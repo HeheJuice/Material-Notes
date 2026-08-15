@@ -4,6 +4,9 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -16,8 +19,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.graphics.drawable.GradientDrawable
-import android.graphics.Typeface
+import androidx.core.view.doOnLayout
 
 class NotesMainAct : Activity() {
 
@@ -28,47 +30,39 @@ class NotesMainAct : Activity() {
     private lateinit var settingsContainer: FrameLayout
     private var isNotesActive = true
 
-    // Monet‑derived colors (resolved from theme)
     private var primaryTextColor: Int = 0
     private var secondaryTextColor: Int = 0
-    private var accentColor: Int = 0          // from colorPrimary
+    private var accentColor: Int = 0
     private var cardBgColor: Int = 0
     private var cardBorderColor: Int = 0
-    private var secondaryBtnColor: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         actionBar?.hide()
 
-        // ----- 1. Resolve Monet colors from the theme -----
+        // 1. Resolve Monet/Theme colors
         val typedValue = TypedValue()
+
         theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        accentColor = typedValue.data                    // active pill
+        accentColor = typedValue.data
+
         theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
         primaryTextColor = typedValue.data
+
         theme.resolveAttribute(android.R.attr.textColorSecondary, typedValue, true)
         secondaryTextColor = typedValue.data
 
-        // For backgrounds and cards, use colorSurface (or fallback)
-        theme.resolveAttribute(android.R.attr.colorSurface, typedValue, true)
-        val surfaceColor = typedValue.data               // main background
-        cardBgColor = surfaceColor                       // pill container background
+        theme.resolveAttribute(android.R.attr.colorBackground, typedValue, true)
+        cardBgColor = typedValue.data
 
-        // For borders, we use a subtle stroke – we can derive from theme or use a fixed light/dark value.
-        // We'll use a fixed value that adapts; better to use a theme attribute like colorOutline.
-        // For simplicity, we'll use a light/dark fallback:
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
-        cardBorderColor = if (isDark) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt()
-        secondaryBtnColor = if (isDark) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt() // pill active background
+        cardBorderColor = if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
 
-        val bgColor = if (isDark) 0xFF000000.toInt() else 0xFFF2F2F7.toInt() // fallback for root, but we use surfaceColor
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(cardBgColor) }
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
-        val statusBarHeight = getStatusBarHeight()
-
-        // ----- 2. Content containers (empty) -----
+        // 2. Content containers
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -93,7 +87,7 @@ class NotesMainAct : Activity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- 3. Bottom bar (identical to your reference, with Monet colors) -----
+        // 3. Bottom bar layout
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -116,14 +110,12 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill – uses accent (Monet primary)
-        val activeTabBg = GradientDrawable().apply {
-            setColor(accentColor)
-            cornerRadius = dpToPx(100f).toFloat()
-        }
         slidingPillView = View(this).apply {
-            background = activeTabBg
-            layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f))
+            background = GradientDrawable().apply {
+                setColor(accentColor)
+                cornerRadius = dpToPx(100f).toFloat()
+            }
+            layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f), Gravity.CENTER_VERTICAL)
         }
 
         val tabButtonsLayout = LinearLayout(this).apply {
@@ -142,6 +134,7 @@ class NotesMainAct : Activity() {
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            isClickable = false // Prevent touch consumption over parent drag container
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -155,6 +148,7 @@ class NotesMainAct : Activity() {
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            isClickable = false // Prevent touch consumption over parent drag container
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -171,7 +165,7 @@ class NotesMainAct : Activity() {
 
         setContentView(rootFrame)
 
-        // ----- 4. Tab switching logic (exactly as your reference) -----
+        // 4. Tab switching & animation logic
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -224,17 +218,12 @@ class NotesMainAct : Activity() {
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
-                if (toNotes) {
-                    notesContainer.visibility = View.VISIBLE
-                    settingsContainer.visibility = View.GONE
-                } else {
-                    notesContainer.visibility = View.GONE
-                    settingsContainer.visibility = View.VISIBLE
-                }
+                notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
+                settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
             }
         }
 
-        // Touch handling (drag)
+        // Unified touch & click gesture handling
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
             val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
@@ -264,7 +253,8 @@ class NotesMainAct : Activity() {
                     true
                 }
 
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                MotionEvent.ACTION_UP -> {
+                    view.performClick()
                     val touchX = event.x - tabPillContainer.paddingLeft
                     val midPoint = (x0 + x1) / 2f
                     val targetIsNotes = touchX < midPoint
@@ -286,54 +276,40 @@ class NotesMainAct : Activity() {
                         .start()
                     true
                 }
+
+                MotionEvent.ACTION_CANCEL -> {
+                    val targetProgress = if (isNotesActive) 0f else 1f
+                    animatePillTo(targetProgress) {}
+                    view.animate().cancel()
+                    view.animate().scaleX(1.0f).scaleY(1.0f).alpha(1.0f).setDuration(200).start()
+                    true
+                }
+
                 else -> false
             }
         }
 
-        notesTabBtn.setOnClickListener {
-            if (!isNotesActive) {
-                animatePillTo(0f) { switchTab(true) }
-            }
-        }
-        settingsTabBtn.setOnClickListener {
-            if (isNotesActive) {
-                animatePillTo(1f) { switchTab(false) }
-            }
-        }
-
-        tabPillContainer.post {
+        // Initial setup once layout is ready
+        tabPillContainer.doOnLayout {
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = notesTabBtn.width }
             slidingPillView.translationX = notesTabBtn.left.toFloat()
-            slidingPillView.requestLayout()
         }
 
         // Window insets
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
-            val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                insets.getInsets(WindowInsets.Type.statusBars()).top
-            } else {
-                @Suppress("DEPRECATION") insets.systemWindowInsetTop
-            }
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.navigationBars() or WindowInsets.Type.ime()).bottom
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
-            val effectiveTop = if (topInset > 0) topInset else statusBarHeight
 
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
             insets
         }
     }
 
-    // ----- Helpers (unchanged from your reference) -----
     private fun dpToPx(dp: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
 
     private fun dpToPx(dp: Int): Int = dpToPx(dp.toFloat())
-
-    private fun getStatusBarHeight(): Int {
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else dpToPx(36f)
-    }
 }
