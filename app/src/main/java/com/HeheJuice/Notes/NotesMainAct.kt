@@ -23,33 +23,43 @@ class NotesMainAct : Activity() {
     private lateinit var settingsTabBtn: TextView
     private var isNotesActive = true
 
+    // Colors
+    private var primaryTextColor: Int = 0
+    private var secondaryTextColor: Int = 0
+    private var accentColor: Int = 0
+    private var cardBgColor: Int = 0
+    private var cardBorderColor: Int = 0
+    private var secondaryBtnColor: Int = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         actionBar?.hide()
 
         // 1. Get Monet colors from the theme
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+
         val typedValue = TypedValue()
         theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        val primaryColor = typedValue.data          // Monet accent (pill color)
+        accentColor = typedValue.data                     // Pill accent (Monet)
         theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-        val primaryTextColor = typedValue.data
+        primaryTextColor = typedValue.data
         theme.resolveAttribute(android.R.attr.textColorSecondary, typedValue, true)
-        val secondaryTextColor = typedValue.data
-        theme.resolveAttribute(android.R.attr.colorSurface, typedValue, true)
-        val surfaceColor = typedValue.data          // for background (optional)
+        secondaryTextColor = typedValue.data
 
-        // 2. Root container – fill with system background
+        // Fallback card colours (adapt to dark/light) – same as reference
+        cardBgColor = if (isDark) 0xFF1C1C1E.toInt() else 0xFFFFFFFF.toInt()
+        cardBorderColor = if (isDark) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt()
+        secondaryBtnColor = if (isDark) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt()
+        val rootBg = if (isDark) 0xFF000000.toInt() else 0xFFF2F2F7.toInt()
+
+        // 2. Root layout – empty content (no text)
         val rootFrame = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            // Use theme background (adapts to dark/light)
-            setBackgroundColor(surfaceColor)
+            setBackgroundColor(rootBg)
         }
 
-        // 3. Content area – completely empty (no placeholder text)
+        // 3. Content area – completely empty (just a placeholder)
         val contentContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -59,7 +69,7 @@ class NotesMainAct : Activity() {
             // No child views – just empty space
         }
 
-        // 4. Bottom bar with sliding pill
+        // 4. Bottom bar (sliding pill, no search)
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -68,24 +78,23 @@ class NotesMainAct : Activity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             ).apply {
-                bottomMargin = dpToPx(16f)
+                bottomMargin = dpToPx(16)
             }
         }
 
-        // The pill container background (card-like)
         val tabPillContainer = FrameLayout(this).apply {
             background = createRoundedDrawable(
-                color = if (isDarkMode()) 0xFF1C1C1E.toInt() else 0xFFFFFFFF.toInt(),
-                strokeColor = if (isDarkMode()) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt()
+                color = cardBgColor,
+                strokeColor = cardBorderColor
             )
-            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
+            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
         }
 
-        // Sliding pill – uses Monet primary color
-        val pillBg = createRoundedDrawable(color = primaryColor)
+        // Sliding pill background – uses Monet accent
+        val activeTabBg = createRoundedDrawable(color = accentColor)
         slidingPillView = View(this).apply {
-            background = pillBg
-            layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f))
+            background = activeTabBg
+            layoutParams = FrameLayout.LayoutParams(0, dpToPx(56)) // taller than before
         }
 
         // Tab buttons
@@ -97,13 +106,13 @@ class NotesMainAct : Activity() {
         notesTabBtn = TextView(this).apply {
             text = "Notes"
             textSize = 14f
-            setTextColor(primaryTextColor)   // visible in both modes
+            setTextColor(primaryTextColor)
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            setPadding(dpToPx(20), 0, dpToPx(20), 0) // more horizontal padding
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(44f)
+                dpToPx(56)
             )
         }
 
@@ -113,10 +122,10 @@ class NotesMainAct : Activity() {
             setTextColor(secondaryTextColor)
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            setPadding(dpToPx(20), 0, dpToPx(20), 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(44f)
+                dpToPx(56)
             )
         }
 
@@ -135,7 +144,7 @@ class NotesMainAct : Activity() {
         rootFrame.addView(bottomBarLayout)
         setContentView(rootFrame)
 
-        // 5. Tab switching logic (unchanged)
+        // 5. Tab switching logic (same as reference, with animation)
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -187,6 +196,7 @@ class NotesMainAct : Activity() {
             }
         }
 
+        // Touch handling – same as reference (drag + haptic)
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
             val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
@@ -239,6 +249,7 @@ class NotesMainAct : Activity() {
             }
         }
 
+        // Click listeners for direct taps
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 animatePillTo(0f) { switchTab(true) }
@@ -260,7 +271,7 @@ class NotesMainAct : Activity() {
         }
     }
 
-    // ---------- Helpers ----------
+    // ---------- Helpers (same as reference) ----------
     private fun isDarkMode(): Boolean =
         (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -268,16 +279,18 @@ class NotesMainAct : Activity() {
     private fun createRoundedDrawable(color: Int, strokeColor: Int? = null): android.graphics.drawable.GradientDrawable {
         return android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = dpToPx(100f).toFloat()
+            cornerRadius = dpToPx(100).toFloat()
             setColor(color)
             if (strokeColor != null) {
-                setStroke(dpToPx(1f), strokeColor)
+                setStroke(dpToPx(1), strokeColor)
             }
         }
     }
 
+    // DP to PX – use Int versions to avoid type mismatch
+    private fun dpToPx(dp: Int): Int =
+        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
+
     private fun dpToPx(dp: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
-
-    private fun dpToPx(dp: Int): Int = dpToPx(dp.toFloat())
 }
