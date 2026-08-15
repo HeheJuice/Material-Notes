@@ -32,12 +32,11 @@ class NotesMainAct : Activity() {
     private lateinit var settingsContainer: FrameLayout
     private var isNotesActive = true
 
-    // Clean Material 3 & Google Photos style color variables
-    private var accentColor: Int = 0          // Active pill background (Soft Tonal Container)
-    private var activeTextColor: Int = 0      // Active text & icon color
-    private var secondaryTextColor: Int = 0   // Inactive text & icon color
-    private var cardBgColor: Int = 0          // Bottom bar background
-    private var cardBorderColor: Int = 0      // Outline border color
+    private var accentColor: Int = 0
+    private var activeTextColor: Int = 0
+    private var secondaryTextColor: Int = 0
+    private var cardBgColor: Int = 0
+    private var cardBorderColor: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -47,9 +46,8 @@ class NotesMainAct : Activity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- 1. Robust Monet & Material 3 Color Resolution -----
+        // ----- 1. Monet & Material 3 Colors -----
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Dynamic Monet colors matching Google Photos style (Soft pastel active container)
             accentColor = ContextCompat.getColor(this, android.R.color.system_accent2_100)
             activeTextColor = ContextCompat.getColor(this, android.R.color.system_accent2_800)
             cardBgColor = ContextCompat.getColor(
@@ -57,7 +55,6 @@ class NotesMainAct : Activity() {
                 if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
             )
         } else {
-            // Safe fallbacks for older Android versions
             accentColor = Color.parseColor("#E8DEF8")
             activeTextColor = Color.parseColor("#1D192B")
             cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
@@ -68,7 +65,7 @@ class NotesMainAct : Activity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(cardBgColor) }
 
-        // ----- 2. Content containers -----
+        // ----- 2. Content Containers -----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -90,7 +87,7 @@ class NotesMainAct : Activity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- 3. Bottom bar layout -----
+        // ----- 3. Bottom Bar & Unified Coordinate Stack -----
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -113,7 +110,14 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background
+        // Unified wrapper so slidingPillView and tabButtonsLayout share the exact same coordinate space
+        val innerTabStack = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(accentColor)
@@ -131,7 +135,6 @@ class NotesMainAct : Activity() {
             )
         }
 
-        // Load drawables safely
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
@@ -168,14 +171,14 @@ class NotesMainAct : Activity() {
         tabButtonsLayout.addView(notesTabBtn)
         tabButtonsLayout.addView(settingsTabBtn)
 
-        tabPillContainer.addView(slidingPillView)
-        tabPillContainer.addView(tabButtonsLayout)
+        innerTabStack.addView(slidingPillView)
+        innerTabStack.addView(tabButtonsLayout)
+        tabPillContainer.addView(innerTabStack)
         bottomBarLayout.addView(tabPillContainer)
         rootFrame.addView(bottomBarLayout)
 
         setContentView(rootFrame)
 
-        // Helper to tint icon drawables dynamically matching text color
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -186,11 +189,10 @@ class NotesMainAct : Activity() {
             textView.setCompoundDrawablesWithIntrinsicBounds(left, drawables[1], drawables[2], drawables[3])
         }
 
-        // Initial icon tint setup
         tintDrawableColor(notesTabBtn, activeTextColor)
         tintDrawableColor(settingsTabBtn, secondaryTextColor)
 
-        // ----- 4. Tab switching & position interpolation -----
+        // ----- 4. Tab Switching & Perfectly Synced Drag Tracking -----
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -245,26 +247,26 @@ class NotesMainAct : Activity() {
         }
 
         val switchTab: (Boolean) -> Unit = { toNotes ->
-            if (isNotesActionActive(isNotesActive, toNotes)) {
+            if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
             }
         }
 
-        // Direct click listeners with transition animation
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 animatePillTo(0f) { switchTab(true) }
             }
         }
+
         settingsTabBtn.setOnClickListener {
             if (isNotesActive) {
                 animatePillTo(1f) { switchTab(false) }
             }
         }
 
-        // Fixed drag/touch handling matching exact button bounds
+        // Clean touch listener using precise innerStack coordinates
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat()
             val x1 = settingsTabBtn.left.toFloat()
@@ -281,21 +283,21 @@ class NotesMainAct : Activity() {
                         .setInterpolator(DecelerateInterpolator(1.5f))
                         .start()
 
-                    val touchX = event.x - tabPillContainer.paddingLeft - tabButtonsLayout.left
+                    val touchX = event.x - tabPillContainer.paddingLeft
                     val progress = if (x1 > x0) ((touchX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
                     updatePillPosition(progress)
                     true
                 }
 
                 MotionEvent.ACTION_MOVE -> {
-                    val touchX = event.x - tabPillContainer.paddingLeft - tabButtonsLayout.left
+                    val touchX = event.x - tabPillContainer.paddingLeft
                     val progress = if (x1 > x0) ((touchX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
                     updatePillPosition(progress)
                     true
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    val touchX = event.x - tabPillContainer.paddingLeft - tabButtonsLayout.left
+                    val touchX = event.x - tabPillContainer.paddingLeft
                     val midPoint = (x0 + x1) / 2f
                     val targetIsNotes = touchX < midPoint
                     val targetProgress = if (targetIsNotes) 0f else 1f
@@ -320,14 +322,12 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Initial pill position after layout
         tabPillContainer.doOnLayout {
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = notesTabBtn.width }
             slidingPillView.translationX = notesTabBtn.left.toFloat()
             slidingPillView.requestLayout()
         }
 
-        // Window insets
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.navigationBars() or WindowInsets.Type.ime()).bottom
@@ -339,8 +339,6 @@ class NotesMainAct : Activity() {
             insets
         }
     }
-
-    private fun isNotesActionActive(current: Boolean, target: Boolean): Boolean = current != target
 
     private fun dpToPx(dp: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
