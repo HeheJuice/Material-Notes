@@ -18,6 +18,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowInsets
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -459,7 +460,7 @@ class NotesMainAct : Activity() {
         val timestamp: Long
     )
 
-    // ---------- RecyclerView Adapter (fixed) ----------
+    // ---------- RecyclerView Adapter (corrected with adapterPosition) ----------
     inner class NoteAdapter(
         private val items: MutableList<Note>,
         private val onItemClick: (Int) -> Unit
@@ -482,7 +483,7 @@ class NotesMainAct : Activity() {
                 isClickable = true
                 isFocusable = true
                 setOnClickListener {
-                    val pos = bindingAdapterPosition
+                    val pos = adapterPosition
                     if (pos != RecyclerView.NO_POSITION) onItemClick(pos)
                 }
                 // Inner layout
@@ -527,7 +528,7 @@ class NotesMainAct : Activity() {
         override fun getItemCount() = items.size
     }
 
-    // ---------- Dialog for adding/editing note (fixed window calls) ----------
+    // ---------- Dialog for adding/editing note ----------
     private fun showNoteDialog(note: Note? = null, position: Int) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -770,7 +771,7 @@ class NotesMainAct : Activity() {
         false
     }
 
-    // ---------- Plus icon (search icon removed) ----------
+    // ---------- Plus icon ----------
     private fun createPlusIcon(): Drawable {
         return object : Drawable() {
             private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
