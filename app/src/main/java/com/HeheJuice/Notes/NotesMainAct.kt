@@ -14,7 +14,6 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.animation.doOnEnd
 
 class NotesMainAct : Activity() {
 
@@ -78,7 +77,7 @@ class NotesMainAct : Activity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             ).apply {
-                bottomMargin = dpToPx(16)
+                bottomMargin = dpToPx(16f)
             }
         }
 
@@ -87,14 +86,14 @@ class NotesMainAct : Activity() {
                 color = cardBgColor,
                 strokeColor = cardBorderColor
             )
-            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
         // Sliding pill background – uses Monet accent
         val activeTabBg = createRoundedDrawable(color = accentColor)
         slidingPillView = View(this).apply {
             background = activeTabBg
-            layoutParams = FrameLayout.LayoutParams(0, dpToPx(56)) // taller than before
+            layoutParams = FrameLayout.LayoutParams(0, dpToPx(56f))
         }
 
         // Tab buttons
@@ -103,29 +102,36 @@ class NotesMainAct : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
 
+        // Notes tab with icon
         notesTabBtn = TextView(this).apply {
             text = "Notes"
             textSize = 14f
             setTextColor(primaryTextColor)
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(20), 0, dpToPx(20), 0) // more horizontal padding
+            // Set icon to the left
+            setCompoundDrawablesWithIntrinsicBounds(R.drawable.note_stack_24px, 0, 0, 0)
+            compoundDrawablePadding = dpToPx(8f)
+            setPadding(dpToPx(20f), 0, dpToPx(20f), 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(56)
+                dpToPx(56f)
             )
         }
 
+        // Settings tab with icon
         settingsTabBtn = TextView(this).apply {
             text = "Settings"
             textSize = 14f
             setTextColor(secondaryTextColor)
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(20), 0, dpToPx(20), 0)
+            setCompoundDrawablesWithIntrinsicBounds(R.drawable.settings_24px, 0, 0, 0)
+            compoundDrawablePadding = dpToPx(8f)
+            setPadding(dpToPx(20f), 0, dpToPx(20f), 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(56)
+                dpToPx(56f)
             )
         }
 
@@ -271,7 +277,7 @@ class NotesMainAct : Activity() {
         }
     }
 
-    // ---------- Helpers (same as reference) ----------
+    // ---------- Helpers (single dpToPx) ----------
     private fun isDarkMode(): Boolean =
         (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -279,18 +285,15 @@ class NotesMainAct : Activity() {
     private fun createRoundedDrawable(color: Int, strokeColor: Int? = null): android.graphics.drawable.GradientDrawable {
         return android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = dpToPx(100).toFloat()
+            cornerRadius = dpToPx(100f).toFloat()
             setColor(color)
             if (strokeColor != null) {
-                setStroke(dpToPx(1), strokeColor)
+                setStroke(dpToPx(1f), strokeColor)
             }
         }
     }
 
-    // DP to PX – use Int versions to avoid type mismatch
-    private fun dpToPx(dp: Int): Int =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
-
+    // Single dpToPx function – takes Float and returns Int
     private fun dpToPx(dp: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
 }
