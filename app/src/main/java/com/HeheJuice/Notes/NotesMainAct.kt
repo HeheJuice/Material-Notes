@@ -15,9 +15,6 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
-// Top‑level helper (visible everywhere in the file)
-private fun px(dp: Float, density: Float): Int = (dp * density).toInt()
-
 class NotesMainAct : Activity() {
 
     private lateinit var slidingPillView: View
@@ -38,11 +35,10 @@ class NotesMainAct : Activity() {
         actionBar?.hide()
 
         val density = resources.displayMetrics.density
-
-        // 1. Get Monet colors from theme
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
+        // Load Monet colors from theme
         val typedValue = TypedValue()
         theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
         accentColor = typedValue.data
@@ -55,10 +51,10 @@ class NotesMainAct : Activity() {
         cardBorderColor = if (isDark) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt()
         val rootBg = if (isDark) 0xFF000000.toInt() else 0xFFF2F2F7.toInt()
 
-        // 2. Root container
+        // Root container
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(rootBg) }
 
-        // 3. Empty content
+        // Empty content area
         val contentContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -67,7 +63,7 @@ class NotesMainAct : Activity() {
             )
         }
 
-        // 4. Bottom bar with sliding pill
+        // Bottom bar
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -76,31 +72,34 @@ class NotesMainAct : Activity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             ).apply {
-                bottomMargin = px(16f, density)
+                bottomMargin = (16 * density).toInt()
             }
         }
 
+        // Pill container
         val tabPillContainer = FrameLayout(this).apply {
             background = createRoundedDrawable(
                 color = cardBgColor,
                 strokeColor = cardBorderColor,
                 density = density
             )
-            setPadding(px(4f, density), px(4f, density), px(4f, density), px(4f, density))
+            val pad = (4 * density).toInt()
+            setPadding(pad, pad, pad, pad)
         }
 
-        // Sliding pill – uses Monet accent
+        // Sliding pill (uses Monet accent)
         slidingPillView = View(this).apply {
             background = createRoundedDrawable(color = accentColor, density = density)
-            layoutParams = FrameLayout.LayoutParams(0, px(56f, density))
+            layoutParams = FrameLayout.LayoutParams(0, (56 * density).toInt())
         }
 
-        // Tab buttons with icons
+        // Buttons layout
         val tabButtonsLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
 
+        // Notes tab
         notesTabBtn = TextView(this).apply {
             text = "Notes"
             textSize = 14f
@@ -108,14 +107,16 @@ class NotesMainAct : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             setCompoundDrawablesWithIntrinsicBounds(R.drawable.note_stack_24px, 0, 0, 0)
-            compoundDrawablePadding = px(8f, density)
-            setPadding(px(20f, density), 0, px(20f, density), 0)
+            compoundDrawablePadding = (8 * density).toInt()
+            val hPad = (20 * density).toInt()
+            setPadding(hPad, 0, hPad, 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                px(56f, density)
+                (56 * density).toInt()
             )
         }
 
+        // Settings tab
         settingsTabBtn = TextView(this).apply {
             text = "Settings"
             textSize = 14f
@@ -123,11 +124,12 @@ class NotesMainAct : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             setCompoundDrawablesWithIntrinsicBounds(R.drawable.settings_24px, 0, 0, 0)
-            compoundDrawablePadding = px(8f, density)
-            setPadding(px(20f, density), 0, px(20f, density), 0)
+            compoundDrawablePadding = (8 * density).toInt()
+            val hPad = (20 * density).toInt()
+            setPadding(hPad, 0, hPad, 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                px(56f, density)
+                (56 * density).toInt()
             )
         }
 
@@ -145,7 +147,7 @@ class NotesMainAct : Activity() {
         rootFrame.addView(bottomBarLayout)
         setContentView(rootFrame)
 
-        // 5. Tab switching (same as reference)
+        // --- Tab switching logic (same as reference) ---
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -196,7 +198,7 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Touch / drag handling
+        // Drag / touch handling
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
             val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
@@ -269,14 +271,13 @@ class NotesMainAct : Activity() {
         }
     }
 
-    // Helper to create rounded drawable
     private fun createRoundedDrawable(color: Int, strokeColor: Int? = null, density: Float): android.graphics.drawable.GradientDrawable {
         return android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = px(100f, density).toFloat()
+            cornerRadius = (100 * density).toFloat()
             setColor(color)
             if (strokeColor != null) {
-                setStroke(px(1f, density), strokeColor)
+                setStroke((1 * density).toInt(), strokeColor)
             }
         }
     }
