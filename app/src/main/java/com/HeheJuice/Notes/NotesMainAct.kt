@@ -460,7 +460,7 @@ class NotesMainAct : Activity() {
         val timestamp: Long
     )
 
-    // ---------- RecyclerView Adapter (corrected with adapterPosition) ----------
+    // ---------- RecyclerView Adapter (fixed) ----------
     inner class NoteAdapter(
         private val items: MutableList<Note>,
         private val onItemClick: (Int) -> Unit
@@ -482,8 +482,9 @@ class NotesMainAct : Activity() {
                 radius = dpToPx(16f).toFloat()
                 isClickable = true
                 isFocusable = true
+                // Fix: use this@ViewHolder to access adapterPosition
                 setOnClickListener {
-                    val pos = adapterPosition
+                    val pos = this@ViewHolder.adapterPosition
                     if (pos != RecyclerView.NO_POSITION) onItemClick(pos)
                 }
                 // Inner layout
