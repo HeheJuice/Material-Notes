@@ -460,7 +460,7 @@ class NotesMainAct : Activity() {
         val timestamp: Long
     )
 
-    // ---------- RecyclerView Adapter (fixed) ----------
+    // ---------- RecyclerView Adapter (FIXED) ----------
     inner class NoteAdapter(
         private val items: MutableList<Note>,
         private val onItemClick: (Int) -> Unit
@@ -469,6 +469,7 @@ class NotesMainAct : Activity() {
         inner class ViewHolder(val card: MaterialCardView) : RecyclerView.ViewHolder(card)
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            // Build the card view
             val card = MaterialCardView(parent.context).apply {
                 layoutParams = RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
@@ -482,11 +483,7 @@ class NotesMainAct : Activity() {
                 radius = dpToPx(16f).toFloat()
                 isClickable = true
                 isFocusable = true
-                // Fix: use this@ViewHolder to access adapterPosition
-                setOnClickListener {
-                    val pos = this@ViewHolder.adapterPosition
-                    if (pos != RecyclerView.NO_POSITION) onItemClick(pos)
-                }
+
                 // Inner layout
                 val innerLayout = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
@@ -514,7 +511,14 @@ class NotesMainAct : Activity() {
                 innerLayout.addView(dateTv)
                 addView(innerLayout)
             }
-            return ViewHolder(card)
+
+            // Create ViewHolder and attach click listener using holder.adapterPosition
+            val holder = ViewHolder(card)
+            card.setOnClickListener {
+                val pos = holder.adapterPosition
+                if (pos != RecyclerView.NO_POSITION) onItemClick(pos)
+            }
+            return holder
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
