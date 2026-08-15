@@ -21,8 +21,6 @@ class NotesMainAct : Activity() {
     private lateinit var slidingPillView: View
     private lateinit var notesTabBtn: TextView
     private lateinit var settingsTabBtn: TextView
-    private lateinit var notesContent: View
-    private lateinit var settingsContent: View
     private var isNotesActive = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,49 +28,38 @@ class NotesMainAct : Activity() {
         super.onCreate(savedInstanceState)
         actionBar?.hide()
 
-        // 1. Get Monet colors from theme
+        // 1. Get Monet colors from the theme
         val typedValue = TypedValue()
         theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        val accentColor = typedValue.data
-        theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true) // same
+        val primaryColor = typedValue.data          // Monet accent (pill color)
+        theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
         val primaryTextColor = typedValue.data
         theme.resolveAttribute(android.R.attr.textColorSecondary, typedValue, true)
         val secondaryTextColor = typedValue.data
+        theme.resolveAttribute(android.R.attr.colorSurface, typedValue, true)
+        val surfaceColor = typedValue.data          // for background (optional)
 
-        // 2. Root container
+        // 2. Root container – fill with system background
         val rootFrame = FrameLayout(this).apply {
-            setBackgroundColor(if (isDarkMode()) 0xFF000000.toInt() else 0xFFF2F2F7.toInt())
-        }
-
-        // 3. Content container (two placeholders)
-        val contentContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
+            // Use theme background (adapts to dark/light)
+            setBackgroundColor(surfaceColor)
         }
 
-        // Notes placeholder
-        notesContent = TextView(this).apply {
-            text = "Notes Content"
-            textSize = 24f
-            setTextColor(primaryTextColor)
-            gravity = Gravity.CENTER
-        }
-        // Settings placeholder
-        settingsContent = TextView(this).apply {
-            text = "Settings Content"
-            textSize = 24f
-            setTextColor(primaryTextColor)
-            gravity = Gravity.CENTER
-            visibility = View.GONE
+        // 3. Content area – completely empty (no placeholder text)
+        val contentContainer = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+            // No child views – just empty space
         }
 
-        contentContainer.addView(notesContent)
-        contentContainer.addView(settingsContent)
-        rootFrame.addView(contentContainer)
-
-        // 4. Bottom bar (sliding pill with two tabs)
+        // 4. Bottom bar with sliding pill
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -85,6 +72,7 @@ class NotesMainAct : Activity() {
             }
         }
 
+        // The pill container background (card-like)
         val tabPillContainer = FrameLayout(this).apply {
             background = createRoundedDrawable(
                 color = if (isDarkMode()) 0xFF1C1C1E.toInt() else 0xFFFFFFFF.toInt(),
@@ -93,14 +81,14 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background (uses accent/Monet color)
-        val pillBg = createRoundedDrawable(color = accentColor)
+        // Sliding pill – uses Monet primary color
+        val pillBg = createRoundedDrawable(color = primaryColor)
         slidingPillView = View(this).apply {
             background = pillBg
             layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f))
         }
 
-        // Buttons
+        // Tab buttons
         val tabButtonsLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -109,7 +97,7 @@ class NotesMainAct : Activity() {
         notesTabBtn = TextView(this).apply {
             text = "Notes"
             textSize = 14f
-            setTextColor(primaryTextColor)
+            setTextColor(primaryTextColor)   // visible in both modes
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
@@ -138,11 +126,16 @@ class NotesMainAct : Activity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
         bottomBarLayout.addView(tabPillContainer)
-        rootFrame.addView(bottomBarLayout)
 
+        // Assemble root
+        rootFrame.addView(contentContainer, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
+        rootFrame.addView(bottomBarLayout)
         setContentView(rootFrame)
 
-        // 5. Tab switching logic (same as before, but simplified)
+        // 5. Tab switching logic (unchanged)
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -159,7 +152,6 @@ class NotesMainAct : Activity() {
                 slidingPillView.requestLayout()
             }
 
-            // Update text colors
             notesTabBtn.setTextColor(if (p < 0.5f) primaryTextColor else secondaryTextColor)
             settingsTabBtn.setTextColor(if (p < 0.5f) secondaryTextColor else primaryTextColor)
         }
@@ -191,12 +183,10 @@ class NotesMainAct : Activity() {
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
-                notesContent.visibility = if (toNotes) View.VISIBLE else View.GONE
-                settingsContent.visibility = if (toNotes) View.GONE else View.VISIBLE
+                // No content to switch – just tab state
             }
         }
 
-        // Touch handling on pill container
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
             val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
@@ -249,7 +239,6 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Click listeners for direct taps
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 animatePillTo(0f) { switchTab(true) }
@@ -261,7 +250,7 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Set initial state
+        // Initial pill position
         rootFrame.post {
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply {
                 width = notesTabBtn.width
