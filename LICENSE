@@ -1,0 +1,44 @@
+## License
+
+Copyright (c) [2026] [HeheJuice]. All rights reserved.
+
+This repository and its source code are provided strictly for **personal, non-commercial use**.
+
+### Permitted Use
+You may view, clone, and run this project locally solely for personal, private, and non-commercial evaluation.
+
+### Restrictions
+Without explicit, prior written permission from the copyright holder, you are strictly prohibited from:
+* Re-distributing, publishing, hosting, or mirroring the source code or binaries publicly.
+* Using any portion of this project for commercial purposes or monetization.
+* Modifying, creating derivative works, or publicly sharing forks of this repository.
+
+---
+
+## Third-Party Component Licenses
+
+This project includes or utilizes third-party assets subject to their own open-source licenses. These licenses apply only to their respective components and do not grant broader rights to the rest of this repository.
+
+### 1. Material Design Icons (MDI)
+* **Copyright:** Copyright (c) 2020 Austin Andrews (SIL Open Font License / Apache 2.0)
+* **License:** Material Design Icons are licensed under the **Apache License 2.0** or the **SIL Open Font License (OFL) 1.1**. 
+
+> Licensed under the Apache License, Version 2.0 (the "License");
+> you may not use this file except in compliance with the License.
+> You may obtain a copy of the License at:
+> http://www.apache.org/licenses/LICENSE-2.0
+> 
+> Unless required by applicable law.writing, software
+> distributed under the License is distributed on an "AS IS" BASIS,
+> WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+> See the License for the specific language governing permissions and
+> limitations under the License.
+
+### 2. Google Sans Flex (Typography)
+* **Copyright:** Copyright (c) Google LLC. All rights reserved.
+* **License:** Google fonts and proprietary font files (such as Google Sans variants) are generally governed by the **SIL Open Font License 1.1** or specific Google Terms of Service depending on how they were acquired. 
+
+> Copyright (c) Google LLC. 
+> This Font Software is licensed under the SIL Open Font License, Version 1.1.
+> This license is copied below, and is also available with a FAQ at:
+> https://scripts.sil.org/OFL
