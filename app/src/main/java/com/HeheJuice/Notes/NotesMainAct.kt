@@ -4,9 +4,11 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.app.Dialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.*
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -16,6 +18,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.Window
 import android.view.WindowInsets
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.DecelerateInterpolator
@@ -31,15 +34,15 @@ import java.util.*
 
 class NotesMainAct : Activity() {
 
-    // ----- Colors (auto‑adapt to dark/light + Monet) -----
-    private lateinit var primaryTextColor: Int
-    private lateinit var secondaryTextColor: Int
-    private lateinit var accentColor: Int
-    private lateinit var cardBgColor: Int
-    private lateinit var cardBorderColor: Int
-    private lateinit var inputBgColor: Int
-    private lateinit var secondaryBtnColor: Int
-    private lateinit var bottomBarBg: Int
+    // Colors (use nullable or default values – not lateinit for primitives)
+    private var primaryTextColor = 0
+    private var secondaryTextColor = 0
+    private var accentColor = 0
+    private var cardBgColor = 0
+    private var cardBorderColor = 0
+    private var inputBgColor = 0
+    private var secondaryBtnColor = 0
+    private var bottomBarBg = 0
 
     private lateinit var notesRecyclerView: RecyclerView
     private lateinit var noteAdapter: NoteAdapter
@@ -211,7 +214,7 @@ class NotesMainAct : Activity() {
         }
         rootFrame.addView(fab)
 
-        // ----- 9. Bottom bar with ONLY the sliding pill (search button removed) -----
+        // 9. Bottom bar with sliding pill (no search button)
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -234,7 +237,6 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background
         val activeTabBg = GradientDrawable().apply {
             setColor(secondaryBtnColor)
             cornerRadius = dpToPx(100f).toFloat()
@@ -285,11 +287,10 @@ class NotesMainAct : Activity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        // Only the pill container, no search button
         bottomBarLayout.addView(tabPillContainer)
         rootFrame.addView(bottomBarLayout)
 
-        // ----- 10. Tab switching logic (unchanged) -----
+        // ----- Tab switching logic (unchanged) -----
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -353,7 +354,6 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Touch handling on pill container (dragging)
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
             val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
@@ -407,7 +407,6 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Click listeners for tabs (direct click)
         notesTabBtn.setOnClickListener {
             if (!isNotesTabActive) {
                 animatePillTo(0f) { switchTab(true) }
@@ -419,7 +418,7 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // ----- 11. Window insets handling (unchanged) -----
+        // Window insets
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
@@ -443,7 +442,6 @@ class NotesMainAct : Activity() {
 
         setContentView(rootFrame)
 
-        // Initialize pill position after layout
         rootFrame.post {
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply {
                 width = notesTabBtn.width
@@ -461,7 +459,7 @@ class NotesMainAct : Activity() {
         val timestamp: Long
     )
 
-    // ---------- RecyclerView Adapter ----------
+    // ---------- RecyclerView Adapter (fixed) ----------
     inner class NoteAdapter(
         private val items: MutableList<Note>,
         private val onItemClick: (Int) -> Unit
@@ -484,7 +482,7 @@ class NotesMainAct : Activity() {
                 isClickable = true
                 isFocusable = true
                 setOnClickListener {
-                    val pos = getChildAdapterPosition(this)
+                    val pos = bindingAdapterPosition
                     if (pos != RecyclerView.NO_POSITION) onItemClick(pos)
                 }
                 // Inner layout
@@ -529,7 +527,7 @@ class NotesMainAct : Activity() {
         override fun getItemCount() = items.size
     }
 
-    // ---------- Dialog for adding/editing note ----------
+    // ---------- Dialog for adding/editing note (fixed window calls) ----------
     private fun showNoteDialog(note: Note? = null, position: Int) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -679,7 +677,10 @@ class NotesMainAct : Activity() {
         dialog.setContentView(cardLayout)
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            setLayout((resources.displayMetrics.widthPixels * 0.88).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT)
+            setLayout(
+                (resources.displayMetrics.widthPixels * 0.88).toInt(),
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
         }
         dialog.show()
     }
@@ -769,7 +770,7 @@ class NotesMainAct : Activity() {
         false
     }
 
-    // ---------- Icons (only plus icon, search removed) ----------
+    // ---------- Plus icon (search icon removed) ----------
     private fun createPlusIcon(): Drawable {
         return object : Drawable() {
             private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
