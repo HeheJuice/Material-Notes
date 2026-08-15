@@ -15,6 +15,9 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
+// Top‑level helper (visible everywhere in the file)
+private fun px(dp: Float, density: Float): Int = (dp * density).toInt()
+
 class NotesMainAct : Activity() {
 
     private lateinit var slidingPillView: View
@@ -28,47 +31,43 @@ class NotesMainAct : Activity() {
     private var accentColor: Int = 0
     private var cardBgColor: Int = 0
     private var cardBorderColor: Int = 0
-    private var secondaryBtnColor: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         actionBar?.hide()
 
-        // 1. Get Monet colors from the theme
+        val density = resources.displayMetrics.density
+
+        // 1. Get Monet colors from theme
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
         val typedValue = TypedValue()
         theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        accentColor = typedValue.data                     // Pill accent (Monet)
+        accentColor = typedValue.data
         theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
         primaryTextColor = typedValue.data
         theme.resolveAttribute(android.R.attr.textColorSecondary, typedValue, true)
         secondaryTextColor = typedValue.data
 
-        // Fallback card colours (adapt to dark/light) – same as reference
         cardBgColor = if (isDark) 0xFF1C1C1E.toInt() else 0xFFFFFFFF.toInt()
         cardBorderColor = if (isDark) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt()
-        secondaryBtnColor = if (isDark) 0xFF2C2C2E.toInt() else 0xFFE5E5EA.toInt()
         val rootBg = if (isDark) 0xFF000000.toInt() else 0xFFF2F2F7.toInt()
 
-        // 2. Root layout – empty content (no text)
-        val rootFrame = FrameLayout(this).apply {
-            setBackgroundColor(rootBg)
-        }
+        // 2. Root container
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(rootBg) }
 
-        // 3. Content area – completely empty (just a placeholder)
+        // 3. Empty content
         val contentContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
-            // No child views – just empty space
         }
 
-        // 4. Bottom bar (sliding pill, no search)
+        // 4. Bottom bar with sliding pill
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -77,49 +76,46 @@ class NotesMainAct : Activity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             ).apply {
-                bottomMargin = dpToPx(16f)
+                bottomMargin = px(16f, density)
             }
         }
 
         val tabPillContainer = FrameLayout(this).apply {
             background = createRoundedDrawable(
                 color = cardBgColor,
-                strokeColor = cardBorderColor
+                strokeColor = cardBorderColor,
+                density = density
             )
-            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
+            setPadding(px(4f, density), px(4f, density), px(4f, density), px(4f, density))
         }
 
-        // Sliding pill background – uses Monet accent
-        val activeTabBg = createRoundedDrawable(color = accentColor)
+        // Sliding pill – uses Monet accent
         slidingPillView = View(this).apply {
-            background = activeTabBg
-            layoutParams = FrameLayout.LayoutParams(0, dpToPx(56f))
+            background = createRoundedDrawable(color = accentColor, density = density)
+            layoutParams = FrameLayout.LayoutParams(0, px(56f, density))
         }
 
-        // Tab buttons
+        // Tab buttons with icons
         val tabButtonsLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        // Notes tab with icon
         notesTabBtn = TextView(this).apply {
             text = "Notes"
             textSize = 14f
             setTextColor(primaryTextColor)
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            // Set icon to the left
             setCompoundDrawablesWithIntrinsicBounds(R.drawable.note_stack_24px, 0, 0, 0)
-            compoundDrawablePadding = dpToPx(8f)
-            setPadding(dpToPx(20f), 0, dpToPx(20f), 0)
+            compoundDrawablePadding = px(8f, density)
+            setPadding(px(20f, density), 0, px(20f, density), 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(56f)
+                px(56f, density)
             )
         }
 
-        // Settings tab with icon
         settingsTabBtn = TextView(this).apply {
             text = "Settings"
             textSize = 14f
@@ -127,11 +123,11 @@ class NotesMainAct : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             setCompoundDrawablesWithIntrinsicBounds(R.drawable.settings_24px, 0, 0, 0)
-            compoundDrawablePadding = dpToPx(8f)
-            setPadding(dpToPx(20f), 0, dpToPx(20f), 0)
+            compoundDrawablePadding = px(8f, density)
+            setPadding(px(20f, density), 0, px(20f, density), 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(56f)
+                px(56f, density)
             )
         }
 
@@ -142,7 +138,6 @@ class NotesMainAct : Activity() {
         tabPillContainer.addView(tabButtonsLayout)
         bottomBarLayout.addView(tabPillContainer)
 
-        // Assemble root
         rootFrame.addView(contentContainer, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
@@ -150,7 +145,7 @@ class NotesMainAct : Activity() {
         rootFrame.addView(bottomBarLayout)
         setContentView(rootFrame)
 
-        // 5. Tab switching logic (same as reference, with animation)
+        // 5. Tab switching (same as reference)
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -198,11 +193,10 @@ class NotesMainAct : Activity() {
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
-                // No content to switch – just tab state
             }
         }
 
-        // Touch handling – same as reference (drag + haptic)
+        // Touch / drag handling
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
             val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
@@ -255,7 +249,6 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Click listeners for direct taps
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 animatePillTo(0f) { switchTab(true) }
@@ -267,7 +260,6 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Initial pill position
         rootFrame.post {
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply {
                 width = notesTabBtn.width
@@ -277,23 +269,15 @@ class NotesMainAct : Activity() {
         }
     }
 
-    // ---------- Helpers (single dpToPx) ----------
-    private fun isDarkMode(): Boolean =
-        (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
-
-    private fun createRoundedDrawable(color: Int, strokeColor: Int? = null): android.graphics.drawable.GradientDrawable {
+    // Helper to create rounded drawable
+    private fun createRoundedDrawable(color: Int, strokeColor: Int? = null, density: Float): android.graphics.drawable.GradientDrawable {
         return android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = dpToPx(100f).toFloat()
+            cornerRadius = px(100f, density).toFloat()
             setColor(color)
             if (strokeColor != null) {
-                setStroke(dpToPx(1f), strokeColor)
+                setStroke(px(1f, density), strokeColor)
             }
         }
     }
-
-    // Single dpToPx function – takes Float and returns Int
-    private fun dpToPx(dp: Float): Int =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
 }
