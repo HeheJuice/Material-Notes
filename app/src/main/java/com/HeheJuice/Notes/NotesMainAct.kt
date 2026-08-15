@@ -6,7 +6,6 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
@@ -33,12 +32,12 @@ class NotesMainAct : Activity() {
     private lateinit var settingsContainer: FrameLayout
     private var isNotesActive = true
 
-    // Colors resolved from theme (Monet on Android 12+)
-    private var primaryTextColor: Int = 0
-    private var secondaryTextColor: Int = 0
-    private var accentColor: Int = 0
-    private var cardBgColor: Int = 0
-    private var cardBorderColor: Int = 0
+    // Clean Material 3 & Google Photos style color variables
+    private var accentColor: Int = 0          // Active pill background (Soft Tonal Container)
+    private var activeTextColor: Int = 0      // Active text & icon color
+    private var secondaryTextColor: Int = 0   // Inactive text & icon color
+    private var cardBgColor: Int = 0          // Bottom bar background
+    private var cardBorderColor: Int = 0      // Outline border color
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -48,26 +47,24 @@ class NotesMainAct : Activity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- 1. Resolve colors from theme (safe attributes) -----
-        val typedValue = TypedValue()
+        // ----- 1. Robust Monet & Material 3 Color Resolution -----
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Dynamic Monet colors matching Google Photos style (Soft pastel active container)
+            accentColor = ContextCompat.getColor(this, android.R.color.system_accent2_100)
+            activeTextColor = ContextCompat.getColor(this, android.R.color.system_accent2_800)
+            cardBgColor = ContextCompat.getColor(
+                this,
+                if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
+            )
+        } else {
+            // Safe fallbacks for older Android versions
+            accentColor = Color.parseColor("#E8DEF8")
+            activeTextColor = Color.parseColor("#1D192B")
+            cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
+        }
 
-        // Accent color (pill background) – uses primary color from theme (Monet on Android 12+)
-        theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        accentColor = if (typedValue.data != 0) typedValue.data else Color.parseColor("#6200EE")
-
-        // Text colors
-        theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-        primaryTextColor = if (typedValue.data != 0) typedValue.data else Color.parseColor("#000000")
-
-        theme.resolveAttribute(android.R.attr.textColorSecondary, typedValue, true)
-        secondaryTextColor = if (typedValue.data != 0) typedValue.data else Color.parseColor("#666666")
-
-        // Background for the pill container – use colorBackground or fallback
-        theme.resolveAttribute(android.R.attr.colorBackground, typedValue, true)
-        cardBgColor = if (typedValue.data != 0) typedValue.data else if (isDark) Color.parseColor("#1C1C1E") else Color.parseColor("#FFFFFF")
-
-        // Border color (fallback)
-        cardBorderColor = if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
+        secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
+        cardBorderColor = if (isDark) Color.parseColor("#49454F") else Color.parseColor("#E7E0EC")
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(cardBgColor) }
 
@@ -93,7 +90,7 @@ class NotesMainAct : Activity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- 3. Bottom bar -----
+        // ----- 3. Bottom bar layout -----
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -116,13 +113,13 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill – uses accent color (Monet primary)
+        // Sliding pill background
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(accentColor)
                 cornerRadius = dpToPx(100f).toFloat()
             }
-            layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f))
+            layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f), Gravity.CENTER_VERTICAL)
         }
 
         val tabButtonsLayout = LinearLayout(this).apply {
@@ -134,26 +131,19 @@ class NotesMainAct : Activity() {
             )
         }
 
-        // ----- Icons (if drawables exist) -----
-        val notesDrawable = try {
-            ContextCompat.getDrawable(this, R.drawable.note_stack_24px)
-        } catch (e: Exception) { null }
-
-        val settingsDrawable = try {
-            ContextCompat.getDrawable(this, R.drawable.settings_24px)
-        } catch (e: Exception) { null }
+        // Load drawables safely
+        val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
+        val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
         notesTabBtn = TextView(this).apply {
             text = "Notes"
             textSize = 14f
-            setTextColor(primaryTextColor)
+            setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
-            if (notesDrawable != null) {
-                setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
-            }
+            setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -166,11 +156,9 @@ class NotesMainAct : Activity() {
             setTextColor(secondaryTextColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
-            if (settingsDrawable != null) {
-                setCompoundDrawablesWithIntrinsicBounds(settingsDrawable, null, null, null)
-            }
+            setCompoundDrawablesWithIntrinsicBounds(settingsDrawable, null, null, null)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -187,7 +175,22 @@ class NotesMainAct : Activity() {
 
         setContentView(rootFrame)
 
-        // ----- 4. Tab switching -----
+        // Helper to tint icon drawables dynamically matching text color
+        val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
+            val drawables = textView.compoundDrawables
+            val left = drawables[0]?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
+            textView.setCompoundDrawablesWithIntrinsicBounds(left, drawables[1], drawables[2], drawables[3])
+        }
+
+        // Initial icon tint setup
+        tintDrawableColor(notesTabBtn, activeTextColor)
+        tintDrawableColor(settingsTabBtn, secondaryTextColor)
+
+        // ----- 4. Tab switching & position interpolation -----
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -205,11 +208,15 @@ class NotesMainAct : Activity() {
             }
 
             if (p < 0.5f) {
-                notesTabBtn.setTextColor(primaryTextColor)
+                notesTabBtn.setTextColor(activeTextColor)
+                tintDrawableColor(notesTabBtn, activeTextColor)
                 settingsTabBtn.setTextColor(secondaryTextColor)
+                tintDrawableColor(settingsTabBtn, secondaryTextColor)
             } else {
                 notesTabBtn.setTextColor(secondaryTextColor)
-                settingsTabBtn.setTextColor(primaryTextColor)
+                tintDrawableColor(notesTabBtn, secondaryTextColor)
+                settingsTabBtn.setTextColor(activeTextColor)
+                tintDrawableColor(settingsTabBtn, activeTextColor)
             }
         }
 
@@ -238,14 +245,14 @@ class NotesMainAct : Activity() {
         }
 
         val switchTab: (Boolean) -> Unit = { toNotes ->
-            if (isNotesActive != toNotes) {
+            if (isNotesActionActive(isNotesActive, toNotes)) {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
             }
         }
 
-        // Click listeners
+        // Direct click listeners with transition animation
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 animatePillTo(0f) { switchTab(true) }
@@ -257,10 +264,10 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Drag handling
+        // Fixed drag/touch handling matching exact button bounds
         tabPillContainer.setOnTouchListener { view, event ->
-            val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
-            val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
+            val x0 = notesTabBtn.left.toFloat()
+            val x1 = settingsTabBtn.left.toFloat()
 
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -274,21 +281,21 @@ class NotesMainAct : Activity() {
                         .setInterpolator(DecelerateInterpolator(1.5f))
                         .start()
 
-                    val touchX = event.x - tabPillContainer.paddingLeft
+                    val touchX = event.x - tabPillContainer.paddingLeft - tabButtonsLayout.left
                     val progress = if (x1 > x0) ((touchX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
                     updatePillPosition(progress)
                     true
                 }
 
                 MotionEvent.ACTION_MOVE -> {
-                    val touchX = event.x - tabPillContainer.paddingLeft
+                    val touchX = event.x - tabPillContainer.paddingLeft - tabButtonsLayout.left
                     val progress = if (x1 > x0) ((touchX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
                     updatePillPosition(progress)
                     true
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    val touchX = event.x - tabPillContainer.paddingLeft
+                    val touchX = event.x - tabPillContainer.paddingLeft - tabButtonsLayout.left
                     val midPoint = (x0 + x1) / 2f
                     val targetIsNotes = touchX < midPoint
                     val targetProgress = if (targetIsNotes) 0f else 1f
@@ -332,6 +339,8 @@ class NotesMainAct : Activity() {
             insets
         }
     }
+
+    private fun isNotesActionActive(current: Boolean, target: Boolean): Boolean = current != target
 
     private fun dpToPx(dp: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
