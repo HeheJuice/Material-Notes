@@ -32,6 +32,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonGroup
 
 class NotesMainAct : AppCompatActivity() {
 
@@ -207,9 +208,10 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Spaced Independent Buttons Container (M3 Expressive Style) -----
-        val themeSelectorContainer = LinearLayout(this).apply {
+        // ----- M3 Expressive MaterialButtonGroup -----
+        val themeSelectorContainer = MaterialButtonGroup(this).apply {
             orientation = LinearLayout.HORIZONTAL
+            spacing = dpToPx(8f)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -231,7 +233,6 @@ class NotesMainAct : AppCompatActivity() {
                 isAllCaps = false
                 setTypeface(null, Typeface.BOLD)
 
-                // Expressive independent pill styling
                 backgroundTintList = ColorStateList.valueOf(if (isSelected) accentColor else secondaryBtnColor)
                 setTextColor(if (isSelected) activeTextColor else secondaryTextColor)
                 strokeColor = ColorStateList.valueOf(Color.TRANSPARENT)
@@ -244,11 +245,7 @@ class NotesMainAct : AppCompatActivity() {
                     0,
                     dpToPx(44f),
                     1f
-                ).apply {
-                    if (index > 0) {
-                        marginStart = dpToPx(8f) // Creates the distinct gap between buttons
-                    }
-                }
+                )
 
                 setOnClickListener {
                     if (savedTheme != index) {
@@ -286,7 +283,6 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
         }
 
-        // App Name Pill (Left) - Dynamically changes based on active tab
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
@@ -314,7 +310,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Menu Button Container (Right) using R.drawable.menu_24px
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -323,9 +318,7 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
             isFocusable = true
-            setOnClickListener {
-                // Does nothing for now as requested
-            }
+            setOnClickListener {}
             setOnTouchListener(pressScaleTouchListener)
         }
 
@@ -361,7 +354,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- Expanding Menu Container (Separated Individual Pills) -----
+        // ----- Expanding Menu Container -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -397,7 +390,6 @@ class NotesMainAct : AppCompatActivity() {
         val createIcon = tintDrawableFunc(editNoteDrawable, activeTextColor)
         val importIcon = tintDrawableFunc(boxAddDrawable, activeTextColor)
 
-        // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
             textSize = 14f
@@ -417,7 +409,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Menu Item: Import Notes Pill
         val importNotesItem = TextView(this).apply {
             text = getString(R.string.import_notes)
             textSize = 14f
@@ -441,7 +432,7 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
-        // ----- Bottom bar layout (with + button) -----
+        // ----- Bottom bar layout -----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -452,7 +443,6 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // ----- Tab pill container -----
         val tabPillContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -462,7 +452,6 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(accentColor)
@@ -483,7 +472,6 @@ class NotesMainAct : AppCompatActivity() {
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
-        // Notes tab
         notesTabBtn = TextView(this).apply {
             text = getString(R.string.nav_notes)
             textSize = 14f
@@ -506,7 +494,6 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
         }
 
-        // Settings tab
         settingsTabBtn = TextView(this).apply {
             text = getString(R.string.nav_settings)
             textSize = 14f
@@ -535,7 +522,6 @@ class NotesMainAct : AppCompatActivity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        // ----- + Button (FAB-like) -----
         plusIconDrawable = PlusDrawable(activeTextColor, dpToPx(3f).toFloat())
         plusBtnRef = ImageView(this).apply {
             setImageDrawable(plusIconDrawable)
@@ -565,7 +551,6 @@ class NotesMainAct : AppCompatActivity() {
 
         setContentView(rootFrame)
 
-        // ----- Tab switching logic & Pill animation -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -648,7 +633,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Click listeners for tabs -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -663,7 +647,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Initial pill layout -----
         tabPillContainer.doOnLayout {
             val targetBtn = if (isNotesActive) notesTabBtn else settingsTabBtn
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = targetBtn.width }
@@ -671,7 +654,6 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        // ----- Window insets (Dynamic Spacing) -----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
@@ -685,15 +667,12 @@ class NotesMainAct : AppCompatActivity() {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
 
-            // Push top bar down below the status bar
             topBarLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 topMargin = topInset
             }
 
-            // Ensure content doesn't hide behind the top bar
             contentHolder.setPadding(0, topInset + dpToPx(66f), 0, 0)
 
-            // Adjust bottom bar and expanding menu positions
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
             (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
             
@@ -710,7 +689,6 @@ class NotesMainAct : AppCompatActivity() {
         isMenuExpanded = true
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-        // Pre-measure the menu container synchronously so dimensions are known on the first click
         val rootFrame = menuOverlayContainer.parent as? FrameLayout
         if (rootFrame != null) {
             menuOverlayContainer.measure(
