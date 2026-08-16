@@ -236,13 +236,22 @@ class NotesMainAct : AppCompatActivity() {
             com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
         )
 
-        // ColorStateLists mapping Monet states to checked/unchecked
+        // Unselected background using a solid Monet level tone (neutral1_200 for light, neutral1_800 for dark)
+        val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.getColor(
+                this,
+                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_200
+            )
+        } else {
+            secondaryBtnColor
+        }
+
         val checkedState = intArrayOf(android.R.attr.state_checked)
         val uncheckedState = intArrayOf(-android.R.attr.state_checked)
 
         val buttonBgTint = android.content.res.ColorStateList(
             arrayOf(checkedState, uncheckedState),
-            intArrayOf(activeTextColor, cardBgColor) 
+            intArrayOf(activeTextColor, unselectedBgColor) 
         )
 
         val buttonTextTint = android.content.res.ColorStateList(
@@ -255,7 +264,9 @@ class NotesMainAct : AppCompatActivity() {
 
             val optionBtn = MaterialButton(buttonContext).apply {
                 text = optionName
-                icon = null // Ensures no icon is drawn next to the text
+                icon = null 
+                textSize = 11.5f // Smaller font size to guarantee single-line fit
+                isSingleLine = true
                 
                 layoutParams = LinearLayout.LayoutParams(
                     0,
@@ -268,7 +279,9 @@ class NotesMainAct : AppCompatActivity() {
 
                 backgroundTintList = buttonBgTint
                 setTextColor(buttonTextTint)
-                strokeWidth = 0 
+                strokeWidth = 0 // Completely remove stroke/border
+                
+                setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
 
                 setOnTouchListener(pressScaleTouchListener)
 
