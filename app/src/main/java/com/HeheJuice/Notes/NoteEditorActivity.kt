@@ -6,14 +6,17 @@ import android.view.Gravity
 import android.view.View
 import android.view.Window
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Color
 import android.util.TypedValue
 import android.graphics.Typeface
+import com.google.android.material.color.DynamicColors
 
 class NoteEditorActivity : AppCompatActivity() {
 
@@ -27,32 +30,64 @@ class NoteEditorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        // Apply Dynamic Colors (Monet) before any view creation
+        DynamicColors.applyToActivityIfAvailable(this)
+
         // Initialize repository
         NoteRepository.init(applicationContext)
 
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // Resolve colors
+        // ----- Resolve colors with fallbacks -----
         val typedValue = TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-        val surfaceContainer = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
-        val surfaceLow = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
-        val primaryContainer = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
-        val onPrimaryContainer = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-        val onSurfaceVariant = typedValue.data
 
+        // Helper to resolve attribute with fallback
+        fun resolveColor(attrRes: Int, fallback: Int): Int {
+            return if (theme.resolveAttribute(attrRes, typedValue, true)) {
+                typedValue.data
+            } else {
+                fallback
+            }
+        }
+
+        // Determine dark mode for fallbacks
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+        val surfaceContainer = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainer,
+            if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
+        )
+
+        val surfaceLow = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainerLow,
+            if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
+        )
+
+        val primaryContainer = resolveColor(
+            com.google.android.material.R.attr.colorPrimaryContainer,
+            if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
+        )
+
+        val onPrimaryContainer = resolveColor(
+            com.google.android.material.R.attr.colorOnPrimaryContainer,
+            if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
+        )
+
+        val onSurfaceVariant = resolveColor(
+            com.google.android.material.R.attr.colorOnSurfaceVariant,
+            if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
+        )
+
+        // ----- Build UI -----
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceContainer)
             setPadding(dpToPx(20f), dpToPx(48f), dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar: back, title, save
+        // Top bar
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -61,22 +96,24 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dpToPx(24f) }
         }
-        val backBtn = TextView(this).apply {
-            text = "←"
-            textSize = 28f
-            setTextColor(onSurfaceVariant)
-            gravity = Gravity.CENTER
-            setPadding(dpToPx(8f), 0, dpToPx(16f), 0)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+
+        // Back button with circle background
+        val backBtn = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(surfaceLow)
+            }
+            setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+            layoutParams = LinearLayout.LayoutParams(dpToPx(50f), dpToPx(50f))
             isClickable = true
             isFocusable = true
+            contentDescription = getString(R.string.back_content_desc)
             setOnClickListener { finish() }
         }
+
         val topTitle = TextView(this).apply {
-            text = if (isNewNote) "New Note" else "Edit Note"
+            text = if (isNewNote) getString(R.string.new_note) else getString(R.string.edit_note)
             textSize = 22f
             setTextColor(onPrimaryContainer)
             setTypeface(null, Typeface.BOLD)
@@ -86,8 +123,9 @@ class NoteEditorActivity : AppCompatActivity() {
                 1f
             )
         }
+
         val saveBtn = TextView(this).apply {
-            text = "Save"
+            text = getString(R.string.save)
             textSize = 16f
             setTextColor(onPrimaryContainer)
             setTypeface(null, Typeface.BOLD)
@@ -100,14 +138,15 @@ class NoteEditorActivity : AppCompatActivity() {
             isFocusable = true
             setOnClickListener { saveNote() }
         }
+
         topBar.addView(backBtn)
         topBar.addView(topTitle)
         topBar.addView(saveBtn)
         root.addView(topBar)
 
-        // Title input
+        // Title label
         val titleLabel = TextView(this).apply {
-            text = "Title"
+            text = getString(R.string.title)
             textSize = 14f
             setTextColor(onSurfaceVariant)
             layoutParams = LinearLayout.LayoutParams(
@@ -118,7 +157,7 @@ class NoteEditorActivity : AppCompatActivity() {
         root.addView(titleLabel)
 
         titleEdit = EditText(this).apply {
-            hint = "Enter title..."
+            hint = getString(R.string.enter_title_hint)
             setHintTextColor(onSurfaceVariant)
             setTextColor(onPrimaryContainer)
             textSize = 18f
@@ -134,9 +173,9 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
-        // Content input
+        // Content label
         val contentLabel = TextView(this).apply {
-            text = "Content"
+            text = getString(R.string.content)
             textSize = 14f
             setTextColor(onSurfaceVariant)
             layoutParams = LinearLayout.LayoutParams(
@@ -147,7 +186,7 @@ class NoteEditorActivity : AppCompatActivity() {
         root.addView(contentLabel)
 
         contentEdit = EditText(this).apply {
-            hint = "Write your note here..."
+            hint = getString(R.string.write_content_hint)
             setHintTextColor(onSurfaceVariant)
             setTextColor(onPrimaryContainer)
             textSize = 16f
@@ -165,7 +204,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentEdit)
 
-        // Load existing note if editing
+        // Load existing note
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -180,19 +219,18 @@ class NoteEditorActivity : AppCompatActivity() {
         val title = titleEdit.text.toString().trim()
         val content = contentEdit.text.toString().trim()
         if (title.isEmpty() && content.isEmpty()) {
-            Toast.makeText(this, "Note cannot be empty", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.note_cannot_be_empty), Toast.LENGTH_SHORT).show()
             return
         }
-        val finalContent = if (content.isNotEmpty()) content else title
+        val fullContent = if (content.isNotEmpty()) "$title\n$content" else title
         val id = if (isNewNote) {
             val base = if (title.isNotEmpty()) title else "note"
             val sanitized = base.replace(Regex("[^a-zA-Z0-9\\-_]"), "_")
-            val timestamp = System.currentTimeMillis()
-            "$sanitized-$timestamp"
+            "$sanitized-${System.currentTimeMillis()}"
         } else {
             noteId
         }
-        NoteRepository.saveNote(id, finalContent)
+        NoteRepository.saveNote(id, title, fullContent)
         setResult(Activity.RESULT_OK)
         finish()
     }

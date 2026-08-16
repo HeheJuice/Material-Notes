@@ -64,9 +64,10 @@ object NoteRepository {
         val dir = getNotesDir()
         return dir.listFiles { file -> file.extension == "txt" }
             ?.mapNotNull { file ->
-                val content = file.readText()
-                val lines = content.lines()
-                val title = if (lines.isNotEmpty() && lines[0].isNotBlank()) lines[0] else file.nameWithoutExtension
+                val fullText = file.readText()
+                val lines = fullText.lines()
+                val title = if (lines.isNotEmpty()) lines.first() else file.nameWithoutExtension
+                val content = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
                 Note(
                     id = file.nameWithoutExtension,
                     title = title,
@@ -81,16 +82,18 @@ object NoteRepository {
     fun getNote(id: String): Note? {
         val file = getNotesDir().resolve("$id.txt")
         return if (file.exists()) {
-            val content = file.readText()
-            val lines = content.lines()
-            val title = if (lines.isNotEmpty() && lines[0].isNotBlank()) lines[0] else id
+            val fullText = file.readText()
+            val lines = fullText.lines()
+            val title = if (lines.isNotEmpty()) lines.first() else id
+            val content = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
             Note(id, title, content, file.lastModified())
         } else null
     }
 
-    fun saveNote(id: String, content: String) {
+    fun saveNote(id: String, title: String, content: String) {
         val file = getNotesDir().resolve("$id.txt")
-        file.writeText(content)
+        val fullText = if (content.isNotEmpty()) "$title\n$content" else title
+        file.writeText(fullText)
     }
 
     fun deleteNote(id: String) {
@@ -584,7 +587,6 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                // Open the note editor
                 val intent = Intent(this@NotesMainAct, NoteEditorActivity::class.java)
                 startActivity(intent)
             }
@@ -606,7 +608,7 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                Toast.makeText(this@NotesMainAct, "Import Notes clicked (coming soon)", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@NotesMainAct, getString(R.string.import_notes_toast), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -716,7 +718,7 @@ class NotesMainAct : AppCompatActivity() {
                 shape = GradientDrawable.OVAL
                 setColor(surfaceContainerLowColor)
             }
-            contentDescription = "Add"
+            contentDescription = getString(R.string.add_button_content_desc)
             isClickable = true
             isFocusable = true
             layoutParams = LinearLayout.LayoutParams(dpToPx(52f), dpToPx(52f)).apply {

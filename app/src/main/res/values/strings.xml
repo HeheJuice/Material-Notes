@@ -15,4 +15,13 @@
     <!-- Menu Actions -->
     <string name="create_notes">Create Notes</string>
     <string name="import_notes">Import Notes</string>
+    <string name="save">Save</string>
+<string name="title">Title</string>
+<string name="content">Content</string>
+<string name="new_note">New Note</string>
+<string name="edit_note">Edit Note</string>
+<string name="enter_title_hint">Enter title...</string>
+<string name="write_content_hint">Write your note here...</string>
+<string name="note_cannot_be_empty">Note cannot be empty</string>
+<string name="back_content_desc">Back</string>
 </resources>
