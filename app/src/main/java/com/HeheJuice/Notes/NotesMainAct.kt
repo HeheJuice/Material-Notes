@@ -27,12 +27,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonGroup
 import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
@@ -212,9 +212,13 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Horizontal layout for separated pill buttons with a compact gap
-        val themeSelectorContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        // Material 3 Expressive Connected Button Group
+        val groupContext = ContextThemeWrapper(
+            this,
+            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonGroup_Connected
+        )
+
+        val themeSelectorContainer = MaterialButtonGroup(groupContext).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -254,14 +258,6 @@ class NotesMainAct : AppCompatActivity() {
             intArrayOf(cardBgColor, activeTextColor) 
         )
 
-        val rippleColorList = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(
-                ColorUtils.setAlphaComponent(cardBgColor, 60),
-                ColorUtils.setAlphaComponent(activeTextColor, 40)
-            )
-        )
-
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
@@ -275,20 +271,14 @@ class NotesMainAct : AppCompatActivity() {
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
-                ).apply {
-                    if (index > 0) {
-                        marginStart = dpToPx(6f) // Reduced gap between pills
-                    }
-                }
+                )
 
                 isCheckable = true
                 isChecked = isActive
 
                 backgroundTintList = buttonBgTint
                 setTextColor(buttonTextTint)
-                rippleColor = rippleColorList
-                strokeWidth = 0
-                cornerRadius = dpToPx(100f) // Pill shape
+                strokeWidth = 0 // Completely remove stroke/border
                 
                 setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
 
