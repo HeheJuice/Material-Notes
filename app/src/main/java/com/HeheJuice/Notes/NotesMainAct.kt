@@ -10,7 +10,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -55,7 +54,7 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var contentHolder: FrameLayout
     private lateinit var appNamePill: TextView
 
-    // Colors (Material You Theme Attributes)
+    // Colors (MD3 Expressive Theme Attributes)
     private var windowBgColor: Int = 0
     private var accentColor: Int = 0
     private var activeTextColor: Int = 0
@@ -93,16 +92,14 @@ class NotesMainAct : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // ----- Apply Saved Theme Preference before super.onCreate -----
         val prefs = getPreferences(Context.MODE_PRIVATE)
-        val savedTheme = prefs.getInt("app_theme", 0) // 0: System, 1: Light, 2: Dark
+        val savedTheme = prefs.getInt("app_theme", 0)
         when (savedTheme) {
             0 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
             1 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
             2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         }
 
-        // Restore active tab state if available
         if (savedInstanceState != null) {
             isNotesActive = savedInstanceState.getBoolean("is_notes_active", true)
         }
@@ -111,19 +108,16 @@ class NotesMainAct : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        // ----- Force Dynamic Colors Application -----
         DynamicColors.applyToActivityIfAvailable(this)
 
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- Status Bar Visibility Fix for Light Mode -----
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Resolve Theme Attributes for 100% Color Match -----
         windowBgColor = resolveAttrOrDefault(
             com.google.android.material.R.attr.colorSurfaceContainer,
             if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#F3EDF7")
@@ -148,7 +142,6 @@ class NotesMainAct : AppCompatActivity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(windowBgColor) }
 
-        // ----- Content containers -----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -162,7 +155,6 @@ class NotesMainAct : AppCompatActivity() {
             visibility = if (isNotesActive) View.GONE else View.VISIBLE
         }
 
-        // Populate Settings Page UI
         val settingsScrollView = ScrollView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -180,12 +172,11 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // App Theme Card
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(24f).toFloat()
+                cornerRadius = dpToPx(28f).toFloat() // MD3E Expressive large container radius
                 setColor(cardBgColor)
             }
             setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
@@ -208,7 +199,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Custom Clean Toggle Group (Exact Color Match with Apply Button) -----
+        // ----- MD3E Connected Button Group (Segmented Control Track) -----
         val themeSelectorContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
@@ -217,7 +208,7 @@ class NotesMainAct : AppCompatActivity() {
             )
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
+                cornerRadius = dpToPx(28f).toFloat() // Expressive pill container shape
                 setColor(resolveAttrOrDefault(com.google.android.material.R.attr.colorSurfaceVariant, secondaryBtnColor))
             }
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
@@ -238,7 +229,7 @@ class NotesMainAct : AppCompatActivity() {
                 btn.background = if (isSelected) {
                     GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(100f).toFloat()
+                        cornerRadius = dpToPx(24f).toFloat() // Expressive inner segment shape
                         setColor(accentColor)
                     }
                 } else null
@@ -247,8 +238,6 @@ class NotesMainAct : AppCompatActivity() {
         }
 
         themeOptions.forEachIndexed { index, optionName ->
-            val isActive = (savedTheme == index)
-
             val optionBtn = TextView(this).apply {
                 text = optionName
                 textSize = 12f
@@ -275,7 +264,6 @@ class NotesMainAct : AppCompatActivity() {
 
         updateToggleVisuals(savedTheme)
 
-        // ----- Apply Theme Button (Primary Container) -----
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
@@ -284,7 +272,7 @@ class NotesMainAct : AppCompatActivity() {
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
+                cornerRadius = dpToPx(28f).toFloat() // MD3E Expressive pill shape
                 setColor(accentColor)
             }
             setPadding(dpToPx(24f), dpToPx(16f), dpToPx(24f), dpToPx(16f))
@@ -335,7 +323,6 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- Top Bar Layout -----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -345,7 +332,6 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
         }
 
-        // App Name Pill (Left)
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
@@ -354,7 +340,7 @@ class NotesMainAct : AppCompatActivity() {
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
+                cornerRadius = dpToPx(28f).toFloat()
                 setColor(cardBgColor)
             }
             setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
@@ -373,7 +359,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Menu Button Container (Right)
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -403,7 +388,6 @@ class NotesMainAct : AppCompatActivity() {
         topBarLayout.addView(topBarRefreshContainer)
         rootFrame.addView(topBarLayout)
 
-        // ----- Dim Background Overlay for Menu -----
         dimOverlay = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -418,7 +402,6 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- Expanding Menu Container -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -435,7 +418,7 @@ class NotesMainAct : AppCompatActivity() {
         val createPillBackground = {
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
+                cornerRadius = dpToPx(28f).toFloat()
                 setColor(cardBgColor)
             }
         }
@@ -454,7 +437,6 @@ class NotesMainAct : AppCompatActivity() {
         val createIcon = tintDrawableFunc(editNoteDrawable, activeTextColor)
         val importIcon = tintDrawableFunc(boxAddDrawable, activeTextColor)
 
-        // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
             textSize = 14f
@@ -474,7 +456,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Menu Item: Import Notes Pill
         val importNotesItem = TextView(this).apply {
             text = getString(R.string.import_notes)
             textSize = 14f
@@ -498,7 +479,6 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
-        // ----- Bottom bar layout -----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -509,21 +489,19 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // ----- Tab pill container -----
         val tabPillContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
+                cornerRadius = dpToPx(28f).toFloat()
                 setColor(cardBgColor)
             }
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(accentColor)
-                cornerRadius = dpToPx(100f).toFloat()
+                cornerRadius = dpToPx(24f).toFloat()
             }
             layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f), Gravity.CENTER_VERTICAL)
         }
@@ -540,7 +518,6 @@ class NotesMainAct : AppCompatActivity() {
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
-        // Notes tab
         notesTabBtn = TextView(this).apply {
             text = getString(R.string.nav_notes)
             textSize = 14f
@@ -563,7 +540,6 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
         }
 
-        // Settings tab
         settingsTabBtn = TextView(this).apply {
             text = getString(R.string.nav_settings)
             textSize = 14f
@@ -592,7 +568,6 @@ class NotesMainAct : AppCompatActivity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        // ----- + Button (FAB-like) -----
         plusIconDrawable = PlusDrawable(activeTextColor, dpToPx(3f).toFloat())
         plusBtnRef = ImageView(this).apply {
             setImageDrawable(plusIconDrawable)
@@ -618,7 +593,6 @@ class NotesMainAct : AppCompatActivity() {
 
         setContentView(rootFrame)
 
-        // ----- Tab switching logic & Pill animation -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -701,7 +675,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Click listeners for tabs -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -716,7 +689,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Initial pill layout -----
         tabPillContainer.doOnLayout {
             val targetBtn = if (isNotesActive) notesTabBtn else settingsTabBtn
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = targetBtn.width }
@@ -724,7 +696,6 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        // ----- Window insets (Dynamic Spacing) -----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
