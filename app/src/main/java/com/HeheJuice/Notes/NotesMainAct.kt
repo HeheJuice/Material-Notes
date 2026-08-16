@@ -32,7 +32,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
 
 class NotesMainAct : AppCompatActivity() {
 
@@ -208,10 +207,9 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- MaterialButtonToggleGroup Implementation -----
-        val themeSelectorContainer = MaterialButtonToggleGroup(this).apply {
-            isSingleSelection = true
-            isSelectionRequired = true
+        // ----- Spaced Independent Buttons Container (M3 Expressive Style) -----
+        val themeSelectorContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -224,64 +222,43 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
-        val buttonIds = IntArray(themeOptions.size)
-        val buttonStates = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(
-                accentColor,
-                secondaryBtnColor
-            )
-        )
-        val textStates = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(
-                activeTextColor,
-                secondaryTextColor
-            )
-        )
-
         themeOptions.forEachIndexed { index, optionName ->
-            val buttonId = View.generateViewId()
-            buttonIds[index] = buttonId
+            val isSelected = (savedTheme == index)
 
             val optionBtn = MaterialButton(this).apply {
-                id = buttonId
                 text = optionName
                 textSize = 13f
                 isAllCaps = false
                 setTypeface(null, Typeface.BOLD)
-                backgroundTintList = buttonStates
-                setTextColor(textStates)
+
+                // Expressive independent pill styling
+                backgroundTintList = ColorStateList.valueOf(if (isSelected) accentColor else secondaryBtnColor)
+                setTextColor(if (isSelected) activeTextColor else secondaryTextColor)
                 strokeColor = ColorStateList.valueOf(Color.TRANSPARENT)
                 strokeWidth = 0
-                isClickable = true
-                isFocusable = true
+                cornerRadius = dpToPx(100f)
+                insetTop = 0
+                insetBottom = 0
+
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    dpToPx(44f),
                     1f
-                )
-            }
-            themeSelectorContainer.addView(optionBtn)
-        }
+                ).apply {
+                    if (index > 0) {
+                        marginStart = dpToPx(8f) // Creates the distinct gap between buttons
+                    }
+                }
 
-        themeSelectorContainer.check(buttonIds[savedTheme])
-
-        themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
-            if (isChecked) {
-                val index = buttonIds.indexOf(checkedId)
-                if (index != -1 && savedTheme != index) {
-                    prefs.edit().putInt("app_theme", index).apply()
-                    group.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                    recreate()
+                setOnClickListener {
+                    if (savedTheme != index) {
+                        prefs.edit().putInt("app_theme", index).apply()
+                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                        recreate()
+                    }
                 }
             }
+            themeSelectorContainer.addView(optionBtn)
         }
 
         themeCard.addView(themeTitle)
