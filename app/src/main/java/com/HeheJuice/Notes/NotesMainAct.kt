@@ -157,10 +157,10 @@ class NotesMainAct : Activity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- Expanding Menu Container (Separated Pills) -----
+        // ----- Expanding Menu Container (Separated Individual Pills) -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            clipChildren = false 
+            clipChildren = false
             clipToPadding = false
             visibility = View.GONE
             alpha = 0f
@@ -176,7 +176,7 @@ class NotesMainAct : Activity() {
         val createPillBackground = {
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat() // Full pill shape
+                cornerRadius = dpToPx(100f).toFloat()
                 setColor(cardBgColor)
             }
         }
@@ -189,6 +189,20 @@ class NotesMainAct : Activity() {
             gravity = Gravity.END
         }
 
+        val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
+        val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
+
+        val tintDrawable: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+            drawable?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
+        }
+
+        val createIcon = tintDrawable(notesDrawable, activeTextColor)
+        val importIcon = tintDrawable(settingsDrawable, activeTextColor)
+
         // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
             text = "Create Notes"
@@ -196,8 +210,9 @@ class NotesMainAct : Activity() {
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
-            elevation = dpToPx(4f).toFloat()
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            compoundDrawablePadding = dpToPx(12f)
+            setCompoundDrawablesWithIntrinsicBounds(createIcon, null, null, null)
             layoutParams = menuItemParams
             isClickable = true
             isFocusable = true
@@ -215,8 +230,9 @@ class NotesMainAct : Activity() {
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
-            elevation = dpToPx(4f).toFloat()
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            compoundDrawablePadding = dpToPx(12f)
+            setCompoundDrawablesWithIntrinsicBounds(importIcon, null, null, null)
             layoutParams = menuItemParams
             isClickable = true
             isFocusable = true
@@ -249,7 +265,6 @@ class NotesMainAct : Activity() {
                 cornerRadius = dpToPx(100f).toFloat()
                 setColor(cardBgColor)
             }
-            elevation = dpToPx(4f).toFloat()
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
@@ -270,10 +285,6 @@ class NotesMainAct : Activity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
         }
-
-        // Drawables
-        val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
-        val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
         // Notes tab
         notesTabBtn = TextView(this).apply {
@@ -327,7 +338,6 @@ class NotesMainAct : Activity() {
                 shape = GradientDrawable.OVAL
                 setColor(cardBgColor)
             }
-            elevation = dpToPx(4f).toFloat()
             contentDescription = "Add"
             isClickable = true
             isFocusable = true
@@ -458,10 +468,7 @@ class NotesMainAct : Activity() {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
 
-            // Margin for the bottom bar
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
-            
-            // Push the menu pills significantly higher to avoid overlapping the bottom bar
             (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
             
             insets
@@ -472,7 +479,6 @@ class NotesMainAct : Activity() {
         isMenuExpanded = true
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-        // Rotate plus to look like an X
         plusBtnRef.animate()
             .rotation(45f)
             .setDuration(250)
@@ -484,9 +490,19 @@ class NotesMainAct : Activity() {
 
         menuOverlayContainer.visibility = View.VISIBLE
         menuOverlayContainer.alpha = 0f
-        menuOverlayContainer.translationY = dpToPx(24f).toFloat()
+        menuOverlayContainer.scaleX = 0.8f
+        menuOverlayContainer.scaleY = 0.8f
+        menuOverlayContainer.translationY = dpToPx(16f).toFloat()
+
+        menuOverlayContainer.doOnLayout {
+            it.pivotX = it.width.toFloat()
+            it.pivotY = it.height.toFloat()
+        }
+
         menuOverlayContainer.animate()
             .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
             .translationY(0f)
             .setDuration(250)
             .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f))
@@ -497,7 +513,6 @@ class NotesMainAct : Activity() {
         isMenuExpanded = false
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-        // Rotate X back to Plus
         plusBtnRef.animate()
             .rotation(0f)
             .setDuration(250)
@@ -508,16 +523,20 @@ class NotesMainAct : Activity() {
             dimOverlay.visibility = View.GONE
         }.start()
 
+        menuOverlayContainer.pivotX = menuOverlayContainer.width.toFloat()
+        menuOverlayContainer.pivotY = menuOverlayContainer.height.toFloat()
+
         menuOverlayContainer.animate()
             .alpha(0f)
-            .translationY(dpToPx(24f).toFloat())
+            .scaleX(0.8f)
+            .scaleY(0.8f)
+            .translationY(dpToPx(16f).toFloat())
             .setDuration(200)
             .withEndAction {
                 menuOverlayContainer.visibility = View.GONE
             }.start()
     }
 
-    // ----- Helper: Clean Plus Drawable -----
     private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = colorInt
