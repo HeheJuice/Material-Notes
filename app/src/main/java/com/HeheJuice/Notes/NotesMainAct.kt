@@ -250,7 +250,7 @@ class NotesMainAct : AppCompatActivity() {
             val buttonId = View.generateViewId()
             buttonIds[index] = buttonId
 
-            val optionBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedButtonStyle).apply {
+            val optionBtn = MaterialButton(this).apply {
                 id = buttonId
                 text = optionName
                 textSize = 13f
@@ -262,7 +262,7 @@ class NotesMainAct : AppCompatActivity() {
                 strokeWidth = 0
                 isClickable = true
                 isFocusable = true
-                layoutParams = MaterialButtonToggleGroup.LayoutParams(
+                layoutParams = LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
@@ -273,12 +273,12 @@ class NotesMainAct : AppCompatActivity() {
 
         themeSelectorContainer.check(buttonIds[savedTheme])
 
-        themeSelectorContainer.addOnButtonCheckedListener { _, checkedId, isChecked ->
+        themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
                 val index = buttonIds.indexOf(checkedId)
                 if (index != -1 && savedTheme != index) {
                     prefs.edit().putInt("app_theme", index).apply()
-                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                    group.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                     recreate()
                 }
             }
