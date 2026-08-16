@@ -13,6 +13,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowInsets
 import android.view.animation.DecelerateInterpolator
@@ -25,6 +26,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
+import androidx.core.view.updateLayoutParams
 
 class NotesMainAct : Activity() {
 
@@ -41,6 +43,10 @@ class NotesMainAct : Activity() {
     private lateinit var dimOverlay: View
     private lateinit var plusIconDrawable: PlusDrawable
     private lateinit var plusBtnRef: ImageView
+
+    // Top Bar views
+    private lateinit var topBarLayout: FrameLayout
+    private lateinit var contentHolder: FrameLayout
 
     // Colors (surface-based)
     private var windowBgColor: Int = 0
@@ -133,7 +139,7 @@ class NotesMainAct : Activity() {
             visibility = View.GONE
         }
 
-        val contentHolder = FrameLayout(this).apply {
+        contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
             )
@@ -141,6 +147,76 @@ class NotesMainAct : Activity() {
             addView(settingsContainer)
         }
         rootFrame.addView(contentHolder)
+
+        // ----- Top Bar Layout -----
+        topBarLayout = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
+        }
+
+        // App Name Pill (Left)
+        val appNamePill = TextView(this).apply {
+            text = "Notes"
+            textSize = 14f
+            setTextColor(activeTextColor)
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(cardBgColor)
+            }
+            setPadding(dpToPx(16f), dpToPx(10f), dpToPx(16f), dpToPx(10f))
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.START or Gravity.CENTER_VERTICAL
+            )
+        }
+
+        // Refresh/Menu Button Container (Right) using R.drawable.menu_24px
+        val topBarRefreshContainer = FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(cardBgColor)
+            }
+            layoutParams = FrameLayout.LayoutParams(dpToPx(44f), dpToPx(44f), Gravity.END or Gravity.CENTER_VERTICAL)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                // Does nothing for now as requested
+                Toast.makeText(this@NotesMainAct, "Menu clicked", Toast.LENGTH_SHORT).show()
+            }
+            setOnTouchListener(pressScaleTouchListener)
+        }
+
+        val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (e: Exception) { null }
+        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+            drawable?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
+        }
+
+        val topBarRefreshIcon = ImageView(this).apply {
+            setImageDrawable(tintDrawableFunc(menuDrawable, activeTextColor))
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            layoutParams = FrameLayout.LayoutParams(
+                dpToPx(24f),
+                dpToPx(24f),
+                Gravity.CENTER
+            )
+        }
+
+        topBarRefreshContainer.addView(topBarRefreshIcon)
+        topBarLayout.addView(appNamePill)
+        topBarLayout.addView(topBarRefreshContainer)
+        rootFrame.addView(topBarLayout)
 
         // ----- Dim Background Overlay for Menu -----
         dimOverlay = View(this).apply {
@@ -191,6 +267,8 @@ class NotesMainAct : Activity() {
 
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
+        val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
+        val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
         val tintDrawable: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
             drawable?.let {
@@ -200,8 +278,8 @@ class NotesMainAct : Activity() {
             }
         }
 
-        val createIcon = tintDrawable(notesDrawable, activeTextColor)
-        val importIcon = tintDrawable(settingsDrawable, activeTextColor)
+        val createIcon = tintDrawable(editNoteDrawable, activeTextColor)
+        val importIcon = tintDrawable(boxAddDrawable, activeTextColor)
 
         // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
@@ -462,12 +540,27 @@ class NotesMainAct : Activity() {
 
         // ----- Window insets (Dynamic Spacing) -----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
+            val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                insets.getInsets(WindowInsets.Type.statusBars()).top
+            } else {
+                @Suppress("DEPRECATION") insets.systemWindowInsetTop
+            }
+
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.navigationBars() or WindowInsets.Type.ime()).bottom
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
 
+            // Push top bar down below the status bar
+            topBarLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                topMargin = topInset
+            }
+
+            // Ensure content doesn't hide behind the top bar
+            contentHolder.setPadding(0, topInset + dpToPx(60f), 0, 0)
+
+            // Adjust bottom bar and expanding menu positions
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
             (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
             
