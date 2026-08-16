@@ -233,9 +233,10 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
+        // FIX: Use Widget_Material3Expressive_Button (Filled) so backgroundTintList correctly matches Google Keep colors
         val buttonContext = ContextThemeWrapper(
             this,
-            com.google.android.material.R.style.Widget_Material3Expressive_Button_OutlinedButton
+            com.google.android.material.R.style.Widget_Material3Expressive_Button
         )
 
         val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -304,7 +305,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Round & Monet Apply Theme Button (Matching Selected Theme & Selected Tab Colors) -----
+        // ----- Round & Monet Apply Theme Button -----
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
@@ -411,9 +412,7 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
             isFocusable = true
-            setOnClickListener {
-                // Empty as requested
-            }
+            setOnClickListener {}
             setOnTouchListener(pressScaleTouchListener)
         }
 
@@ -485,7 +484,6 @@ class NotesMainAct : AppCompatActivity() {
         val createIcon = tintDrawableFunc(editNoteDrawable, activeTextColor)
         val importIcon = tintDrawableFunc(boxAddDrawable, activeTextColor)
 
-        // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
             textSize = 14f
@@ -505,7 +503,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Menu Item: Import Notes Pill
         val importNotesItem = TextView(this).apply {
             text = getString(R.string.import_notes)
             textSize = 14f
@@ -540,7 +537,6 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // ----- Tab pill container -----
         val tabPillContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -550,7 +546,6 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(accentColor)
@@ -571,7 +566,6 @@ class NotesMainAct : AppCompatActivity() {
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
-        // Notes tab
         notesTabBtn = TextView(this).apply {
             text = getString(R.string.nav_notes)
             textSize = 14f
@@ -594,7 +588,6 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
         }
 
-        // Settings tab
         settingsTabBtn = TextView(this).apply {
             text = getString(R.string.nav_settings)
             textSize = 14f
@@ -623,7 +616,6 @@ class NotesMainAct : AppCompatActivity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        // ----- + Button (FAB-like) -----
         plusIconDrawable = PlusDrawable(activeTextColor, dpToPx(3f).toFloat())
         plusBtnRef = ImageView(this).apply {
             setImageDrawable(plusIconDrawable)
@@ -638,11 +630,7 @@ class NotesMainAct : AppCompatActivity() {
                 marginStart = dpToPx(12f)
             }
             setOnClickListener {
-                if (isMenuExpanded) {
-                    closeMenu()
-                } else {
-                    openMenu()
-                }
+                if (isMenuExpanded) closeMenu() else openMenu()
             }
             setOnTouchListener(pressScaleTouchListener)
         }
@@ -653,7 +641,6 @@ class NotesMainAct : AppCompatActivity() {
 
         setContentView(rootFrame)
 
-        // ----- Tab switching logic & Pill animation -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -736,7 +723,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Click listeners for tabs -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -751,7 +737,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Initial pill layout -----
         tabPillContainer.doOnLayout {
             val targetBtn = if (isNotesActive) notesTabBtn else settingsTabBtn
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = targetBtn.width }
@@ -759,7 +744,6 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        // ----- Window insets (Dynamic Spacing) -----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
