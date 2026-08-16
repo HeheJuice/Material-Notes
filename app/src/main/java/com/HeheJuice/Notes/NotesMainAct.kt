@@ -15,7 +15,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.Window
 import android.view.WindowInsets
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -31,14 +33,15 @@ class NotesMainAct : Activity() {
     private lateinit var settingsContainer: FrameLayout
     private var isNotesActive = true
 
-    // Polished surface-variant colors matching the CrashLogActivity reference style
-    private var accentColor: Int = 0          
-    private var activeTextColor: Int = 0      
-    private var secondaryTextColor: Int = 0   
-    private var cardBgColor: Int = 0          
-    private var cardBorderColor: Int = 0      
+    // Colors (surface-based, matching CrashLogActivity reference)
+    private var accentColor: Int = 0
+    private var activeTextColor: Int = 0
+    private var secondaryTextColor: Int = 0
+    private var cardBgColor: Int = 0
+    private var cardBorderColor: Int = 0
+    private var secondaryBtnColor: Int = 0
 
-    // Reference press-scale touch listener for smooth feedback
+    // Press-scale touch listener (from CrashLogActivity)
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
         val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
 
@@ -50,7 +53,7 @@ class NotesMainAct : Activity() {
                     .scaleY(0.95f)
                     .alpha(0.88f)
                     .setDuration(120)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
+                    .setInterpolator(DecelerateInterpolator(1.5f))
                     .start()
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -75,7 +78,7 @@ class NotesMainAct : Activity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- Color Resolution (Subdued, surface-based matching CrashLogActivity reference) -----
+        // ----- Color Resolution (subdued, surface-based) -----
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             accentColor = ContextCompat.getColor(
                 this,
@@ -97,6 +100,7 @@ class NotesMainAct : Activity() {
 
         secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
         cardBorderColor = if (isDark) Color.parseColor("#49454F") else Color.parseColor("#E7E0EC")
+        secondaryBtnColor = if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(cardBgColor) }
 
@@ -122,7 +126,7 @@ class NotesMainAct : Activity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- Bottom bar layout -----
+        // ----- Bottom bar layout (with + button) -----
         val bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -135,6 +139,7 @@ class NotesMainAct : Activity() {
             }
         }
 
+        // ----- Tab pill container -----
         val tabPillContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -163,9 +168,11 @@ class NotesMainAct : Activity() {
             )
         }
 
+        // Drawables
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
+        // Notes tab
         notesTabBtn = TextView(this).apply {
             text = "Notes"
             textSize = 14f
@@ -175,15 +182,13 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
             setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
             )
         }
 
+        // Settings tab
         settingsTabBtn = TextView(this).apply {
             text = "Settings"
             textSize = 14f
@@ -193,9 +198,6 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
             setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -207,11 +209,34 @@ class NotesMainAct : Activity() {
 
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
+
+        // ----- + Button (FAB-like, matches search button from CrashLogActivity) -----
+        val plusBtn = ImageView(this).apply {
+            setImageDrawable(createPlusDrawable())
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(cardBgColor)
+                setStroke(dpToPx(1f), cardBorderColor)
+            }
+            contentDescription = "Add"
+            isClickable = true
+            isFocusable = true
+            layoutParams = LinearLayout.LayoutParams(dpToPx(52f), dpToPx(52f)).apply {
+                marginStart = dpToPx(8f)
+            }
+            setOnClickListener {
+                Toast.makeText(this@NotesMainAct, "Add button clicked", Toast.LENGTH_SHORT).show()
+            }
+            setOnTouchListener(pressScaleTouchListener)
+        }
+
         bottomBarLayout.addView(tabPillContainer)
+        bottomBarLayout.addView(plusBtn)
         rootFrame.addView(bottomBarLayout)
 
         setContentView(rootFrame)
 
+        // ----- Tab switching logic (with long-press and drag from CrashLogActivity) -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -224,7 +249,6 @@ class NotesMainAct : Activity() {
 
         tintDrawableColor(notesTabBtn, activeTextColor)
 
-        // ----- Position & Icon Visibility Interpolation -----
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
             val x0 = notesTabBtn.left.toFloat()
@@ -290,7 +314,7 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // ----- Click & Long-Click Listeners -----
+        // ----- Click listeners -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -305,22 +329,70 @@ class NotesMainAct : Activity() {
             }
         }
 
-        notesTabBtn.setOnLongClickListener {
-            true
+        // ----- Long-click + Drag logic (from CrashLogActivity) -----
+        tabPillContainer.setOnTouchListener { view, event ->
+            val x0 = notesTabBtn.left.toFloat() + (notesTabBtn.width / 2f)
+            val x1 = settingsTabBtn.left.toFloat() + (settingsTabBtn.width / 2f)
+
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    pillAnimator?.cancel()
+                    view.animate().cancel()
+                    view.animate()
+                        .scaleX(0.95f)
+                        .scaleY(0.95f)
+                        .alpha(0.9f)
+                        .setDuration(120)
+                        .setInterpolator(DecelerateInterpolator(1.5f))
+                        .start()
+
+                    val touchX = event.x - tabPillContainer.paddingLeft
+                    val progress = if (x1 > x0) ((touchX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
+                    updatePillPosition(progress)
+                    true
+                }
+
+                MotionEvent.ACTION_MOVE -> {
+                    val touchX = event.x - tabPillContainer.paddingLeft
+                    val progress = if (x1 > x0) ((touchX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
+                    updatePillPosition(progress)
+                    true
+                }
+
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val touchX = event.x - tabPillContainer.paddingLeft
+                    val midPoint = (x0 + x1) / 2f
+                    val targetIsNotes = touchX < midPoint
+                    val targetProgress = if (targetIsNotes) 0f else 1f
+
+                    animatePillTo(targetProgress) {
+                        switchTab(targetIsNotes)
+                    }
+
+                    view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+
+                    view.animate().cancel()
+                    view.animate()
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .alpha(1.0f)
+                        .setDuration(350)
+                        .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f))
+                        .start()
+                    true
+                }
+                else -> false
+            }
         }
 
-        settingsTabBtn.setOnLongClickListener {
-            true
-        }
-
-        // Initial pill layout configuration
+        // ----- Initial pill layout -----
         tabPillContainer.doOnLayout {
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = notesTabBtn.width }
             slidingPillView.translationX = notesTabBtn.left.toFloat()
             slidingPillView.requestLayout()
         }
 
-        // Window insets
+        // ----- Window insets -----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.navigationBars() or WindowInsets.Type.ime()).bottom
@@ -330,6 +402,28 @@ class NotesMainAct : Activity() {
 
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
             insets
+        }
+    }
+
+    // ----- Helper: Plus icon drawable -----
+    private fun createPlusDrawable(): android.graphics.drawable.Drawable {
+        return object : android.graphics.drawable.Drawable() {
+            private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = activeTextColor
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = dpToPx(3f).toFloat()
+                strokeCap = android.graphics.Paint.Cap.ROUND
+            }
+            override fun draw(canvas: android.graphics.Canvas) {
+                val cx = bounds.exactCenterX()
+                val cy = bounds.exactCenterY()
+                val size = dpToPx(9f).toFloat()
+                canvas.drawLine(cx - size, cy, cx + size, cy, paint)
+                canvas.drawLine(cx, cy - size, cx, cy + size, paint)
+            }
+            override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+            override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
+            @Deprecated("Deprecated in Java") override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
         }
     }
 
