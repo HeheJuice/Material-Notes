@@ -4,7 +4,6 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -32,7 +31,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonGroup
+import com.google.android.material.button.MaterialButtonToggleGroup
 
 class NotesMainAct : AppCompatActivity() {
 
@@ -62,7 +61,6 @@ class NotesMainAct : AppCompatActivity() {
     private var activeTextColor: Int = 0
     private var secondaryTextColor: Int = 0
     private var cardBgColor: Int = 0
-    private var pillUnselectedBg: Int = 0
 
     // Press-scale touch listener
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
@@ -118,11 +116,10 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Harmonious MD3 Expressive Color Palette -----
+        // ----- Harmonious MD3 Color Palette -----
         windowBgColor = if (isDark) Color.BLACK else Color.WHITE
         cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
         secondaryTextColor = if (isDark) Color.parseColor("#E6E1E5") else Color.parseColor("#49454F")
-        pillUnselectedBg = if (isDark) Color.parseColor("#36343B") else Color.parseColor("#E7E0EC")
 
         accentColor = if (isDark) Color.parseColor("#F2B8B5") else Color.parseColor("#6750A4")
         activeTextColor = if (isDark) Color.parseColor("#601410") else Color.parseColor("#FFFFFF")
@@ -159,7 +156,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // ----- App Theme Card (now using M3 Connected ButtonGroup) -----
+        // App Theme Card
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -187,23 +184,55 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Material 3 Expressive Connected Button Group -----
-        val themeGroup = MaterialButtonGroup(this).apply {
+        // ----- MaterialButtonToggleGroup Built Programmatically in Kotlin -----
+        val themeToggleGroup = MaterialButtonToggleGroup(this).apply {
+            isSingleSelection = true
+            isSelectionRequired = true
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            // Connected style – no gaps, rounded outer corners
-            setStyle(MaterialButtonGroup.STYLE_CONNECTED)
-            isSingleSelection = true
-            // Save selection and recreate
-            setOnCheckedChangeListener { group, checkedId ->
-                val index = when (checkedId) {
-                    R.id.theme_system -> 0
-                    R.id.theme_light -> 1
-                    R.id.theme_dark -> 2
-                    else -> 0
-                }
+        }
+
+        val themeOptions = listOf(
+            Pair(getString(R.string.theme_system), 0),
+            Pair(getString(R.string.theme_light), 1),
+            Pair(getString(R.string.theme_dark), 2)
+        )
+
+        var checkedButtonIdToSelect = View.NO_ID
+
+        themeOptions.forEach { (optionName, index) ->
+            val button = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                id = View.generateViewId()
+                tag = index
+                text = optionName
+                textSize = 13f
+                isAllCaps = false
+                setTypeface(null, Typeface.BOLD)
+                
+                layoutParams = MaterialButtonToggleGroup.LayoutParams(
+                    0,
+                    dpToPx(48f),
+                    1f
+                )
+            }
+
+            themeToggleGroup.addView(button)
+
+            if (savedTheme == index) {
+                checkedButtonIdToSelect = button.id
+            }
+        }
+
+        if (checkedButtonIdToSelect != View.NO_ID) {
+            themeToggleGroup.check(checkedButtonIdToSelect)
+        }
+
+        themeToggleGroup.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                val selectedButton = group.findViewById<View>(checkedId)
+                val index = selectedButton?.tag as? Int ?: 0
                 if (savedTheme != index) {
                     prefs.edit().putInt("app_theme", index).apply()
                     performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -212,55 +241,8 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // State arrays for checked / unchecked
-        val states = arrayOf(
-            intArrayOf(android.R.attr.state_checked),
-            intArrayOf()
-        )
-
-        // Background: accent when checked, transparent otherwise
-        val bgColors = intArrayOf(accentColor, Color.TRANSPARENT)
-        val bgStateList = ColorStateList(states, bgColors)
-
-        // Stroke: accent when checked, secondary text color otherwise
-        val strokeColors = intArrayOf(accentColor, secondaryTextColor)
-        val strokeStateList = ColorStateList(states, strokeColors)
-
-        // Text color: active (onPrimary) when checked, secondary otherwise
-        val textColors = intArrayOf(activeTextColor, secondaryTextColor)
-        val textStateList = ColorStateList(states, textColors)
-
-        // Theme options: System, Light, Dark
-        val themeOptions = listOf(
-            Triple(getString(R.string.theme_system), 0, R.id.theme_system),
-            Triple(getString(R.string.theme_light), 1, R.id.theme_light),
-            Triple(getString(R.string.theme_dark), 2, R.id.theme_dark)
-        )
-
-        themeOptions.forEach { (optionName, index, id) ->
-            val button = MaterialButton(this).apply {
-                this.id = id
-                text = optionName
-                // Use outlined style as base (required for connected groups)
-                style = com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
-                // Apply custom states
-                backgroundTintList = bgStateList
-                strokeColor = strokeStateList
-                setTextColor(textStateList)
-                // No icons
-                iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
-                icon = null
-                // Set initial checked state
-                isChecked = (savedTheme == index)
-                isClickable = true
-                isFocusable = true
-                setOnTouchListener(pressScaleTouchListener)
-            }
-            themeGroup.addView(button)
-        }
-
         themeCard.addView(themeTitle)
-        themeCard.addView(themeGroup)
+        themeCard.addView(themeToggleGroup)
         settingsContentLayout.addView(themeCard)
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
