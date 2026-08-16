@@ -30,7 +30,7 @@ class NoteEditorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        // Apply Dynamic Colors (Monet) before any view creation
+        // Apply Dynamic Colors (Monet)
         DynamicColors.applyToActivityIfAvailable(this)
 
         // Initialize repository
@@ -42,7 +42,6 @@ class NoteEditorActivity : AppCompatActivity() {
         // ----- Resolve colors with fallbacks -----
         val typedValue = TypedValue()
 
-        // Helper to resolve attribute with fallback
         fun resolveColor(attrRes: Int, fallback: Int): Int {
             return if (theme.resolveAttribute(attrRes, typedValue, true)) {
                 typedValue.data
@@ -51,7 +50,6 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        // Determine dark mode for fallbacks
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
@@ -97,13 +95,14 @@ class NoteEditorActivity : AppCompatActivity() {
             ).apply { bottomMargin = dpToPx(24f) }
         }
 
-        // Back button with circle background
+        // Back button – matches "More" button
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(surfaceLow)
             }
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
             layoutParams = LinearLayout.LayoutParams(dpToPx(50f), dpToPx(50f))
             isClickable = true
@@ -215,6 +214,7 @@ class NoteEditorActivity : AppCompatActivity() {
         setContentView(root)
     }
 
+    // ✅ FIXED: pass raw content (without title) to repository
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
         val content = contentEdit.text.toString().trim()
@@ -222,7 +222,6 @@ class NoteEditorActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.note_cannot_be_empty), Toast.LENGTH_SHORT).show()
             return
         }
-        val fullContent = if (content.isNotEmpty()) "$title\n$content" else title
         val id = if (isNewNote) {
             val base = if (title.isNotEmpty()) title else "note"
             val sanitized = base.replace(Regex("[^a-zA-Z0-9\\-_]"), "_")
@@ -230,7 +229,8 @@ class NoteEditorActivity : AppCompatActivity() {
         } else {
             noteId
         }
-        NoteRepository.saveNote(id, title, fullContent)
+        // ✅ Pass title and content separately; repository adds title as first line
+        NoteRepository.saveNote(id, title, content)
         setResult(Activity.RESULT_OK)
         finish()
     }

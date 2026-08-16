@@ -92,6 +92,7 @@ object NoteRepository {
 
     fun saveNote(id: String, title: String, content: String) {
         val file = getNotesDir().resolve("$id.txt")
+        // Title is stored as the first line, content as the rest
         val fullText = if (content.isNotEmpty()) "$title\n$content" else title
         file.writeText(fullText)
     }
@@ -243,6 +244,9 @@ class NotesMainAct : AppCompatActivity() {
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
+                // Add padding to the RecyclerView itself (optional – we'll use item margins instead)
+                setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+                clipToPadding = false
             }
             notesRecyclerView = rv
             addView(rv)
@@ -976,7 +980,7 @@ class NotesMainAct : AppCompatActivity() {
             }.start()
     }
 
-    // ----- Inner adapter for notes list -----
+    // ----- Inner adapter for notes list with fixed margins -----
     inner class NotesListAdapter(
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
@@ -993,10 +997,15 @@ class NotesMainAct : AppCompatActivity() {
                     cornerRadius = dpToPx(12f).toFloat()
                     setColor(surfaceContainerLowColor)
                 }
+                // Layout params with left and right margins
                 layoutParams = RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = dpToPx(8f) }
+                ).apply {
+                    bottomMargin = dpToPx(8f)
+                    leftMargin = dpToPx(16f)
+                    rightMargin = dpToPx(16f)
+                }
                 isClickable = true
                 isFocusable = true
             }
