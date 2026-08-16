@@ -33,7 +33,6 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.HeheJuice.Notes.R
 
 class NotesMainAct : AppCompatActivity() {
 
@@ -64,7 +63,7 @@ class NotesMainAct : AppCompatActivity() {
     private var secondaryTextColor: Int = 0
     private var cardBgColor: Int = 0
 
-    // Helper to resolve dynamic Material / Monet theme attributes via project's R.attr
+    // Helper to resolve dynamic Material / Monet theme attributes via library R.attr classes
     private fun getThemeColor(attr: Int): Int {
         val typedValue = TypedValue()
         theme.resolveAttribute(attr, typedValue, true)
@@ -127,11 +126,11 @@ class NotesMainAct : AppCompatActivity() {
 
         // ----- Dynamic MD3 / Monet Color Resolution -----
         windowBgColor = getThemeColor(android.R.attr.colorBackground)
-        cardBgColor = getThemeColor(R.attr.colorSurfaceContainer)
-        secondaryTextColor = getThemeColor(R.attr.colorOnSurfaceVariant)
+        cardBgColor = getThemeColor(com.google.android.material.R.attr.colorSurfaceContainer)
+        secondaryTextColor = getThemeColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
 
-        accentColor = getThemeColor(R.attr.colorPrimary)
-        activeTextColor = getThemeColor(R.attr.colorOnPrimary)
+        accentColor = getThemeColor(androidx.appcompat.R.attr.colorPrimary)
+        activeTextColor = getThemeColor(com.google.android.material.R.attr.colorOnPrimary)
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(windowBgColor) }
 
@@ -183,7 +182,7 @@ class NotesMainAct : AppCompatActivity() {
         val themeTitle = TextView(this).apply {
             text = getString(R.string.setting_app_theme)
             textSize = 16f
-            setTextColor(getThemeColor(R.attr.colorOnSurface))
+            setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface))
             setTypeface(null, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -287,7 +286,7 @@ class NotesMainAct : AppCompatActivity() {
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
-            setTextColor(getThemeColor(R.attr.colorOnSurface))
+            setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface))
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
@@ -326,7 +325,7 @@ class NotesMainAct : AppCompatActivity() {
         val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (e: Exception) { null }
 
         val topBarRefreshIcon = ImageView(this).apply {
-            setImageDrawable(tintDrawableFunc(menuDrawable, getThemeColor(R.attr.colorOnSurface)))
+            setImageDrawable(tintDrawableFunc(menuDrawable, getThemeColor(com.google.android.material.R.attr.colorOnSurface)))
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             layoutParams = FrameLayout.LayoutParams(
                 dpToPx(26f),
@@ -388,7 +387,7 @@ class NotesMainAct : AppCompatActivity() {
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
-        val menuTextColor = getThemeColor(R.attr.colorOnSurface)
+        val menuTextColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
         val createIcon = tintDrawableFunc(editNoteDrawable, menuTextColor)
         val importIcon = tintDrawableFunc(boxAddDrawable, menuTextColor)
 
@@ -524,7 +523,7 @@ class NotesMainAct : AppCompatActivity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        plusIconDrawable = PlusDrawable(getThemeColor(R.attr.colorOnSurface), dpToPx(3f).toFloat())
+        plusIconDrawable = PlusDrawable(getThemeColor(com.google.android.material.R.attr.colorOnSurface), dpToPx(3f).toFloat())
         plusBtnRef = ImageView(this).apply {
             setImageDrawable(plusIconDrawable)
             background = GradientDrawable().apply {
