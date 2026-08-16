@@ -4,12 +4,14 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -30,6 +32,8 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
@@ -54,18 +58,18 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var contentHolder: FrameLayout
     private lateinit var appNamePill: TextView
 
-    // Colors
+    // Colors (resolved from theme)
     private var windowBgColor: Int = 0
-    private var surfaceContainerColor: Int = 0
-    private var surfaceContainerHighColor: Int = 0
-    private var primaryColor: Int = 0
-    private var onPrimaryColor: Int = 0
     private var primaryContainerColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
-    private var textColorPrimary: Int = 0
-    private var textColorSecondary: Int = 0
+    private var surfaceContainerColor: Int = 0
+    private var surfaceContainerLowColor: Int = 0
+    private var onSurfaceVariantColor: Int = 0
+    private var accentColor: Int = 0
+    private var activeTextColor: Int = 0
+    private var secondaryTextColor: Int = 0
 
-    // Press-scale touch listener with expressive bounce
+    // Press-scale touch listener
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
         val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
 
@@ -73,10 +77,10 @@ class NotesMainAct : AppCompatActivity() {
             MotionEvent.ACTION_DOWN -> {
                 v.animate().cancel()
                 v.animate()
-                    .scaleX(0.92f)
-                    .scaleY(0.92f)
-                    .alpha(0.85f)
-                    .setDuration(100)
+                    .scaleX(0.95f)
+                    .scaleY(0.95f)
+                    .alpha(0.88f)
+                    .setDuration(120)
                     .setInterpolator(DecelerateInterpolator(1.5f))
                     .start()
             }
@@ -95,14 +99,16 @@ class NotesMainAct : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ----- Apply Saved Theme Preference before super.onCreate -----
         val prefs = getPreferences(Context.MODE_PRIVATE)
-        val savedTheme = prefs.getInt("app_theme", 0)
+        val savedTheme = prefs.getInt("app_theme", 0) // 0: System, 1: Light, 2: Dark
         when (savedTheme) {
             0 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
             1 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
             2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         }
 
+        // Restore active tab state if available
         if (savedInstanceState != null) {
             isNotesActive = savedInstanceState.getBoolean("is_notes_active", true)
         }
@@ -111,39 +117,60 @@ class NotesMainAct : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        // ----- Force Dynamic Colors Application -----
         DynamicColors.applyToActivityIfAvailable(this)
 
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
+        // ----- Status Bar Visibility -----
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        windowBgColor = if (isDark) Color.BLACK else Color.WHITE
+        // ----- Resolve all required colors from the current theme -----
+        val typedValue = TypedValue()
 
+        // Primary Container (for selected items and buttons)
+        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+        primaryContainerColor = typedValue.data
+
+        // On Primary Container (text on primary container)
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+        onPrimaryContainerColor = typedValue.data
+
+        // Surface Container (for main background)
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+        surfaceContainerColor = typedValue.data
+
+        // Surface Container Low (for unselected items, bottom bar, pills, etc.)
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
+        surfaceContainerLowColor = typedValue.data
+
+        // On Surface Variant (text on surface containers)
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+        onSurfaceVariantColor = typedValue.data
+
+        // Primary (for other accents)
+        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true)
+        accentColor = typedValue.data
+
+        // Fallback for active text if needed
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            surfaceContainerColor = ContextCompat.getColor(this, if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_100)
-            surfaceContainerHighColor = ContextCompat.getColor(this, if (isDark) android.R.color.system_neutral1_700 else android.R.color.system_neutral1_200)
-            primaryColor = ContextCompat.getColor(this, if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_600)
-            onPrimaryColor = ContextCompat.getColor(this, if (isDark) android.R.color.system_accent1_800 else android.R.color.system_accent1_100)
-            primaryContainerColor = ContextCompat.getColor(this, if (isDark) android.R.color.system_accent1_700 else android.R.color.system_accent1_100)
-            onPrimaryContainerColor = ContextCompat.getColor(this, if (isDark) android.R.color.system_accent1_100 else android.R.color.system_accent1_900)
+            activeTextColor = ContextCompat.getColor(
+                this,
+                if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_700
+            )
         } else {
-            surfaceContainerColor = if (isDark) Color.parseColor("#252428") else Color.parseColor("#F3EDF7")
-            surfaceContainerHighColor = if (isDark) Color.parseColor("#2B2A2E") else Color.parseColor("#ECE6F0")
-            primaryColor = if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4")
-            onPrimaryColor = if (isDark) Color.parseColor("#381E72") else Color.parseColor("#FFFFFF")
-            primaryContainerColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#EADDFF")
-            onPrimaryContainerColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#21005D")
+            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
         }
+        secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
 
-        textColorPrimary = if (isDark) Color.parseColor("#E6E1E5") else Color.parseColor("#1C1B1F")
-        textColorSecondary = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
+        // ----- Root background: Surface Container -----
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(windowBgColor) }
-
+        // ----- Content containers -----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -157,7 +184,7 @@ class NotesMainAct : AppCompatActivity() {
             visibility = if (isNotesActive) View.GONE else View.VISIBLE
         }
 
-        // ----- MD3E Settings Layout (Expressive extra-rounded containers & large touch targets) -----
+        // Populate Settings Page UI
         val settingsScrollView = ScrollView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -172,18 +199,18 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(120f))
+            setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // MD3E Extra-Large Rounded Card (Radius 32dp for expressive look)
+        // ----- App Theme Card (background Surface Container Low) -----
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(32f).toFloat()
-                setColor(surfaceContainerColor)
+                cornerRadius = dpToPx(24f).toFloat()
+                setColor(surfaceContainerLowColor)
             }
-            setPadding(dpToPx(24f), dpToPx(24f), dpToPx(24f), dpToPx(24f))
+            setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -192,30 +219,30 @@ class NotesMainAct : AppCompatActivity() {
 
         val themeTitle = TextView(this).apply {
             text = getString(R.string.setting_app_theme)
-            textSize = 18f
-            setTextColor(textColorPrimary)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
             setTypeface(null, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = dpToPx(18f)
+                bottomMargin = dpToPx(14f)
             }
         }
 
-        // MD3E Expressive Segmented Selector (Pill style container with pill items)
-        val themeSelectorContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerHighColor)
-            }
-            setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
+        // --- Expressive Toggle Group with Surface Container Low for unselected ---
+        val toggleGroupContext = ContextThemeWrapper(
+            this,
+            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
+        )
+
+        val themeSelectorContainer = MaterialButtonToggleGroup(toggleGroupContext).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            isSingleSelection = true
+            isSelectionRequired = true
         }
 
         val themeOptions = listOf(
@@ -224,73 +251,89 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
+        val buttonContext = ContextThemeWrapper(
+            this,
+            com.google.android.material.R.style.Widget_Material3Expressive_Button_OutlinedButton
+        )
+
+        // Color state lists: selected = Primary Container, unselected = Surface Container Low
+        val buttonBgTint = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(primaryContainerColor, surfaceContainerLowColor)
+        )
+
+        val buttonTextTint = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(onPrimaryContainerColor, onSurfaceVariantColor)
+        )
+
         var pendingTheme = savedTheme
-        val optionTextViews = mutableListOf<TextView>()
 
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
-            val optionBtn = TextView(this).apply {
+            val optionBtn = MaterialButton(buttonContext).apply {
+                id = View.generateViewId()
                 text = optionName
-                textSize = 13f
+                icon = null
+                textSize = 11.5f
                 isSingleLine = true
-                gravity = Gravity.CENTER
 
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    dpToPx(48f),
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
                 )
 
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dpToPx(100f).toFloat()
-                    setColor(if (isActive) primaryContainerColor else Color.TRANSPARENT)
-                }
+                backgroundTintList = buttonBgTint
+                setTextColor(buttonTextTint)
+                strokeWidth = 0   // no outline, just background fill
 
-                setTextColor(if (isActive) onPrimaryContainerColor else textColorSecondary)
-                setTypeface(null, if (isActive) Typeface.BOLD else Typeface.NORMAL)
-
+                setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
                 setOnTouchListener(pressScaleTouchListener)
-                setOnClickListener {
-                    if (pendingTheme != index) {
-                        pendingTheme = index
-                        it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-
-                        optionTextViews.forEachIndexed { i, tv ->
-                            val selected = (i == index)
-                            tv.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
-                            (tv.background as? GradientDrawable)?.setColor(
-                                if (selected) primaryContainerColor else Color.TRANSPARENT
-                            )
-                            tv.setTextColor(if (selected) onPrimaryContainerColor else textColorSecondary)
-                        }
-                    }
-                }
             }
 
-            optionTextViews.add(optionBtn)
             themeSelectorContainer.addView(optionBtn)
+            if (isActive) {
+                themeSelectorContainer.check(optionBtn.id)
+            }
         }
 
-        // MD3E Fully Rounded Action Button
+        themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                pendingTheme = when (checkedId) {
+                    group.getChildAt(0).id -> 0
+                    group.getChildAt(1).id -> 1
+                    group.getChildAt(2).id -> 2
+                    else -> savedTheme
+                }
+            }
+        }
+
+        // ----- Apply Theme Button (Primary Container) -----
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
-            textSize = 15f
-            setTextColor(onPrimaryColor)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(primaryColor)
+                setColor(primaryContainerColor)
             }
-            setPadding(dpToPx(24f), dpToPx(18f), dpToPx(24f), dpToPx(18f))
+            setPadding(dpToPx(24f), dpToPx(16f), dpToPx(24f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = dpToPx(20f)
+                topMargin = dpToPx(16f)
             }
             isClickable = true
             isFocusable = true
@@ -324,6 +367,7 @@ class NotesMainAct : AppCompatActivity() {
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
+        // --- Continue with rest of UI ---
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -333,7 +377,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- MD3E Top Bar Pill Layout -----
+        // ----- Top Bar Layout (App name pill & More button use Surface Container Low) -----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -343,18 +387,19 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
         }
 
+        // App Name Pill (Left) – Surface Container Low
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
-            setTextColor(textColorPrimary)
+            setTextColor(onSurfaceVariantColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerColor)
+                setColor(surfaceContainerLowColor)
             }
-            setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -370,22 +415,25 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // Menu Button Container (Right) – Surface Container Low
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceContainerColor)
+                setColor(surfaceContainerLowColor)
             }
-            layoutParams = FrameLayout.LayoutParams(dpToPx(52f), dpToPx(52f), Gravity.END or Gravity.CENTER_VERTICAL)
+            layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
             isFocusable = true
-            setOnClickListener {}
+            setOnClickListener {
+                // Empty as requested
+            }
             setOnTouchListener(pressScaleTouchListener)
         }
 
         val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (e: Exception) { null }
 
         val topBarRefreshIcon = ImageView(this).apply {
-            setImageDrawable(tintDrawableFunc(menuDrawable, textColorPrimary))
+            setImageDrawable(tintDrawableFunc(menuDrawable, onSurfaceVariantColor))
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             layoutParams = FrameLayout.LayoutParams(
                 dpToPx(26f),
@@ -399,7 +447,7 @@ class NotesMainAct : AppCompatActivity() {
         topBarLayout.addView(topBarRefreshContainer)
         rootFrame.addView(topBarLayout)
 
-        // ----- Dim Background Overlay -----
+        // ----- Dim Background Overlay for Menu -----
         dimOverlay = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -414,7 +462,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- MD3E Expanding Menu Container (Expressive pill items stacked) -----
+        // ----- Expanding Menu Container -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -432,7 +480,7 @@ class NotesMainAct : AppCompatActivity() {
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerHighColor)
+                setColor(surfaceContainerLowColor)
             }
         }
 
@@ -447,17 +495,18 @@ class NotesMainAct : AppCompatActivity() {
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
-        val createIcon = tintDrawableFunc(editNoteDrawable, textColorPrimary)
-        val importIcon = tintDrawableFunc(boxAddDrawable, textColorPrimary)
+        val createIcon = tintDrawableFunc(editNoteDrawable, onSurfaceVariantColor)
+        val importIcon = tintDrawableFunc(boxAddDrawable, onSurfaceVariantColor)
 
+        // Menu Items – Surface Container Low
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
             textSize = 14f
-            setTextColor(textColorPrimary)
+            setTextColor(onSurfaceVariantColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
-            setPadding(dpToPx(22f), dpToPx(16f), dpToPx(26f), dpToPx(16f))
-            compoundDrawablePadding = dpToPx(14f)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            compoundDrawablePadding = dpToPx(12f)
             setCompoundDrawablesWithIntrinsicBounds(createIcon, null, null, null)
             layoutParams = menuItemParams
             isClickable = true
@@ -472,11 +521,11 @@ class NotesMainAct : AppCompatActivity() {
         val importNotesItem = TextView(this).apply {
             text = getString(R.string.import_notes)
             textSize = 14f
-            setTextColor(textColorPrimary)
+            setTextColor(onSurfaceVariantColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
-            setPadding(dpToPx(22f), dpToPx(16f), dpToPx(26f), dpToPx(16f))
-            compoundDrawablePadding = dpToPx(14f)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            compoundDrawablePadding = dpToPx(12f)
             setCompoundDrawablesWithIntrinsicBounds(importIcon, null, null, null)
             layoutParams = menuItemParams
             isClickable = true
@@ -492,7 +541,7 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
-        // ----- MD3E Expressive Bottom Navigation Bar -----
+        // ----- Bottom bar layout (background Surface Container Low) -----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -503,21 +552,23 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
+        // ----- Tab pill container (background Surface Container Low) -----
         val tabPillContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerColor)
+                setColor(surfaceContainerLowColor)
             }
-            setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
+            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
+        // Sliding pill background – Primary Container
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(primaryContainerColor)
                 cornerRadius = dpToPx(100f).toFloat()
             }
-            layoutParams = FrameLayout.LayoutParams(0, dpToPx(48f), Gravity.CENTER_VERTICAL)
+            layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f), Gravity.CENTER_VERTICAL)
         }
 
         val tabButtonsLayout = LinearLayout(this).apply {
@@ -532,14 +583,15 @@ class NotesMainAct : AppCompatActivity() {
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
+        // Notes tab
         notesTabBtn = TextView(this).apply {
             text = getString(R.string.nav_notes)
             textSize = 14f
-            setTextColor(if (isNotesActive) onPrimaryContainerColor else textColorSecondary)
+            setTextColor(if (isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(20f), 0, dpToPx(24f), 0)
-            compoundDrawablePadding = dpToPx(10f)
+            setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
+            compoundDrawablePadding = dpToPx(8f)
             if (isNotesActive) {
                 setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
             } else {
@@ -547,21 +599,22 @@ class NotesMainAct : AppCompatActivity() {
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(48f)
+                dpToPx(44f)
             )
             isClickable = true
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
         }
 
+        // Settings tab
         settingsTabBtn = TextView(this).apply {
             text = getString(R.string.nav_settings)
             textSize = 14f
-            setTextColor(if (!isNotesActive) onPrimaryContainerColor else textColorSecondary)
+            setTextColor(if (!isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dpToPx(20f), 0, dpToPx(24f), 0)
-            compoundDrawablePadding = dpToPx(10f)
+            setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
+            compoundDrawablePadding = dpToPx(8f)
             if (!isNotesActive) {
                 setCompoundDrawablesWithIntrinsicBounds(settingsDrawable, null, null, null)
             } else {
@@ -569,7 +622,7 @@ class NotesMainAct : AppCompatActivity() {
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dpToPx(48f)
+                dpToPx(44f)
             )
             isClickable = true
             isFocusable = true
@@ -582,21 +635,26 @@ class NotesMainAct : AppCompatActivity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        plusIconDrawable = PlusDrawable(textColorPrimary, dpToPx(3f).toFloat())
+        // ----- + Button (FAB-like) -----
+        plusIconDrawable = PlusDrawable(onSurfaceVariantColor, dpToPx(3f).toFloat())
         plusBtnRef = ImageView(this).apply {
             setImageDrawable(plusIconDrawable)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceContainerColor)
+                setColor(surfaceContainerLowColor)
             }
             contentDescription = "Add"
             isClickable = true
             isFocusable = true
-            layoutParams = LinearLayout.LayoutParams(dpToPx(60f), dpToPx(60f)).apply {
-                marginStart = dpToPx(14f)
+            layoutParams = LinearLayout.LayoutParams(dpToPx(52f), dpToPx(52f)).apply {
+                marginStart = dpToPx(12f)
             }
             setOnClickListener {
-                if (isMenuExpanded) closeMenu() else openMenu()
+                if (isMenuExpanded) {
+                    closeMenu()
+                } else {
+                    openMenu()
+                }
             }
             setOnTouchListener(pressScaleTouchListener)
         }
@@ -607,6 +665,7 @@ class NotesMainAct : AppCompatActivity() {
 
         setContentView(rootFrame)
 
+        // ----- Tab switching logic & Pill animation -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -644,10 +703,10 @@ class NotesMainAct : AppCompatActivity() {
                 notesTabBtn.setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
                 tintDrawableColor(notesTabBtn, onPrimaryContainerColor)
 
-                settingsTabBtn.setTextColor(textColorSecondary)
+                settingsTabBtn.setTextColor(onSurfaceVariantColor)
                 settingsTabBtn.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
             } else {
-                notesTabBtn.setTextColor(textColorSecondary)
+                notesTabBtn.setTextColor(onSurfaceVariantColor)
                 notesTabBtn.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
 
                 settingsTabBtn.setTextColor(onPrimaryContainerColor)
@@ -666,7 +725,7 @@ class NotesMainAct : AppCompatActivity() {
             val currentProgress = if (x1 > x0) ((currentX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
 
             pillAnimator = ValueAnimator.ofFloat(currentProgress, targetProgress).apply {
-                duration = 280L
+                duration = 250L
                 interpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
                 addUpdateListener { anim ->
                     updatePillPosition(anim.animatedValue as Float)
@@ -689,6 +748,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // ----- Click listeners for tabs -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -703,6 +763,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // ----- Initial pill layout -----
         tabPillContainer.doOnLayout {
             val targetBtn = if (isNotesActive) notesTabBtn else settingsTabBtn
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = targetBtn.width }
@@ -710,6 +771,7 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
+        // ----- Window insets (Dynamic Spacing) -----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
@@ -727,10 +789,10 @@ class NotesMainAct : AppCompatActivity() {
                 topMargin = topInset
             }
 
-            contentHolder.setPadding(0, topInset + dpToPx(70f), 0, 0)
+            contentHolder.setPadding(0, topInset + dpToPx(66f), 0, 0)
 
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
-            (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(96f) + bottomInset
+            (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
             
             insets
         }
@@ -827,7 +889,7 @@ class NotesMainAct : AppCompatActivity() {
         override fun draw(canvas: android.graphics.Canvas) {
             val cx = bounds.exactCenterX()
             val cy = bounds.exactCenterY()
-            val size = dpToPx(10f).toFloat()
+            val size = dpToPx(9f).toFloat()
             canvas.drawLine(cx - size, cy, cx + size, cy, paint)
             canvas.drawLine(cx, cy - size, cx, cy + size, paint)
         }
