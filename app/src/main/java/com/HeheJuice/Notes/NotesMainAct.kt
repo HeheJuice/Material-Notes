@@ -142,6 +142,9 @@ class NotesMainAct : AppCompatActivity() {
     private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
 
+    // GoogleSansFlex typeface
+    private var googleSansFlex: Typeface? = null
+
     // Press-scale touch listener
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
         val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
@@ -195,6 +198,13 @@ class NotesMainAct : AppCompatActivity() {
 
         // Initialize repository
         NoteRepository.init(applicationContext)
+
+        // Load GoogleSansFlex
+        googleSansFlex = try {
+            Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
+        } catch (e: Exception) {
+            null
+        }
 
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -291,7 +301,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.setting_app_theme)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            setTypeface(null, Typeface.BOLD)
+            applyGoogleSansBoldRound(this)  // ← apply font
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -462,7 +472,7 @@ class NotesMainAct : AppCompatActivity() {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            setTypeface(null, Typeface.BOLD)
+            applyGoogleSansBoldRound(this)  // ← apply font
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -660,7 +670,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.nav_notes)
             textSize = 14f
             setTextColor(if (isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
-            setTypeface(null, Typeface.BOLD)
+            applyGoogleSansBoldRound(this)  // ← apply font
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
@@ -683,7 +693,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.nav_settings)
             textSize = 14f
             setTextColor(if (!isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
-            setTypeface(null, Typeface.BOLD)
+            applyGoogleSansBoldRound(this)  // ← apply font
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
@@ -971,6 +981,19 @@ class NotesMainAct : AppCompatActivity() {
             .withEndAction {
                 menuOverlayContainer.visibility = View.GONE
             }.start()
+    }
+
+    // Helper to apply GoogleSansFlex Bold + Round
+    private fun applyGoogleSansBoldRound(textView: TextView) {
+        googleSansFlex?.let { font ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                textView.typeface = Typeface.create(font, 700, false)
+                textView.fontVariationSettings = "'wght' 700, 'ROND' 100"
+            } else {
+                // Fallback to bold
+                textView.setTypeface(font, Typeface.BOLD)
+            }
+        }
     }
 
     // ----- Inner adapter for notes list with 12dp margins -----

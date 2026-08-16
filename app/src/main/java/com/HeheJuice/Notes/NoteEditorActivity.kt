@@ -24,6 +24,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var contentEdit: EditText
     private var noteId: String = ""
     private var isNewNote = true
+    private var googleSansFlex: Typeface? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -32,6 +33,13 @@ class NoteEditorActivity : AppCompatActivity() {
 
         DynamicColors.applyToActivityIfAvailable(this)
         NoteRepository.init(applicationContext)
+
+        // Load GoogleSansFlex
+        googleSansFlex = try {
+            Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
+        } catch (e: Exception) {
+            null
+        }
 
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
@@ -82,7 +90,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), dpToPx(48f), dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar
+        // Top bar using LinearLayout with weight for proper alignment
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -92,7 +100,7 @@ class NoteEditorActivity : AppCompatActivity() {
             ).apply { bottomMargin = dpToPx(24f) }
         }
 
-        // Back button – matches "More" button
+        // Back button – positioned on the left (START)
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
@@ -108,11 +116,13 @@ class NoteEditorActivity : AppCompatActivity() {
             setOnClickListener { finish() }
         }
 
+        // Title – centered (weight=1)
         val topTitle = TextView(this).apply {
             text = if (isNewNote) getString(R.string.new_note) else getString(R.string.edit_note)
             textSize = 22f
             setTextColor(onPrimaryContainer)
-            setTypeface(null, Typeface.BOLD)
+            applyGoogleSansBoldRound(this)  // ← apply font
+            gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -120,6 +130,7 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
+        // Save button – positioned on the right
         val saveBtn = TextView(this).apply {
             text = getString(R.string.save)
             textSize = 16f
@@ -211,7 +222,19 @@ class NoteEditorActivity : AppCompatActivity() {
         setContentView(root)
     }
 
-    // ✅ Force title to be non-empty
+    // Helper to apply GoogleSansFlex Bold + Round
+    private fun applyGoogleSansBoldRound(textView: TextView) {
+        googleSansFlex?.let { font ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                textView.typeface = Typeface.create(font, 700, false)
+                textView.fontVariationSettings = "'wght' 700, 'ROND' 100"
+            } else {
+                textView.setTypeface(font, Typeface.BOLD)
+            }
+        }
+    }
+
+    // ✅ Force title to be non‑empty
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
         val content = contentEdit.text.toString().trim()
