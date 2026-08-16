@@ -31,7 +31,7 @@ class NotesMainAct : Activity() {
     private lateinit var settingsContainer: FrameLayout
     private var isNotesActive = true
 
-    // Polished Material 3 / Google Photos style colors (toned down for comfort)
+    // Polished surface-variant colors matching the CrashLogActivity reference style
     private var accentColor: Int = 0          
     private var activeTextColor: Int = 0      
     private var secondaryTextColor: Int = 0   
@@ -75,11 +75,11 @@ class NotesMainAct : Activity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- Color Resolution (Balanced and Muted) -----
+        // ----- Color Resolution (Subdued, surface-based matching CrashLogActivity reference) -----
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             accentColor = ContextCompat.getColor(
                 this,
-                if (isDark) android.R.color.system_accent2_800 else android.R.color.system_accent1_300
+                if (isDark) android.R.color.system_accent2_800 else android.R.color.system_accent2_100
             )
             activeTextColor = ContextCompat.getColor(
                 this,
@@ -90,7 +90,7 @@ class NotesMainAct : Activity() {
                 if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
             )
         } else {
-            accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
+            accentColor = if (isDark) Color.parseColor("#36343B") else Color.parseColor("#F2EEF5")
             activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#1D192B")
             cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
         }
