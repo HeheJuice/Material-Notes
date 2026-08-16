@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -30,6 +31,8 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 
 class NotesMainAct : AppCompatActivity() {
 
@@ -205,9 +208,10 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Adaptable segmented control pill container for App Theme with exact positioning shape rules
-        val themeSelectorContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        // ----- MaterialButtonToggleGroup Implementation -----
+        val themeSelectorContainer = MaterialButtonToggleGroup(this).apply {
+            isSingleSelection = true
+            isSelectionRequired = true
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -220,50 +224,64 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
-        val totalCount = themeOptions.size
-        val pillRadius = dpToPx(100f).toFloat()
+        val buttonIds = IntArray(themeOptions.size)
+        val buttonStates = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                accentColor,
+                secondaryBtnColor
+            )
+        )
+        val textStates = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                activeTextColor,
+                secondaryTextColor
+            )
+        )
 
         themeOptions.forEachIndexed { index, optionName ->
-            val isActive = (savedTheme == index)
-            val optionBtn = TextView(this).apply {
+            val buttonId = View.generateViewId()
+            buttonIds[index] = buttonId
+
+            val optionBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedButtonStyle).apply {
+                id = buttonId
                 text = optionName
                 textSize = 13f
-                gravity = Gravity.CENTER
+                isAllCaps = false
                 setTypeface(null, Typeface.BOLD)
-                setTextColor(if (isActive) activeTextColor else secondaryTextColor)
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    if (isActive) {
-                        cornerRadius = pillRadius
-                        setColor(accentColor)
-                    } else {
-                        setColor(secondaryBtnColor)
-                        cornerRadii = when {
-                            totalCount == 1 -> floatArrayOf(pillRadius, pillRadius, pillRadius, pillRadius, pillRadius, pillRadius, pillRadius, pillRadius)
-                            index == 0 -> floatArrayOf(pillRadius, pillRadius, 0f, 0f, 0f, 0f, pillRadius, pillRadius) // 1st option: left rounded, right flat
-                            index == totalCount - 1 -> floatArrayOf(0f, 0f, pillRadius, pillRadius, pillRadius, pillRadius, 0f, 0f) // Last option: left flat, right rounded
-                            else -> floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f) // Middle option: flat on both sides
-                        }
-                    }
-                }
-                setPadding(dpToPx(12f), dpToPx(14f), dpToPx(12f), dpToPx(14f))
-                layoutParams = LinearLayout.LayoutParams(
+                backgroundTintList = buttonStates
+                setTextColor(textStates)
+                strokeColor = ColorStateList.valueOf(Color.TRANSPARENT)
+                strokeWidth = 0
+                isClickable = true
+                isFocusable = true
+                layoutParams = MaterialButtonToggleGroup.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
-                ) // Zero margin between options so unselected segments seamlessly form a continuous track
-                isClickable = true
-                isFocusable = true
-                setOnTouchListener(pressScaleTouchListener)
-                setOnClickListener {
-                    if (savedTheme != index) {
-                        prefs.edit().putInt("app_theme", index).apply()
-                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                        recreate()
-                    }
-                }
+                )
             }
             themeSelectorContainer.addView(optionBtn)
+        }
+
+        themeSelectorContainer.check(buttonIds[savedTheme])
+
+        themeSelectorContainer.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                val index = buttonIds.indexOf(checkedId)
+                if (index != -1 && savedTheme != index) {
+                    prefs.edit().putInt("app_theme", index).apply()
+                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                    recreate()
+                }
+            }
         }
 
         themeCard.addView(themeTitle)
