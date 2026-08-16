@@ -328,7 +328,7 @@ class NotesMainAct : AppCompatActivity() {
             setOnClickListener {
                 if (savedTheme != pendingTheme) {
                     prefs.edit().putInt("app_theme", pendingTheme).apply()
-                    it.performHapticFeedback(android.HapticFeedbackConstants.KEYBOARD_TAP)
+                    it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
                     val mode = when (pendingTheme) {
                         0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
