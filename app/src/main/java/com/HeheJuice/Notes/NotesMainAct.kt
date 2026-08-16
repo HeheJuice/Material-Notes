@@ -33,6 +33,7 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonGroup
+import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
 
@@ -111,6 +112,9 @@ class NotesMainAct : AppCompatActivity() {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
+
+        // ----- Force Dynamic Colors Application -----
+        DynamicColors.applyToActivityIfAvailable(this)
 
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -232,21 +236,41 @@ class NotesMainAct : AppCompatActivity() {
             com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
         )
 
+        // ColorStateLists mapping Monet states to checked/unchecked
+        val checkedState = intArrayOf(android.R.attr.state_checked)
+        val uncheckedState = intArrayOf(-android.R.attr.state_checked)
+
+        val buttonBgTint = android.content.res.ColorStateList(
+            arrayOf(checkedState, uncheckedState),
+            intArrayOf(activeTextColor, cardBgColor) 
+        )
+
+        val buttonTextTint = android.content.res.ColorStateList(
+            arrayOf(checkedState, uncheckedState),
+            intArrayOf(cardBgColor, activeTextColor) 
+        )
+
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
             val optionBtn = MaterialButton(buttonContext).apply {
                 text = optionName
-                // Use 0 width and weight of 1 to ensure flexible, equally-sized buttons
+                icon = null // Ensures no icon is drawn next to the text
+                
                 layoutParams = LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
                 )
 
-                // Native Material checkable state handles the active visual indication
                 isCheckable = true
                 isChecked = isActive
+
+                backgroundTintList = buttonBgTint
+                setTextColor(buttonTextTint)
+                strokeWidth = 0 
+
+                setOnTouchListener(pressScaleTouchListener)
 
                 setOnClickListener {
                     if (savedTheme != index) {
@@ -284,7 +308,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
         }
 
-        // App Name Pill (Left) - Dynamically changes based on active tab
+        // App Name Pill (Left)
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
@@ -312,7 +336,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Menu Button Container (Right) using R.drawable.menu_24px
+        // Menu Button Container (Right)
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -322,7 +346,7 @@ class NotesMainAct : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                // Does nothing for now as requested
+                // Empty as requested
             }
             setOnTouchListener(pressScaleTouchListener)
         }
@@ -359,7 +383,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- Expanding Menu Container (Separated Individual Pills) -----
+        // ----- Expanding Menu Container -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -439,7 +463,7 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
-        // ----- Bottom bar layout (with + button) -----
+        // ----- Bottom bar layout -----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -708,7 +732,6 @@ class NotesMainAct : AppCompatActivity() {
         isMenuExpanded = true
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-        // Pre-measure the menu container synchronously so dimensions are known on the first click
         val rootFrame = menuOverlayContainer.parent as? FrameLayout
         if (rootFrame != null) {
             menuOverlayContainer.measure(
