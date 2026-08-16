@@ -28,6 +28,7 @@
 <string name="write_content_hint">Write your note here...</string>
 <string name="note_cannot_be_empty">Note cannot be empty</string>
 <string name="back_content_desc">Back</string>
+<string name="title_required">Title is required</string>
 
 <!-- Misc -->
 <string name="add_button_content_desc">Add</string>

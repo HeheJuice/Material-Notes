@@ -92,7 +92,6 @@ object NoteRepository {
 
     fun saveNote(id: String, title: String, content: String) {
         val file = getNotesDir().resolve("$id.txt")
-        // Title is stored as the first line, content as the rest
         val fullText = if (content.isNotEmpty()) "$title\n$content" else title
         file.writeText(fullText)
     }
@@ -237,16 +236,12 @@ class NotesMainAct : AppCompatActivity() {
             )
             visibility = if (isNotesActive) View.VISIBLE else View.GONE
 
-            // Add RecyclerView for notes
             val rv = RecyclerView(this@NotesMainAct).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
-                // Add padding to the RecyclerView itself (optional – we'll use item margins instead)
-                setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
-                clipToPadding = false
             }
             notesRecyclerView = rv
             addView(rv)
@@ -277,7 +272,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // ----- App Theme Card (background Surface Container Low) -----
+        // ----- App Theme Card -----
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -452,14 +447,14 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- Top Bar Layout (App name pill & More button use Surface Container Low) -----
+        // ----- Top Bar Layout (padding reduced to 12dp) -----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
             setBackgroundColor(Color.TRANSPARENT)
-            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
+            setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
         }
 
         // App Name Pill (Left) – Surface Container Low
@@ -551,7 +546,6 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // Background for menu pills – now Primary Container (same as selected theme toggle)
         val createPillBackground = {
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -571,7 +565,6 @@ class NotesMainAct : AppCompatActivity() {
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
-        // Menu item icons and text now use onPrimaryContainerColor for contrast
         val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
         val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
 
@@ -980,7 +973,7 @@ class NotesMainAct : AppCompatActivity() {
             }.start()
     }
 
-    // ----- Inner adapter for notes list with fixed margins -----
+    // ----- Inner adapter for notes list with 12dp margins -----
     inner class NotesListAdapter(
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
@@ -997,14 +990,13 @@ class NotesMainAct : AppCompatActivity() {
                     cornerRadius = dpToPx(12f).toFloat()
                     setColor(surfaceContainerLowColor)
                 }
-                // Layout params with left and right margins
                 layoutParams = RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
                 ).apply {
                     bottomMargin = dpToPx(8f)
-                    leftMargin = dpToPx(16f)
-                    rightMargin = dpToPx(16f)
+                    leftMargin = dpToPx(12f)   // matches top bar padding
+                    rightMargin = dpToPx(12f)
                 }
                 isClickable = true
                 isFocusable = true
@@ -1016,7 +1008,6 @@ class NotesMainAct : AppCompatActivity() {
             val note = items[position]
             holder.card.text = note.title
             holder.card.setOnClickListener { onItemClick(note) }
-            // Long press to delete
             holder.card.setOnLongClickListener {
                 NoteRepository.deleteNote(note.id)
                 loadNotesList()

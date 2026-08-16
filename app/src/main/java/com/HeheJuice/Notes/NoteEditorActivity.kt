@@ -30,10 +30,7 @@ class NoteEditorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        // Apply Dynamic Colors (Monet)
         DynamicColors.applyToActivityIfAvailable(this)
-
-        // Initialize repository
         NoteRepository.init(applicationContext)
 
         noteId = intent.getStringExtra("note_id") ?: ""
@@ -214,14 +211,16 @@ class NoteEditorActivity : AppCompatActivity() {
         setContentView(root)
     }
 
-    // ✅ FIXED: pass raw content (without title) to repository
+    // ✅ Force title to be non-empty
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
         val content = contentEdit.text.toString().trim()
-        if (title.isEmpty() && content.isEmpty()) {
-            Toast.makeText(this, getString(R.string.note_cannot_be_empty), Toast.LENGTH_SHORT).show()
+
+        if (title.isEmpty()) {
+            Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
             return
         }
+
         val id = if (isNewNote) {
             val base = if (title.isNotEmpty()) title else "note"
             val sanitized = base.replace(Regex("[^a-zA-Z0-9\\-_]"), "_")
@@ -229,7 +228,6 @@ class NoteEditorActivity : AppCompatActivity() {
         } else {
             noteId
         }
-        // ✅ Pass title and content separately; repository adds title as first line
         NoteRepository.saveNote(id, title, content)
         setResult(Activity.RESULT_OK)
         finish()
