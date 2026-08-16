@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Notes</string>
-    <!-- Navigation Tabs -->
-    <string name="nav_notes">Notes</string>
-    <string name="nav_settings">Settings</string>
+<string name="app_name">Notes</string>
 
-    <!-- Settings Page -->
-    <string name="setting_app_theme">App Theme</string>
-    <string name="theme_system">Follows System</string>
-    <string name="theme_light">Light Mode</string>
-    <string name="theme_dark">Dark Mode</string>
-    <string name="themerestart">Apply Selected Theme</string>
+<!-- Navigation Tabs -->
+<string name="nav_notes">Notes</string>
+<string name="nav_settings">Settings</string>
 
-    <!-- Menu Actions -->
-    <string name="create_notes">Create Notes</string>
-    <string name="import_notes">Import Notes</string>
-    <string name="save">Save</string>
+<!-- Settings Page -->
+<string name="setting_app_theme">App Theme</string>
+<string name="theme_system">Follows System</string>
+<string name="theme_light">Light Mode</string>
+<string name="theme_dark">Dark Mode</string>
+<string name="themerestart">Apply Selected Theme</string>
+
+<!-- Menu Actions -->
+<string name="create_notes">Create Notes</string>
+<string name="import_notes">Import Notes</string>
+<string name="import_notes_toast">Import Notes (coming soon)</string>
+
+<!-- Note Editor -->
+<string name="save">Save</string>
 <string name="title">Title</string>
 <string name="content">Content</string>
 <string name="new_note">New Note</string>
@@ -25,20 +29,6 @@
 <string name="note_cannot_be_empty">Note cannot be empty</string>
 <string name="back_content_desc">Back</string>
 
-
-
-<string name="setting_app_theme">App Theme</string>
-<string name="theme_system">System</string>
-<string name="theme_light">Light</string>
-<string name="theme_dark">Dark</string>
-<string name="themerestart">Apply Selected Theme</string>
-<string name="nav_notes">Notes</string>
-<string name="nav_settings">Settings</string>
-<string name="create_notes">Create Notes</string>
-<string name="import_notes">Import Notes</string>
-<string name="import_notes_toast">Import Notes (coming soon)</string>
+<!-- Misc -->
 <string name="add_button_content_desc">Add</string>
-<string name="note_cannot_be_empty">Note cannot be empty</string>
-<string name="back_content_desc">Back</string>
-
 </resources>
