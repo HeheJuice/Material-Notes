@@ -282,7 +282,8 @@ class NotesMainAct : AppCompatActivity() {
                 setTextColor(buttonTextTint)
                 strokeWidth = 0
 
-                setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
+                // Match vertical padding with Apply button height (14f)
+                setPadding(dpToPx(4f), dpToPx(14f), dpToPx(4f), dpToPx(14f))
                 setOnTouchListener(pressScaleTouchListener)
             }
 
@@ -303,17 +304,17 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Round & Monet Apply Theme Button -----
+        // ----- Round & Monet Apply Theme Button (Following Selected State Color) -----
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
-            setTextColor(activeTextColor)
+            setTextColor(cardBgColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(accentColor)
+                setColor(activeTextColor)
             }
             setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             layoutParams = LinearLayout.LayoutParams(
