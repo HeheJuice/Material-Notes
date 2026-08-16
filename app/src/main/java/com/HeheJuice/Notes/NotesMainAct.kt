@@ -42,11 +42,11 @@ class NotesMainAct : Activity() {
     private lateinit var plusBtnRef: ImageView
 
     // Colors (surface-based)
+    private var windowBgColor: Int = 0
     private var accentColor: Int = 0
     private var activeTextColor: Int = 0
     private var secondaryTextColor: Int = 0
     private var cardBgColor: Int = 0
-    private var cardBorderColor: Int = 0
     private var secondaryBtnColor: Int = 0
 
     // Press-scale touch listener
@@ -86,7 +86,9 @@ class NotesMainAct : Activity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- Color Resolution -----
+        // ----- Color Resolution (Distinct window background vs card/pill surfaces) -----
+        windowBgColor = if (isDark) Color.BLACK else Color.WHITE
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             accentColor = ContextCompat.getColor(
                 this,
@@ -107,10 +109,9 @@ class NotesMainAct : Activity() {
         }
 
         secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
-        cardBorderColor = if (isDark) Color.parseColor("#49454F") else Color.parseColor("#E7E0EC")
         secondaryBtnColor = if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(cardBgColor) }
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(windowBgColor) }
 
         // ----- Content containers -----
         notesContainer = FrameLayout(this).apply {
@@ -406,7 +407,7 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // ----- Click listeners for tabs (No drag/long-press) -----
+        // ----- Click listeners for tabs -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -482,8 +483,8 @@ class NotesMainAct : Activity() {
         plusBtnRef.invalidate()
     }
 
-    // ----- Helper: Plus/X toggle icon drawable -----
-    private class PlusXDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
+    // ----- Helper: Plus/X toggle icon drawable (Inner class for dpToPx access) -----
+    private inner class PlusXDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         var isX = false
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = colorInt
