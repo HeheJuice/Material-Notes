@@ -100,6 +100,11 @@ class NotesMainAct : AppCompatActivity() {
             2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         }
 
+        // Restore active tab state if available
+        if (savedInstanceState != null) {
+            isNotesActive = savedInstanceState.getBoolean("is_notes_active", true)
+        }
+
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
@@ -145,12 +150,13 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
             )
+            visibility = if (isNotesActive) View.VISIBLE else View.GONE
         }
         settingsContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
             )
-            visibility = View.GONE
+            visibility = if (isNotesActive) View.GONE else View.VISIBLE
         }
 
         // Populate Settings Page UI
@@ -214,27 +220,15 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
-            drawable?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, color)
-                wrapped
-            }
-        }
-
-        val createThemeBtn = { title: String, iconResId: Int, index: Int ->
+        val createThemeBtn = { title: String, index: Int ->
             val isActive = (savedTheme == index)
             val colorToUse = if (isActive) activeTextColor else secondaryTextColor
-            val rawDrawable = try { ContextCompat.getDrawable(this, iconResId) } catch (e: Exception) { null }
-            val tintedIcon = tintDrawableFunc(rawDrawable, colorToUse)
 
             TextView(this).apply {
                 text = title
-                textSize = 12f
+                textSize = 13f
                 gravity = Gravity.CENTER
                 setTypeface(null, Typeface.BOLD)
-                compoundDrawablePadding = dpToPx(6f)
-                setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
                 setTextColor(colorToUse)
                 layoutParams = LinearLayout.LayoutParams(
                     0,
@@ -254,9 +248,9 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        val systemBtn = createThemeBtn(getString(R.string.theme_system), R.drawable.brightness_auto_24px, 0)
-        val lightBtn = createThemeBtn(getString(R.string.theme_light), R.drawable.light_mode_24px, 1)
-        val darkBtn = createThemeBtn(getString(R.string.theme_dark), R.drawable.dark_mode_24px, 2)
+        val systemBtn = createThemeBtn(getString(R.string.theme_system), 0)
+        val lightBtn = createThemeBtn(getString(R.string.theme_light), 1)
+        val darkBtn = createThemeBtn(getString(R.string.theme_dark), 2)
 
         val activeBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -299,7 +293,7 @@ class NotesMainAct : AppCompatActivity() {
 
         // App Name Pill (Left) - Dynamically changes based on active tab
         appNamePill = TextView(this).apply {
-            text = getString(R.string.nav_notes)
+            text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
@@ -315,6 +309,14 @@ class NotesMainAct : AppCompatActivity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.START or Gravity.CENTER_VERTICAL
             )
+        }
+
+        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+            drawable?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
         }
 
         // Menu Button Container (Right) using R.drawable.menu_24px
@@ -394,8 +396,6 @@ class NotesMainAct : AppCompatActivity() {
             gravity = Gravity.END
         }
 
-        val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
-        val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
@@ -485,16 +485,23 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
+        val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
+        val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
+
         // Notes tab
         notesTabBtn = TextView(this).apply {
             text = getString(R.string.nav_notes)
             textSize = 14f
-            setTextColor(activeTextColor)
+            setTextColor(if (isNotesActive) activeTextColor else secondaryTextColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
-            setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
+            if (isNotesActive) {
+                setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
+            } else {
+                setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+            }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -508,12 +515,16 @@ class NotesMainAct : AppCompatActivity() {
         settingsTabBtn = TextView(this).apply {
             text = getString(R.string.nav_settings)
             textSize = 14f
-            setTextColor(secondaryTextColor)
+            setTextColor(if (!isNotesActive) activeTextColor else secondaryTextColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
-            setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+            if (!isNotesActive) {
+                setCompoundDrawablesWithIntrinsicBounds(settingsDrawable, null, null, null)
+            } else {
+                setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+            }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -570,7 +581,11 @@ class NotesMainAct : AppCompatActivity() {
             textView.setCompoundDrawablesWithIntrinsicBounds(left, drawables[1], drawables[2], drawables[3])
         }
 
-        tintDrawableColor(notesTabBtn, activeTextColor)
+        if (isNotesActive) {
+            tintDrawableColor(notesTabBtn, activeTextColor)
+        } else {
+            tintDrawableColor(settingsTabBtn, activeTextColor)
+        }
 
         val updatePillPosition: (Float) -> Unit = { progress ->
             val p = progress.coerceIn(0f, 1f)
@@ -655,8 +670,9 @@ class NotesMainAct : AppCompatActivity() {
 
         // ----- Initial pill layout -----
         tabPillContainer.doOnLayout {
-            slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = notesTabBtn.width }
-            slidingPillView.translationX = notesTabBtn.left.toFloat()
+            val targetBtn = if (isNotesActive) notesTabBtn else settingsTabBtn
+            slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = targetBtn.width }
+            slidingPillView.translationX = targetBtn.left.toFloat()
             slidingPillView.requestLayout()
         }
 
@@ -688,6 +704,11 @@ class NotesMainAct : AppCompatActivity() {
             
             insets
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("is_notes_active", isNotesActive)
     }
 
     private fun openMenu() {
