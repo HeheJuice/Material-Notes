@@ -572,6 +572,26 @@ class NotesMainAct : Activity() {
         isMenuExpanded = true
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
+        // Pre-measure the menu container synchronously so dimensions are known on the first click
+        val rootFrame = menuOverlayContainer.parent as? FrameLayout
+        if (rootFrame != null) {
+            menuOverlayContainer.measure(
+                View.MeasureSpec.makeMeasureSpec(rootFrame.width, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            val menuWidth = menuOverlayContainer.measuredWidth
+            val menuHeight = menuOverlayContainer.measuredHeight
+
+            menuOverlayContainer.pivotX = menuWidth.toFloat()
+            menuOverlayContainer.pivotY = menuHeight.toFloat()
+
+            val plusCenterX = bottomBarLayout.x + plusBtnRef.x + (plusBtnRef.width / 2f)
+            val rightMargin = rootFrame.width - plusCenterX - (menuWidth / 2f)
+            val lp = menuOverlayContainer.layoutParams as FrameLayout.LayoutParams
+            lp.rightMargin = rightMargin.toInt().coerceAtLeast(dpToPx(16f))
+            menuOverlayContainer.layoutParams = lp
+        }
+
         plusBtnRef.animate()
             .rotation(45f)
             .setDuration(250)
@@ -586,21 +606,6 @@ class NotesMainAct : Activity() {
         menuOverlayContainer.scaleX = 0.8f
         menuOverlayContainer.scaleY = 0.8f
         menuOverlayContainer.translationY = dpToPx(16f).toFloat()
-
-        menuOverlayContainer.doOnLayout { view ->
-            view.pivotX = view.width.toFloat()
-            view.pivotY = view.height.toFloat()
-
-            // Align the center of menuOverlayContainer horizontally with the center of plusBtnRef
-            val rootFrame = menuOverlayContainer.parent as? FrameLayout
-            if (rootFrame != null) {
-                val plusCenterX = bottomBarLayout.x + plusBtnRef.x + (plusBtnRef.width / 2f)
-                val rightMargin = rootFrame.width - plusCenterX - (view.width / 2f)
-                val lp = menuOverlayContainer.layoutParams as FrameLayout.LayoutParams
-                lp.rightMargin = rightMargin.toInt().coerceAtLeast(dpToPx(16f))
-                menuOverlayContainer.layoutParams = lp
-            }
-        }
 
         menuOverlayContainer.animate()
             .alpha(1f)
