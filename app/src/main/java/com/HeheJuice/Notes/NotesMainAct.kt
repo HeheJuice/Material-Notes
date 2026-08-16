@@ -10,6 +10,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -30,6 +31,8 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
@@ -209,19 +212,30 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Seamless Connected Button Group with Zero Gap & Single Selection Enforcement
-        val themeSelectorContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        // ----- Material 3 Expressive Connected Button Toggle Group -----
+        val toggleGroupContext = ContextThemeWrapper(
+            this,
+            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup_Connected
+        )
+
+        val themeSelectorContainer = MaterialButtonToggleGroup(toggleGroupContext).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            isSingleSelection = true
+            isSelectionRequired = true
         }
 
         val themeOptions = listOf(
             getString(R.string.theme_system),
             getString(R.string.theme_light),
             getString(R.string.theme_dark)
+        )
+
+        val buttonContext = ContextThemeWrapper(
+            this,
+            com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
         )
 
         val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -233,75 +247,75 @@ class NotesMainAct : AppCompatActivity() {
             secondaryBtnColor
         }
 
-        val themeButtons = arrayOfNulls<TextView>(3)
-        val pillRadius = dpToPx(100f).toFloat()
+        val checkedState = intArrayOf(android.R.attr.state_checked)
+        val uncheckedState = intArrayOf(-android.R.attr.state_checked)
 
-        val updateThemeSelection: (Int) -> Unit = { selectedIndex ->
-            themeOptions.indices.forEach { i ->
-                val btn = themeButtons[i]
-                val isSelected = (i == selectedIndex)
-                if (btn != null) {
-                    val bg = btn.background as? GradientDrawable
-                    bg?.setColor(if (isSelected) activeTextColor else unselectedBgColor)
-                    btn.setTextColor(if (isSelected) cardBgColor else activeTextColor)
-                }
-            }
-        }
+        val buttonBgTint = android.content.res.ColorStateList(
+            arrayOf(checkedState, uncheckedState),
+            intArrayOf(activeTextColor, unselectedBgColor)
+        )
+
+        val buttonTextTint = android.content.res.ColorStateList(
+            arrayOf(checkedState, uncheckedState),
+            intArrayOf(cardBgColor, activeTextColor)
+        )
 
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
-            val optionBtn = TextView(this).apply {
+            val optionBtn = MaterialButton(buttonContext).apply {
+                id = View.generateViewId()
                 text = optionName
+                icon = null
                 textSize = 11.5f
                 isSingleLine = true
-                gravity = Gravity.CENTER
-                setTypeface(null, Typeface.BOLD)
 
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    dpToPx(42f),
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
                 )
 
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    setColor(if (isActive) activeTextColor else unselectedBgColor)
-                    when (index) {
-                        0 -> cornerRadii = floatArrayOf(pillRadius, pillRadius, 0f, 0f, 0f, 0f, pillRadius, pillRadius)
-                        1 -> cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
-                        2 -> cornerRadii = floatArrayOf(0f, 0f, pillRadius, pillRadius, pillRadius, pillRadius, 0f, 0f)
-                    }
-                }
+                backgroundTintList = buttonBgTint
+                setTextColor(buttonTextTint)
+                strokeWidth = 0
 
-                setTextColor(if (isActive) cardBgColor else activeTextColor)
-                setPadding(dpToPx(4f), 0, dpToPx(4f), 0)
-
+                setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
                 setOnTouchListener(pressScaleTouchListener)
+            }
 
-                setOnClickListener {
-                    if (savedTheme != index) {
-                        prefs.edit().putInt("app_theme", index).apply()
-                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                        updateThemeSelection(index)
+            themeSelectorContainer.addView(optionBtn)
+            if (isActive) {
+                themeSelectorContainer.check(optionBtn.id)
+            }
+        }
 
-                        val mode = when (index) {
-                            0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                            1 -> AppCompatDelegate.MODE_NIGHT_NO
-                            2 -> AppCompatDelegate.MODE_NIGHT_YES
-                            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                        }
-                        AppCompatDelegate.setDefaultNightMode(mode)
+        themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                val selectedIndex = when (checkedId) {
+                    group.getChildAt(0).id -> 0
+                    group.getChildAt(1).id -> 1
+                    group.getChildAt(2).id -> 2
+                    else -> 0
+                }
+                if (savedTheme != selectedIndex) {
+                    prefs.edit().putInt("app_theme", selectedIndex).apply()
+                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-                        // Eliminate lag/transition flash when switching themes
-                        overridePendingTransition(0, 0)
-                        recreate()
-                        overridePendingTransition(0, 0)
+                    val mode = when (selectedIndex) {
+                        0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                        1 -> AppCompatDelegate.MODE_NIGHT_NO
+                        2 -> AppCompatDelegate.MODE_NIGHT_YES
+                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                     }
+                    AppCompatDelegate.setDefaultNightMode(mode)
+
+                    // Eliminate lag and transition flash when switching themes
+                    overridePendingTransition(0, 0)
+                    recreate()
+                    overridePendingTransition(0, 0)
                 }
             }
-            themeButtons[index] = optionBtn
-            themeSelectorContainer.addView(optionBtn)
         }
 
         themeCard.addView(themeTitle)
