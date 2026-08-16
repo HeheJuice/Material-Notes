@@ -177,108 +177,98 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // Helper to build adaptable option cards (segmented style like the screenshot)
-        val createAdaptableCard = { titleText: String, options: List<String>, currentIndex: Int, onSelected: (Int) -> Unit ->
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dpToPx(24f).toFloat()
-                    setColor(cardBgColor)
-                }
-                setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    bottomMargin = dpToPx(12f)
-                }
+        // App Theme Card
+        val themeCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(24f).toFloat()
+                setColor(cardBgColor)
+            }
+            setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
 
-                val titleView = TextView(this@NotesMainAct).apply {
-                    text = titleText
-                    textSize = 16f
-                    setTextColor(activeTextColor)
-                    setTypeface(null, Typeface.BOLD)
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        bottomMargin = dpToPx(14f)
-                    }
-                }
-                addView(titleView)
-
-                val selectorContainer = LinearLayout(this@NotesMainAct).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(100f).toFloat()
-                        setColor(secondaryBtnColor)
-                    }
-                    setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dpToPx(48f)
-                    )
-                }
-
-                options.forEachIndexed { index, optionName ->
-                    val isActive = (currentIndex == index)
-                    val optionBtn = TextView(this@NotesMainAct).apply {
-                        text = optionName
-                        textSize = 13f
-                        gravity = Gravity.CENTER
-                        setTypeface(null, Typeface.BOLD)
-                        setTextColor(if (isActive) activeTextColor else secondaryTextColor)
-                        background = if (isActive) GradientDrawable().apply {
-                            shape = GradientDrawable.RECTANGLE
-                            cornerRadius = dpToPx(100f).toFloat()
-                            setColor(accentColor)
-                        } else null
-                        layoutParams = LinearLayout.LayoutParams(
-                            0,
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            1f
-                        )
-                        isClickable = true
-                        isFocusable = true
-                        setOnTouchListener(pressScaleTouchListener)
-                        setOnClickListener {
-                            if (currentIndex != index) {
-                                performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                                onSelected(index)
-                            }
-                        }
-                    }
-                    selectorContainer.addView(optionBtn)
-                }
-                addView(selectorContainer)
+        val themeTitle = TextView(this).apply {
+            text = getString(R.string.setting_app_theme)
+            textSize = 16f
+            setTextColor(activeTextColor)
+            setTypeface(null, Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(14f)
             }
         }
 
-        // 1. App Theme Card (Adaptable Segmented Control)
-        val themeCard = createAdaptableCard(
-            getString(R.string.setting_app_theme),
-            listOf(getString(R.string.theme_system), getString(R.string.theme_light), getString(R.string.theme_dark)),
-            savedTheme
-        ) { newIndex ->
-            prefs.edit().putInt("app_theme", newIndex).apply()
-            recreate()
+        // Adaptable segmented control pill container for App Theme with exact positioning shape rules
+        val themeSelectorContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
+
+        val themeOptions = listOf(
+            getString(R.string.theme_system),
+            getString(R.string.theme_light),
+            getString(R.string.theme_dark)
+        )
+
+        val totalCount = themeOptions.size
+        val pillRadius = dpToPx(100f).toFloat()
+
+        themeOptions.forEachIndexed { index, optionName ->
+            val isActive = (savedTheme == index)
+            val optionBtn = TextView(this).apply {
+                text = optionName
+                textSize = 13f
+                gravity = Gravity.CENTER
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(if (isActive) activeTextColor else secondaryTextColor)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    if (isActive) {
+                        cornerRadius = pillRadius
+                        setColor(accentColor)
+                    } else {
+                        setColor(secondaryBtnColor)
+                        cornerRadii = when {
+                            totalCount == 1 -> floatArrayOf(pillRadius, pillRadius, pillRadius, pillRadius, pillRadius, pillRadius, pillRadius, pillRadius)
+                            index == 0 -> floatArrayOf(pillRadius, pillRadius, 0f, 0f, 0f, 0f, pillRadius, pillRadius) // 1st option: left rounded, right flat
+                            index == totalCount - 1 -> floatArrayOf(0f, 0f, pillRadius, pillRadius, pillRadius, pillRadius, 0f, 0f) // Last option: left flat, right rounded
+                            else -> floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f) // Middle option: flat on both sides
+                        }
+                    }
+                }
+                setPadding(dpToPx(12f), dpToPx(14f), dpToPx(12f), dpToPx(14f))
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                ) // Zero margin between options so unselected segments seamlessly form a continuous track
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+                setOnClickListener {
+                    if (savedTheme != index) {
+                        prefs.edit().putInt("app_theme", index).apply()
+                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                        recreate()
+                    }
+                }
+            }
+            themeSelectorContainer.addView(optionBtn)
+        }
+
+        themeCard.addView(themeTitle)
+        themeCard.addView(themeSelectorContainer)
         settingsContentLayout.addView(themeCard)
-
-        // 2. Example Adaptable Feature Card (Matching screenshot style: Force / Default / Hide)
-        val savedFeatureState = prefs.getInt("feature_state", 1) // 0: Force, 1: Default, 2: Hide
-        val featureCard = createAdaptableCard(
-            "Quick Actions Display",
-            listOf("Force", "Default", "Hide"),
-            savedFeatureState
-        ) { newIndex ->
-            prefs.edit().putInt("feature_state", newIndex).apply()
-            Toast.makeText(this, "Updated Quick Actions preference", Toast.LENGTH_SHORT).show()
-        }
-        settingsContentLayout.addView(featureCard)
-
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
