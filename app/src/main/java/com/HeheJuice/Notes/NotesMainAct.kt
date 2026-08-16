@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.Window
 import android.view.WindowInsets
@@ -30,12 +31,41 @@ class NotesMainAct : Activity() {
     private lateinit var settingsContainer: FrameLayout
     private var isNotesActive = true
 
-    // Polished Material 3 / Google Photos style colors
+    // Polished Material 3 / Google Photos style colors (toned down for comfort)
     private var accentColor: Int = 0          
     private var activeTextColor: Int = 0      
     private var secondaryTextColor: Int = 0   
     private var cardBgColor: Int = 0          
     private var cardBorderColor: Int = 0      
+
+    // Reference press-scale touch listener for smooth feedback
+    private val pressScaleTouchListener = View.OnTouchListener { v, event ->
+        val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                v.animate().cancel()
+                v.animate()
+                    .scaleX(0.95f)
+                    .scaleY(0.95f)
+                    .alpha(0.88f)
+                    .setDuration(120)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
+                    .start()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                v.animate().cancel()
+                v.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .alpha(1.0f)
+                    .setDuration(350)
+                    .setInterpolator(springBackInterpolator)
+                    .start()
+            }
+        }
+        false
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -45,11 +75,11 @@ class NotesMainAct : Activity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- Color Resolution -----
+        // ----- Color Resolution (Balanced and Muted) -----
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             accentColor = ContextCompat.getColor(
                 this,
-                if (isDark) android.R.color.system_accent2_800 else android.R.color.system_accent1_200
+                if (isDark) android.R.color.system_accent2_800 else android.R.color.system_accent1_300
             )
             activeTextColor = ContextCompat.getColor(
                 this,
@@ -60,8 +90,8 @@ class NotesMainAct : Activity() {
                 if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
             )
         } else {
-            accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#FFD8E4")
-            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#31111D")
+            accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
+            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#1D192B")
             cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
         }
 
@@ -145,6 +175,9 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
             setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -159,8 +192,10 @@ class NotesMainAct : Activity() {
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
-            // Initially hidden on inactive tab (Google Photos style)
             setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dpToPx(44f)
@@ -255,7 +290,7 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // ----- Click & Long-Click Listeners (Fully Functional) -----
+        // ----- Click & Long-Click Listeners -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -270,7 +305,6 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Long press support is now fully operational
         notesTabBtn.setOnLongClickListener {
             true
         }
