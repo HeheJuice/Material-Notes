@@ -212,10 +212,10 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Material 3 Expressive Connected Button Toggle Group -----
+        // ----- Material 3 Expressive (MD3E) Toggle Group Style -----
         val toggleGroupContext = ContextThemeWrapper(
             this,
-            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup_Connected
+            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
         )
 
         val themeSelectorContainer = MaterialButtonToggleGroup(toggleGroupContext).apply {
@@ -300,7 +300,7 @@ class NotesMainAct : AppCompatActivity() {
                 }
                 if (savedTheme != selectedIndex) {
                     prefs.edit().putInt("app_theme", selectedIndex).apply()
-                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                    group.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
                     val mode = when (selectedIndex) {
                         0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
