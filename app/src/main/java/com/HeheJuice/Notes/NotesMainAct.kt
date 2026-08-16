@@ -59,15 +59,11 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var appNamePill: TextView
 
     // Colors (resolved from theme)
-    private var windowBgColor: Int = 0
     private var primaryContainerColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
     private var surfaceContainerColor: Int = 0
     private var surfaceContainerLowColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
-    private var accentColor: Int = 0
-    private var activeTextColor: Int = 0
-    private var secondaryTextColor: Int = 0
 
     // Press-scale touch listener
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
@@ -129,43 +125,23 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Resolve all required colors from the current theme -----
+        // ----- Resolve all required container colors from the current theme -----
         val typedValue = TypedValue()
 
-        // Primary Container (for selected items and buttons)
         theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
         primaryContainerColor = typedValue.data
 
-        // On Primary Container (text on primary container)
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
         onPrimaryContainerColor = typedValue.data
 
-        // Surface Container (for main background)
         theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
         surfaceContainerColor = typedValue.data
 
-        // Surface Container Low (for unselected items, bottom bar, pills, etc.)
         theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
         surfaceContainerLowColor = typedValue.data
 
-        // On Surface Variant (text on surface containers)
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
         onSurfaceVariantColor = typedValue.data
-
-        // Primary (for other accents)
-        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true)
-        accentColor = typedValue.data
-
-        // Fallback for active text if needed
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            activeTextColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_700
-            )
-        } else {
-            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
-        }
-        secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
 
         // ----- Root background: Surface Container -----
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
@@ -196,8 +172,8 @@ class NotesMainAct : AppCompatActivity() {
         val settingsContentLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
             )
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
