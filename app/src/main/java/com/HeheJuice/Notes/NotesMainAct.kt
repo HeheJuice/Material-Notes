@@ -31,8 +31,6 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
@@ -57,7 +55,7 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var contentHolder: FrameLayout
     private lateinit var appNamePill: TextView
 
-    // Colors (surface-based & primary container rules)
+    // Colors (Material You Theme Attributes)
     private var windowBgColor: Int = 0
     private var accentColor: Int = 0
     private var activeTextColor: Int = 0
@@ -125,32 +123,27 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Color Resolution (App Background = Surface Container, Selected/Apply Button = Primary Container) -----
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            windowBgColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
-            )
-            accentColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_accent1_700 else android.R.color.system_accent1_200
-            )
-            activeTextColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_700
-            )
-            cardBgColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_0
-            )
-        } else {
-            windowBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
-            accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
-            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
-            cardBgColor = if (isDark) Color.parseColor("#141218") else Color.parseColor("#FFFFFF")
-        }
-
-        secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
+        // ----- Resolve Theme Attributes for 100% Color Match -----
+        windowBgColor = resolveAttrOrDefault(
+            com.google.android.material.R.attr.colorSurfaceContainer,
+            if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#F3EDF7")
+        )
+        accentColor = resolveAttrOrDefault(
+            com.google.android.material.R.attr.colorPrimaryContainer,
+            if (isDark) Color.parseColor("#6E3541") else Color.parseColor("#E8DEF8")
+        )
+        activeTextColor = resolveAttrOrDefault(
+            com.google.android.material.R.attr.colorOnPrimaryContainer,
+            if (isDark) Color.parseColor("#FFD9DE") else Color.parseColor("#4F378B")
+        )
+        cardBgColor = resolveAttrOrDefault(
+            com.google.android.material.R.attr.colorSurface,
+            if (isDark) Color.parseColor("#141218") else Color.parseColor("#FFFFFF")
+        )
+        secondaryTextColor = resolveAttrOrDefault(
+            com.google.android.material.R.attr.colorOnSurfaceVariant,
+            if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
+        )
         secondaryBtnColor = if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(windowBgColor) }
@@ -215,19 +208,19 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Material 3 Expressive (MD3E) Toggle Group Style -----
-        val toggleGroupContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
-        )
-
-        val themeSelectorContainer = MaterialButtonToggleGroup(toggleGroupContext).apply {
+        // ----- Custom Clean Toggle Group (Exact Color Match with Apply Button) -----
+        val themeSelectorContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            isSingleSelection = true
-            isSelectionRequired = true
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(resolveAttrOrDefault(com.google.android.material.R.attr.colorSurfaceVariant, secondaryBtnColor))
+            }
+            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
         val themeOptions = listOf(
@@ -236,76 +229,51 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
-        val buttonContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
-        )
-
-        val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_neutral1_700 else android.R.color.system_neutral1_100
-            )
-        } else {
-            secondaryBtnColor
-        }
-
-        val checkedState = intArrayOf(android.R.attr.state_checked)
-        val uncheckedState = intArrayOf(-android.R.attr.state_checked)
-
-        val buttonBgTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(accentColor, unselectedBgColor)
-        )
-
-        val buttonTextTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(activeTextColor, activeTextColor)
-        )
-
         var pendingTheme = savedTheme
+        val optionButtons = mutableListOf<TextView>()
+
+        val updateToggleVisuals = { selectedIndex: Int ->
+            optionButtons.forEachIndexed { idx, btn ->
+                val isSelected = (idx == selectedIndex)
+                btn.background = if (isSelected) {
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dpToPx(100f).toFloat()
+                        setColor(accentColor)
+                    }
+                } else null
+                btn.setTextColor(if (isSelected) activeTextColor else secondaryTextColor)
+            }
+        }
 
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
-            val optionBtn = MaterialButton(buttonContext).apply {
-                id = View.generateViewId()
+            val optionBtn = TextView(this).apply {
                 text = optionName
-                icon = null
-                textSize = 11.5f
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
                 isSingleLine = true
-
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    dpToPx(44f),
                     1f
                 )
-
-                backgroundTintList = buttonBgTint
-                setTextColor(buttonTextTint)
-                strokeWidth = 0
-
-                // Adjusted vertical padding for a slightly higher button height
-                setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
+                setPadding(dpToPx(4f), 0, dpToPx(4f), 0)
                 setOnTouchListener(pressScaleTouchListener)
-            }
-
-            themeSelectorContainer.addView(optionBtn)
-            if (isActive) {
-                themeSelectorContainer.check(optionBtn.id)
-            }
-        }
-
-        themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
-            if (isChecked) {
-                pendingTheme = when (checkedId) {
-                    group.getChildAt(0).id -> 0
-                    group.getChildAt(1).id -> 1
-                    group.getChildAt(2).id -> 2
-                    else -> savedTheme
+                setOnClickListener {
+                    pendingTheme = index
+                    updateToggleVisuals(index)
+                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 }
             }
+
+            optionButtons.add(optionBtn)
+            themeSelectorContainer.addView(optionBtn)
         }
+
+        updateToggleVisuals(savedTheme)
 
         // ----- Apply Theme Button (Primary Container) -----
         val applyThemeBtn = TextView(this).apply {
@@ -414,9 +382,7 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
             isFocusable = true
-            setOnClickListener {
-                // Empty as requested
-            }
+            setOnClickListener { }
             setOnTouchListener(pressScaleTouchListener)
         }
 
@@ -553,7 +519,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background (Primary Container)
+        // Sliding pill background
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(accentColor)
@@ -641,11 +607,7 @@ class NotesMainAct : AppCompatActivity() {
                 marginStart = dpToPx(12f)
             }
             setOnClickListener {
-                if (isMenuExpanded) {
-                    closeMenu()
-                } else {
-                    openMenu()
-                }
+                if (isMenuExpanded) closeMenu() else openMenu()
             }
             setOnTouchListener(pressScaleTouchListener)
         }
@@ -792,6 +754,19 @@ class NotesMainAct : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("is_notes_active", isNotesActive)
+    }
+
+    private fun resolveAttrOrDefault(attr: Int, defaultColor: Int): Int {
+        val typedValue = TypedValue()
+        return if (theme.resolveAttribute(attr, typedValue, true)) {
+            if (typedValue.resourceId != 0) {
+                ContextCompat.getColor(this, typedValue.resourceId)
+            } else {
+                typedValue.data
+            }
+        } else {
+            defaultColor
+        }
     }
 
     private fun openMenu() {
