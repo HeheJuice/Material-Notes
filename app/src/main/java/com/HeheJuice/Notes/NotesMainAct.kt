@@ -211,7 +211,7 @@ class NotesMainAct : AppCompatActivity() {
                 isAllCaps = false
                 setTypeface(null, Typeface.BOLD)
                 
-                layoutParams = MaterialButtonToggleGroup.LayoutParams(
+                layoutParams = LinearLayout.LayoutParams(
                     0,
                     dpToPx(48f),
                     1f
@@ -235,7 +235,7 @@ class NotesMainAct : AppCompatActivity() {
                 val index = selectedButton?.tag as? Int ?: 0
                 if (savedTheme != index) {
                     prefs.edit().putInt("app_theme", index).apply()
-                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                    group.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                     recreate()
                 }
             }
