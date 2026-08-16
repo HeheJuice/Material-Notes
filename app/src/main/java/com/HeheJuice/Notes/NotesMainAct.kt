@@ -47,19 +47,23 @@ class NotesMainAct : Activity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- 1. Robust Monet & Material 3 Color Resolution -----
+        // ----- 1. Robust Monet & Material 3 Color Resolution (Dark/Light Fixed) -----
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Dynamic Monet colors matching Google Photos style (Soft pastel active container)
-            accentColor = ContextCompat.getColor(this, android.R.color.system_accent2_100)
-            activeTextColor = ContextCompat.getColor(this, android.R.color.system_accent2_800)
+            accentColor = ContextCompat.getColor(
+                this,
+                if (isDark) android.R.color.system_accent2_800 else android.R.color.system_accent2_100
+            )
+            activeTextColor = ContextCompat.getColor(
+                this,
+                if (isDark) android.R.color.system_accent2_100 else android.R.color.system_accent2_800
+            )
             cardBgColor = ContextCompat.getColor(
                 this,
                 if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
             )
         } else {
-            // Safe fallbacks for older Android versions
-            accentColor = Color.parseColor("#E8DEF8")
-            activeTextColor = Color.parseColor("#1D192B")
+            accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
+            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#1D192B")
             cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
         }
 
@@ -252,7 +256,7 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Direct click listeners with transition animation
+        // Direct click listeners
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 animatePillTo(0f) { switchTab(true) }
@@ -264,7 +268,15 @@ class NotesMainAct : Activity() {
             }
         }
 
-        // Fixed drag/touch handling matching exact button bounds
+        // Optional long-press support on tabs
+        notesTabBtn.setOnLongClickListener {
+            true
+        }
+        settingsTabBtn.setOnLongClickListener {
+            true
+        }
+
+        // Fixed touch handling allowing normal clicks and long-presses to pass through properly
         tabPillContainer.setOnTouchListener { view, event ->
             val x0 = notesTabBtn.left.toFloat()
             val x1 = settingsTabBtn.left.toFloat()
@@ -284,7 +296,7 @@ class NotesMainAct : Activity() {
                     val touchX = event.x - tabPillContainer.paddingLeft - tabButtonsLayout.left
                     val progress = if (x1 > x0) ((touchX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
                     updatePillPosition(progress)
-                    true
+                    false // Return false so click and long-press listeners can also fire
                 }
 
                 MotionEvent.ACTION_MOVE -> {
@@ -314,7 +326,7 @@ class NotesMainAct : Activity() {
                         .setDuration(350)
                         .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f))
                         .start()
-                    true
+                    false
                 }
                 else -> false
             }
