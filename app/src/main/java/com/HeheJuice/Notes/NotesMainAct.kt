@@ -158,10 +158,10 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
         }
 
-        // App Name Pill (Left)
+        // App Name Pill (Left) - Made larger
         val appNamePill = TextView(this).apply {
             text = "Notes"
-            textSize = 14f
+            textSize = 16f
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
@@ -170,7 +170,7 @@ class NotesMainAct : Activity() {
                 cornerRadius = dpToPx(100f).toFloat()
                 setColor(cardBgColor)
             }
-            setPadding(dpToPx(16f), dpToPx(10f), dpToPx(16f), dpToPx(10f))
+            setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -178,18 +178,17 @@ class NotesMainAct : Activity() {
             )
         }
 
-        // Refresh/Menu Button Container (Right) using R.drawable.menu_24px
+        // Menu Button Container (Right) using R.drawable.menu_24px - Made larger (50dp)
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(cardBgColor)
             }
-            layoutParams = FrameLayout.LayoutParams(dpToPx(44f), dpToPx(44f), Gravity.END or Gravity.CENTER_VERTICAL)
+            layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
             isFocusable = true
             setOnClickListener {
                 // Does nothing for now as requested
-                Toast.makeText(this@NotesMainAct, "Menu clicked", Toast.LENGTH_SHORT).show()
             }
             setOnTouchListener(pressScaleTouchListener)
         }
@@ -207,8 +206,8 @@ class NotesMainAct : Activity() {
             setImageDrawable(tintDrawableFunc(menuDrawable, activeTextColor))
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             layoutParams = FrameLayout.LayoutParams(
-                dpToPx(24f),
-                dpToPx(24f),
+                dpToPx(26f),
+                dpToPx(26f),
                 Gravity.CENTER
             )
         }
@@ -557,8 +556,8 @@ class NotesMainAct : Activity() {
                 topMargin = topInset
             }
 
-            // Ensure content doesn't hide behind the top bar
-            contentHolder.setPadding(0, topInset + dpToPx(60f), 0, 0)
+            // Ensure content doesn't hide behind the larger top bar
+            contentHolder.setPadding(0, topInset + dpToPx(66f), 0, 0)
 
             // Adjust bottom bar and expanding menu positions
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
