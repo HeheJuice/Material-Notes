@@ -10,6 +10,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -26,10 +27,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
@@ -209,44 +212,12 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Unselected background tone for theme selector
-        val themeUnselectedBg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_200
-            )
-        } else {
-            secondaryBtnColor
-        }
-
-        // Theme Selector Container with Sliding Pill (Zero Gaps)
-        val themePillContainer = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(themeUnselectedBg)
-            }
-            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
+        // Horizontal layout for separated pill buttons with a compact gap
+        val themeSelectorContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        val themeSlidingPill = View(this).apply {
-            background = GradientDrawable().apply {
-                setColor(activeTextColor)
-                cornerRadius = dpToPx(100f).toFloat()
-            }
-            layoutParams = FrameLayout.LayoutParams(0, dpToPx(40f), Gravity.CENTER_VERTICAL)
-        }
-
-        val themeButtonsLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
@@ -256,56 +227,86 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
-        val themeButtonViews = mutableListOf<TextView>()
+        val buttonContext = ContextThemeWrapper(
+            this,
+            com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
+        )
+
+        val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.getColor(
+                this,
+                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_200
+            )
+        } else {
+            secondaryBtnColor
+        }
+
+        val checkedState = intArrayOf(android.R.attr.state_checked)
+        val uncheckedState = intArrayOf(-android.R.attr.state_checked)
+
+        val buttonBgTint = android.content.res.ColorStateList(
+            arrayOf(checkedState, uncheckedState),
+            intArrayOf(activeTextColor, unselectedBgColor) 
+        )
+
+        val buttonTextTint = android.content.res.ColorStateList(
+            arrayOf(checkedState, uncheckedState),
+            intArrayOf(cardBgColor, activeTextColor) 
+        )
+
+        val rippleColorList = android.content.res.ColorStateList(
+            arrayOf(checkedState, uncheckedState),
+            intArrayOf(
+                ColorUtils.setAlphaComponent(cardBgColor, 60),
+                ColorUtils.setAlphaComponent(activeTextColor, 40)
+            )
+        )
 
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
-            val optionBtn = TextView(this).apply {
+            val optionBtn = MaterialButton(buttonContext).apply {
                 text = optionName
+                icon = null 
                 textSize = 11.5f
                 isSingleLine = true
-                setTextColor(if (isActive) cardBgColor else activeTextColor)
-                setTypeface(null, Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
+                
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    dpToPx(40f),
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
-                )
-                isClickable = true
-                isFocusable = true
+                ).apply {
+                    if (index > 0) {
+                        marginStart = dpToPx(6f) // Reduced gap between pills
+                    }
+                }
+
+                isCheckable = true
+                isChecked = isActive
+
+                backgroundTintList = buttonBgTint
+                setTextColor(buttonTextTint)
+                rippleColor = rippleColorList
+                strokeWidth = 0
+                cornerRadius = dpToPx(100f) // Pill shape
+                
+                setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
+
                 setOnTouchListener(pressScaleTouchListener)
 
                 setOnClickListener {
                     if (savedTheme != index) {
-                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                         prefs.edit().putInt("app_theme", index).apply()
-                        // Delay recreation slightly so the press-scale animation plays smoothly
-                        postDelayed({
-                            recreate()
-                        }, 180)
+                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                        recreate()
                     }
                 }
             }
-            themeButtonViews.add(optionBtn)
-            themeButtonsLayout.addView(optionBtn)
-        }
-
-        themePillContainer.addView(themeSlidingPill)
-        themePillContainer.addView(themeButtonsLayout)
-
-        // Initial Theme Sliding Pill Position
-        themePillContainer.doOnLayout {
-            val targetBtn = themeButtonViews[savedTheme]
-            themeSlidingPill.layoutParams = themeSlidingPill.layoutParams.apply { width = targetBtn.width }
-            themeSlidingPill.translationX = targetBtn.left.toFloat()
-            themeSlidingPill.requestLayout()
+            themeSelectorContainer.addView(optionBtn)
         }
 
         themeCard.addView(themeTitle)
-        themeCard.addView(themePillContainer)
+        themeCard.addView(themeSelectorContainer)
         settingsContentLayout.addView(themeCard)
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
