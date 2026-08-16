@@ -229,10 +229,23 @@ class NotesMainAct : AppCompatActivity() {
                 btn.background = if (isSelected) {
                     GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(24f).toFloat() // Expressive inner segment shape
+                        cornerRadius = dpToPx(24f).toFloat() // Expressive active segment shape
                         setColor(accentColor)
                     }
-                } else null
+                } else {
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        val outerRadius = dpToPx(22f).toFloat()
+                        val innerRadius = dpToPx(4f).toFloat()
+                        // Connected corner mapping for outer vs inner segments
+                        cornerRadii = when (idx) {
+                            0 -> floatArrayOf(outerRadius, outerRadius, innerRadius, innerRadius, innerRadius, innerRadius, outerRadius, outerRadius)
+                            optionButtons.size - 1 -> floatArrayOf(innerRadius, innerRadius, outerRadius, outerRadius, outerRadius, outerRadius, innerRadius, innerRadius)
+                            else -> floatArrayOf(innerRadius, innerRadius, innerRadius, innerRadius, innerRadius, innerRadius, innerRadius, innerRadius)
+                        }
+                        setColor(Color.TRANSPARENT)
+                    }
+                }
                 btn.setTextColor(if (isSelected) activeTextColor else secondaryTextColor)
             }
         }
