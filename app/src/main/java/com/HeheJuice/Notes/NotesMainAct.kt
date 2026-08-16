@@ -47,6 +47,7 @@ class NotesMainAct : Activity() {
     // Top Bar views
     private lateinit var topBarLayout: FrameLayout
     private lateinit var contentHolder: FrameLayout
+    private lateinit var appNamePill: TextView
 
     // Colors (surface-based)
     private var windowBgColor: Int = 0
@@ -158,8 +159,8 @@ class NotesMainAct : Activity() {
             setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
         }
 
-        // App Name Pill (Left) - Made larger
-        val appNamePill = TextView(this).apply {
+        // App Name Pill (Left) - Dynamically changes based on active tab
+        appNamePill = TextView(this).apply {
             text = "Notes"
             textSize = 16f
             setTextColor(activeTextColor)
@@ -178,7 +179,7 @@ class NotesMainAct : Activity() {
             )
         }
 
-        // Menu Button Container (Right) using R.drawable.menu_24px - Made larger (50dp)
+        // Menu Button Container (Right) using R.drawable.menu_24px
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -512,6 +513,7 @@ class NotesMainAct : Activity() {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
+                appNamePill.text = if (toNotes) "Notes" else "Settings"
             }
         }
 
@@ -556,7 +558,7 @@ class NotesMainAct : Activity() {
                 topMargin = topInset
             }
 
-            // Ensure content doesn't hide behind the larger top bar
+            // Ensure content doesn't hide behind the top bar
             contentHolder.setPadding(0, topInset + dpToPx(66f), 0, 0)
 
             // Adjust bottom bar and expanding menu positions

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.HeheJuice.Notes"
-        minSdk = 35
+        minSdk = 32
         targetSdk = 36
         versionCode = 10
         versionName = "V.1.0"
