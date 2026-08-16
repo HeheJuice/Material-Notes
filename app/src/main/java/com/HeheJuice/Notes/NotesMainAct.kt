@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
@@ -32,10 +33,78 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
+import java.io.File
 
+// ----- Data class & Repository -----
+data class Note(
+    val id: String,
+    val title: String,
+    val content: String,
+    val lastModified: Long
+)
+
+object NoteRepository {
+    private const val NOTES_DIR = "notes"
+    private lateinit var context: Context
+
+    fun init(context: Context) {
+        this.context = context.applicationContext
+        val dir = getNotesDir()
+        if (!dir.exists()) dir.mkdirs()
+    }
+
+    private fun getNotesDir(): File = context.filesDir.resolve(NOTES_DIR)
+
+    fun getAllNotes(): List<Note> {
+        val dir = getNotesDir()
+        return dir.listFiles { file -> file.extension == "txt" }
+            ?.mapNotNull { file ->
+                val content = file.readText()
+                val lines = content.lines()
+                val title = if (lines.isNotEmpty() && lines[0].isNotBlank()) lines[0] else file.nameWithoutExtension
+                Note(
+                    id = file.nameWithoutExtension,
+                    title = title,
+                    content = content,
+                    lastModified = file.lastModified()
+                )
+            }
+            ?.sortedByDescending { it.lastModified }
+            ?: emptyList()
+    }
+
+    fun getNote(id: String): Note? {
+        val file = getNotesDir().resolve("$id.txt")
+        return if (file.exists()) {
+            val content = file.readText()
+            val lines = content.lines()
+            val title = if (lines.isNotEmpty() && lines[0].isNotBlank()) lines[0] else id
+            Note(id, title, content, file.lastModified())
+        } else null
+    }
+
+    fun saveNote(id: String, content: String) {
+        val file = getNotesDir().resolve("$id.txt")
+        file.writeText(content)
+    }
+
+    fun deleteNote(id: String) {
+        getNotesDir().resolve("$id.txt").delete()
+    }
+
+    fun renameNote(oldId: String, newId: String): Boolean {
+        val oldFile = getNotesDir().resolve("$oldId.txt")
+        val newFile = getNotesDir().resolve("$newId.txt")
+        return oldFile.renameTo(newFile)
+    }
+}
+
+// ----- Main Activity -----
 class NotesMainAct : AppCompatActivity() {
 
     private lateinit var slidingPillView: View
@@ -57,6 +126,10 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var topBarLayout: FrameLayout
     private lateinit var contentHolder: FrameLayout
     private lateinit var appNamePill: TextView
+
+    // Notes list
+    private lateinit var notesRecyclerView: RecyclerView
+    private lateinit var notesAdapter: NotesListAdapter
 
     // Colors (resolved from theme)
     private var primaryContainerColor: Int = 0
@@ -117,6 +190,9 @@ class NotesMainAct : AppCompatActivity() {
         // ----- Force Dynamic Colors Application -----
         DynamicColors.applyToActivityIfAvailable(this)
 
+        // Initialize repository
+        NoteRepository.init(applicationContext)
+
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
@@ -156,7 +232,19 @@ class NotesMainAct : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
             )
             visibility = if (isNotesActive) View.VISIBLE else View.GONE
+
+            // Add RecyclerView for notes
+            val rv = RecyclerView(this@NotesMainAct).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                layoutManager = LinearLayoutManager(this@NotesMainAct)
+            }
+            notesRecyclerView = rv
+            addView(rv)
         }
+
         settingsContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -496,7 +584,9 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                Toast.makeText(this@NotesMainAct, "Create Notes clicked", Toast.LENGTH_SHORT).show()
+                // Open the note editor
+                val intent = Intent(this@NotesMainAct, NoteEditorActivity::class.java)
+                startActivity(intent)
             }
         }
 
@@ -516,7 +606,7 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                Toast.makeText(this@NotesMainAct, "Import Notes clicked", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@NotesMainAct, "Import Notes clicked (coming soon)", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -647,6 +737,16 @@ class NotesMainAct : AppCompatActivity() {
         rootFrame.addView(bottomBarLayout)
 
         setContentView(rootFrame)
+
+        // ----- Notes list adapter initialization -----
+        notesAdapter = NotesListAdapter(emptyList()) { note ->
+            val intent = Intent(this, NoteEditorActivity::class.java).apply {
+                putExtra("note_id", note.id)
+            }
+            startActivity(intent)
+        }
+        notesRecyclerView.adapter = notesAdapter
+        loadNotesList()
 
         // ----- Tab switching logic & Pill animation -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
@@ -781,9 +881,21 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::notesAdapter.isInitialized) {
+            loadNotesList()
+        }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("is_notes_active", isNotesActive)
+    }
+
+    private fun loadNotesList() {
+        val notes = NoteRepository.getAllNotes()
+        notesAdapter.updateItems(notes)
     }
 
     private fun openMenu() {
@@ -862,6 +974,54 @@ class NotesMainAct : AppCompatActivity() {
             }.start()
     }
 
+    // ----- Inner adapter for notes list -----
+    inner class NotesListAdapter(
+        private var items: List<Note>,
+        private val onItemClick: (Note) -> Unit
+    ) : RecyclerView.Adapter<NotesListAdapter.ViewHolder>() {
+
+        inner class ViewHolder(val card: TextView) : RecyclerView.ViewHolder(card)
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val tv = TextView(parent.context).apply {
+                textSize = 16f
+                setTextColor(onPrimaryContainerColor)
+                setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(16f))
+                background = GradientDrawable().apply {
+                    cornerRadius = dpToPx(12f).toFloat()
+                    setColor(surfaceContainerLowColor)
+                }
+                layoutParams = RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT,
+                    RecyclerView.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dpToPx(8f) }
+                isClickable = true
+                isFocusable = true
+            }
+            return ViewHolder(tv)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val note = items[position]
+            holder.card.text = note.title
+            holder.card.setOnClickListener { onItemClick(note) }
+            // Long press to delete
+            holder.card.setOnLongClickListener {
+                NoteRepository.deleteNote(note.id)
+                loadNotesList()
+                true
+            }
+        }
+
+        override fun getItemCount() = items.size
+
+        fun updateItems(newItems: List<Note>) {
+            items = newItems
+            notifyDataSetChanged()
+        }
+    }
+
+    // ----- Plus drawable helper -----
     private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = colorInt
