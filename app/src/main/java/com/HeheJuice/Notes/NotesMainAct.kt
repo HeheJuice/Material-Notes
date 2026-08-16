@@ -63,6 +63,7 @@ class NotesMainAct : AppCompatActivity() {
     private var onPrimaryContainerColor: Int = 0
     private var surfaceContainerColor: Int = 0
     private var surfaceContainerLowColor: Int = 0
+    private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
 
     // Press-scale touch listener
@@ -140,6 +141,9 @@ class NotesMainAct : AppCompatActivity() {
         theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
         surfaceContainerLowColor = typedValue.data
 
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, typedValue, true)
+        surfaceContainerHighestColor = typedValue.data
+
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
         onSurfaceVariantColor = typedValue.data
 
@@ -206,7 +210,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // --- Expressive Toggle Group with Surface Container Low for unselected ---
+        // --- Expressive Toggle Group with Surface Container Highest for unselected ---
         val toggleGroupContext = ContextThemeWrapper(
             this,
             com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
@@ -232,13 +236,13 @@ class NotesMainAct : AppCompatActivity() {
             com.google.android.material.R.style.Widget_Material3Expressive_Button_OutlinedButton
         )
 
-        // Color state lists: selected = Primary Container, unselected = Surface Container Low
+        // Color state lists: selected = Primary Container, unselected = Surface Container Highest
         val buttonBgTint = ColorStateList(
             arrayOf(
                 intArrayOf(android.R.attr.state_checked),
                 intArrayOf(-android.R.attr.state_checked)
             ),
-            intArrayOf(primaryContainerColor, surfaceContainerLowColor)
+            intArrayOf(primaryContainerColor, surfaceContainerHighestColor)
         )
 
         val buttonTextTint = ColorStateList(
@@ -269,7 +273,7 @@ class NotesMainAct : AppCompatActivity() {
 
                 backgroundTintList = buttonBgTint
                 setTextColor(buttonTextTint)
-                strokeWidth = 0   // no outline, just background fill
+                strokeWidth = 0
 
                 setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
                 setOnTouchListener(pressScaleTouchListener)
@@ -438,7 +442,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- Expanding Menu Container -----
+        // ----- Expanding Menu Container (Floating Pills now use Primary Container) -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -452,11 +456,12 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
+        // Background for menu pills – now Primary Container (same as selected theme toggle)
         val createPillBackground = {
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerLowColor)
+                setColor(primaryContainerColor)
             }
         }
 
@@ -471,14 +476,15 @@ class NotesMainAct : AppCompatActivity() {
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
-        val createIcon = tintDrawableFunc(editNoteDrawable, onSurfaceVariantColor)
-        val importIcon = tintDrawableFunc(boxAddDrawable, onSurfaceVariantColor)
+        // Menu item icons and text now use onPrimaryContainerColor for contrast
+        val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
+        val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
 
-        // Menu Items – Surface Container Low
+        // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
             textSize = 14f
-            setTextColor(onSurfaceVariantColor)
+            setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
@@ -494,10 +500,11 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // Menu Item: Import Notes Pill
         val importNotesItem = TextView(this).apply {
             text = getString(R.string.import_notes)
             textSize = 14f
-            setTextColor(onSurfaceVariantColor)
+            setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
