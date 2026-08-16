@@ -24,4 +24,21 @@
 <string name="write_content_hint">Write your note here...</string>
 <string name="note_cannot_be_empty">Note cannot be empty</string>
 <string name="back_content_desc">Back</string>
+
+
+
+<string name="setting_app_theme">App Theme</string>
+<string name="theme_system">System</string>
+<string name="theme_light">Light</string>
+<string name="theme_dark">Dark</string>
+<string name="themerestart">Apply Selected Theme</string>
+<string name="nav_notes">Notes</string>
+<string name="nav_settings">Settings</string>
+<string name="create_notes">Create Notes</string>
+<string name="import_notes">Import Notes</string>
+<string name="import_notes_toast">Import Notes (coming soon)</string>
+<string name="add_button_content_desc">Add</string>
+<string name="note_cannot_be_empty">Note cannot be empty</string>
+<string name="back_content_desc">Back</string>
+
 </resources>
