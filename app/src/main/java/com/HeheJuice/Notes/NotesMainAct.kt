@@ -40,6 +40,7 @@ class NotesMainAct : Activity() {
     // Menu state & views
     private var isMenuExpanded = false
     private lateinit var menuOverlayContainer: LinearLayout
+    private lateinit var bottomBarLayout: LinearLayout
     private lateinit var dimOverlay: View
     private lateinit var plusIconDrawable: PlusDrawable
     private lateinit var plusBtnRef: ImageView
@@ -244,9 +245,7 @@ class NotesMainAct : Activity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dpToPx(16f)
-            }
+            )
         }
 
         val createPillBackground = {
@@ -326,7 +325,7 @@ class NotesMainAct : Activity() {
         rootFrame.addView(menuOverlayContainer)
 
         // ----- Bottom bar layout (with + button) -----
-        val bottomBarLayout = LinearLayout(this).apply {
+        bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = FrameLayout.LayoutParams(
@@ -572,6 +571,16 @@ class NotesMainAct : Activity() {
     private fun openMenu() {
         isMenuExpanded = true
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+
+        // Dynamically align menu container right edge directly above the + button
+        val rootFrame = menuOverlayContainer.parent as? FrameLayout
+        if (rootFrame != null) {
+            val plusRightInRoot = bottomBarLayout.x + plusBtnRef.x + plusBtnRef.width
+            val rightMargin = (rootFrame.width - plusRightInRoot).toInt()
+            val lp = menuOverlayContainer.layoutParams as FrameLayout.LayoutParams
+            lp.rightMargin = rightMargin.coerceAtLeast(dpToPx(16f))
+            menuOverlayContainer.layoutParams = lp
+        }
 
         plusBtnRef.animate()
             .rotation(45f)
