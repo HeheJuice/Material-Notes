@@ -125,25 +125,25 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Color Resolution -----
+        // ----- Color Resolution (Accent 1 200 / Accent 1 700 rules) -----
         windowBgColor = if (isDark) Color.BLACK else Color.WHITE
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             accentColor = ContextCompat.getColor(
                 this,
-                if (isDark) android.R.color.system_accent2_800 else android.R.color.system_accent2_100
+                if (isDark) android.R.color.system_accent1_700 else android.R.color.system_accent1_200
             )
             activeTextColor = ContextCompat.getColor(
                 this,
-                if (isDark) android.R.color.system_accent2_100 else android.R.color.system_accent1_900
+                if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_700
             )
             cardBgColor = ContextCompat.getColor(
                 this,
                 if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
             )
         } else {
-            accentColor = if (isDark) Color.parseColor("#36343B") else Color.parseColor("#F2EEF5")
-            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#1D192B")
+            accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
+            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
             cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
         }
 
@@ -282,7 +282,7 @@ class NotesMainAct : AppCompatActivity() {
                 setTextColor(buttonTextTint)
                 strokeWidth = 0
 
-                // Adjusted vertical padding for a slightly higher button height (16f)
+                // Adjusted vertical padding for a slightly higher button height
                 setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
                 setOnTouchListener(pressScaleTouchListener)
             }
@@ -304,7 +304,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Round & Monet Apply Theme Button (Matching Selected Tab Color & Increased Height) -----
+        // ----- Round & Monet Apply Theme Button (Matching Selected Theme & Selected Tab Colors) -----
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
