@@ -4,7 +4,6 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -60,7 +59,7 @@ class NotesMainAct : AppCompatActivity() {
     private var activeTextColor: Int = 0
     private var secondaryTextColor: Int = 0
     private var cardBgColor: Int = 0
-    private var secondaryBtnColor: Int = 0
+    private var pillUnselectedBg: Int = 0
 
     // Press-scale touch listener
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
@@ -116,14 +115,14 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Robust Harmonious Color Palette -----
+        // ----- Harmonious MD3 Expressive Color Palette -----
         windowBgColor = if (isDark) Color.BLACK else Color.WHITE
         cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
-        secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
-        secondaryBtnColor = if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
+        secondaryTextColor = if (isDark) Color.parseColor("#E6E1E5") else Color.parseColor("#49454F")
+        pillUnselectedBg = if (isDark) Color.parseColor("#36343B") else Color.parseColor("#E7E0EC")
 
-        accentColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#6750A4")
-        activeTextColor = if (isDark) Color.parseColor("#381E72") else Color.parseColor("#FFFFFF")
+        accentColor = if (isDark) Color.parseColor("#F2B8B5") else Color.parseColor("#6750A4")
+        activeTextColor = if (isDark) Color.parseColor("#601410") else Color.parseColor("#FFFFFF")
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(windowBgColor) }
 
@@ -185,15 +184,9 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- M3 Expressive Pill Segmented Group Container -----
+        // ----- MD3 Expressive Independent Pill Button Group (Text-only) -----
         val themeSelectorContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#E6E0E9"))
-            }
-            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -201,37 +194,40 @@ class NotesMainAct : AppCompatActivity() {
         }
 
         val themeOptions = listOf(
-            getString(R.string.theme_system),
-            getString(R.string.theme_light),
-            getString(R.string.theme_dark)
+            Pair(getString(R.string.theme_system), 0),
+            Pair(getString(R.string.theme_light), 1),
+            Pair(getString(R.string.theme_dark), 2)
         )
 
-        themeOptions.forEachIndexed { index, optionName ->
+        themeOptions.forEach { (optionName, index) ->
             val isSelected = (savedTheme == index)
 
-            val optionBtn = TextView(this).apply {
+            val pillButton = TextView(this).apply {
                 text = optionName
                 textSize = 13f
                 setTypeface(null, Typeface.BOLD)
                 gravity = Gravity.CENTER
                 
-                background = if (isSelected) {
-                    GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(100f).toFloat()
-                        setColor(accentColor)
-                    }
-                } else {
-                    null
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(100f).toFloat()
+                    setColor(if (isSelected) accentColor else pillUnselectedBg)
                 }
 
                 setTextColor(if (isSelected) activeTextColor else secondaryTextColor)
+                setPadding(dpToPx(12f), dpToPx(10f), dpToPx(12f), dpToPx(10f))
 
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    dpToPx(38f),
+                    dpToPx(44f),
                     1f
-                )
+                ).apply {
+                    if (index > 0) marginStart = dpToPx(8f)
+                }
+
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
 
                 setOnClickListener {
                     if (savedTheme != index) {
@@ -241,7 +237,7 @@ class NotesMainAct : AppCompatActivity() {
                     }
                 }
             }
-            themeSelectorContainer.addView(optionBtn)
+            themeSelectorContainer.addView(pillButton)
         }
 
         themeCard.addView(themeTitle)
