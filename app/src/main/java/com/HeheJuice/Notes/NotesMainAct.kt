@@ -260,6 +260,8 @@ class NotesMainAct : AppCompatActivity() {
             intArrayOf(cardBgColor, activeTextColor)
         )
 
+        var pendingTheme = savedTheme
+
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
@@ -292,17 +294,43 @@ class NotesMainAct : AppCompatActivity() {
 
         themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
-                val selectedIndex = when (checkedId) {
+                pendingTheme = when (checkedId) {
                     group.getChildAt(0).id -> 0
                     group.getChildAt(1).id -> 1
                     group.getChildAt(2).id -> 2
-                    else -> 0
+                    else -> savedTheme
                 }
-                if (savedTheme != selectedIndex) {
-                    prefs.edit().putInt("app_theme", selectedIndex).apply()
-                    group.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            }
+        }
 
-                    val mode = when (selectedIndex) {
+        // ----- Round & Monet Apply Theme Button -----
+        val applyThemeBtn = TextView(this).apply {
+            text = getString(R.string.themerestart)
+            textSize = 14f
+            setTextColor(activeTextColor)
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(accentColor)
+            }
+            setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(16f)
+            }
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                if (savedTheme != pendingTheme) {
+                    prefs.edit().putInt("app_theme", pendingTheme).apply()
+                    it.performHapticFeedback(android.HapticFeedbackConstants.KEYBOARD_TAP)
+
+                    val mode = when (pendingTheme) {
                         0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                         1 -> AppCompatDelegate.MODE_NIGHT_NO
                         2 -> AppCompatDelegate.MODE_NIGHT_YES
@@ -310,16 +338,18 @@ class NotesMainAct : AppCompatActivity() {
                     }
                     AppCompatDelegate.setDefaultNightMode(mode)
 
-                    // Eliminate lag and transition flash when switching themes
                     overridePendingTransition(0, 0)
                     recreate()
                     overridePendingTransition(0, 0)
+                } else {
+                    Toast.makeText(this@NotesMainAct, "Selected theme is already applied", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         themeCard.addView(themeTitle)
         themeCard.addView(themeSelectorContainer)
+        themeCard.addView(applyThemeBtn)
         settingsContentLayout.addView(themeCard)
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
