@@ -16,6 +16,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.Color
 import android.util.TypedValue
 import android.graphics.Typeface
+import android.os.Build  // ← ADDED to fix the Build reference
 import com.google.android.material.color.DynamicColors
 
 class NoteEditorActivity : AppCompatActivity() {
@@ -121,7 +122,7 @@ class NoteEditorActivity : AppCompatActivity() {
             text = if (isNewNote) getString(R.string.new_note) else getString(R.string.edit_note)
             textSize = 22f
             setTextColor(onPrimaryContainer)
-            applyGoogleSansBoldRound(this)  // ← apply font
+            applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 0,

@@ -301,7 +301,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.setting_app_theme)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)  // ← apply font
+            applyGoogleSansBoldRound(this)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -472,7 +472,7 @@ class NotesMainAct : AppCompatActivity() {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)  // ← apply font
+            applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -670,7 +670,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.nav_notes)
             textSize = 14f
             setTextColor(if (isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)  // ← apply font
+            applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
@@ -693,7 +693,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.nav_settings)
             textSize = 14f
             setTextColor(if (!isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)  // ← apply font
+            applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
