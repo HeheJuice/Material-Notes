@@ -252,12 +252,12 @@ class NotesMainAct : AppCompatActivity() {
 
         val buttonBgTint = android.content.res.ColorStateList(
             arrayOf(checkedState, uncheckedState),
-            intArrayOf(activeTextColor, unselectedBgColor)
+            intArrayOf(accentColor, unselectedBgColor)
         )
 
         val buttonTextTint = android.content.res.ColorStateList(
             arrayOf(checkedState, uncheckedState),
-            intArrayOf(cardBgColor, activeTextColor)
+            intArrayOf(activeTextColor, activeTextColor)
         )
 
         var pendingTheme = savedTheme
@@ -282,8 +282,8 @@ class NotesMainAct : AppCompatActivity() {
                 setTextColor(buttonTextTint)
                 strokeWidth = 0
 
-                // Match vertical padding with Apply button height (14f)
-                setPadding(dpToPx(4f), dpToPx(14f), dpToPx(4f), dpToPx(14f))
+                // Adjusted vertical padding for a slightly higher button height (16f)
+                setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
                 setOnTouchListener(pressScaleTouchListener)
             }
 
@@ -304,19 +304,19 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Round & Monet Apply Theme Button (Following Selected State Color) -----
+        // ----- Round & Monet Apply Theme Button (Matching Selected Tab Color & Increased Height) -----
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
-            setTextColor(cardBgColor)
+            setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(activeTextColor)
+                setColor(accentColor)
             }
-            setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            setPadding(dpToPx(24f), dpToPx(16f), dpToPx(24f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
