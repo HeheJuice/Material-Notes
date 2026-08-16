@@ -3,7 +3,7 @@ package com.HeheJuice.Notes
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
-import android.app.Activity
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -20,15 +20,18 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 
-class NotesMainAct : Activity() {
+class NotesMainAct : AppCompatActivity() {
 
     private lateinit var slidingPillView: View
     private lateinit var notesTabBtn: TextView
@@ -88,9 +91,18 @@ class NotesMainAct : Activity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ----- Apply Saved Theme Preference before super.onCreate -----
+        val prefs = getPreferences(Context.MODE_PRIVATE)
+        val savedTheme = prefs.getInt("app_theme", 0) // 0: System, 1: Light, 2: Dark
+        when (savedTheme) {
+            0 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+            1 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+            2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        }
+
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
-        actionBar?.hide()
+        supportActionBar?.hide()
 
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -141,6 +153,131 @@ class NotesMainAct : Activity() {
             visibility = View.GONE
         }
 
+        // Populate Settings Page UI
+        val settingsScrollView = ScrollView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            clipToPadding = false
+        }
+
+        val settingsContentLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
+        }
+
+        // App Theme Card
+        val themeCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(24f).toFloat()
+                setColor(cardBgColor)
+            }
+            setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val themeTitle = TextView(this).apply {
+            text = getString(R.string.setting_app_theme)
+            textSize = 16f
+            setTextColor(activeTextColor)
+            setTypeface(null, Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(16f)
+            }
+        }
+
+        // Segmented theme selector container [(Follows System)(Light Mode)(Dark Mode)]
+        val themeSelectorContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(secondaryBtnColor)
+            }
+            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dpToPx(52f)
+            )
+        }
+
+        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+            drawable?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
+        }
+
+        val createThemeBtn = { title: String, iconResId: Int, index: Int ->
+            val isActive = (savedTheme == index)
+            val colorToUse = if (isActive) activeTextColor else secondaryTextColor
+            val rawDrawable = try { ContextCompat.getDrawable(this, iconResId) } catch (e: Exception) { null }
+            val tintedIcon = tintDrawableFunc(rawDrawable, colorToUse)
+
+            TextView(this).apply {
+                text = title
+                textSize = 12f
+                gravity = Gravity.CENTER
+                setTypeface(null, Typeface.BOLD)
+                compoundDrawablePadding = dpToPx(6f)
+                setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
+                setTextColor(colorToUse)
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    1f
+                )
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+                setOnClickListener {
+                    if (savedTheme != index) {
+                        prefs.edit().putInt("app_theme", index).apply()
+                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                        recreate()
+                    }
+                }
+            }
+        }
+
+        val systemBtn = createThemeBtn(getString(R.string.theme_system), R.drawable.brightness_auto_24px, 0)
+        val lightBtn = createThemeBtn(getString(R.string.theme_light), R.drawable.light_mode_24px, 1)
+        val darkBtn = createThemeBtn(getString(R.string.theme_dark), R.drawable.dark_mode_24px, 2)
+
+        val activeBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dpToPx(100f).toFloat()
+            setColor(accentColor)
+        }
+
+        systemBtn.background = if (savedTheme == 0) activeBg else null
+        lightBtn.background = if (savedTheme == 1) activeBg else null
+        darkBtn.background = if (savedTheme == 2) activeBg else null
+
+        themeSelectorContainer.addView(systemBtn)
+        themeSelectorContainer.addView(lightBtn)
+        themeSelectorContainer.addView(darkBtn)
+
+        themeCard.addView(themeTitle)
+        themeCard.addView(themeSelectorContainer)
+        settingsContentLayout.addView(themeCard)
+        settingsScrollView.addView(settingsContentLayout)
+        settingsContainer.addView(settingsScrollView)
+
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -162,7 +299,7 @@ class NotesMainAct : Activity() {
 
         // App Name Pill (Left) - Dynamically changes based on active tab
         appNamePill = TextView(this).apply {
-            text = "Notes"
+            text = getString(R.string.nav_notes)
             textSize = 16f
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
@@ -196,13 +333,6 @@ class NotesMainAct : Activity() {
         }
 
         val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (e: Exception) { null }
-        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
-            drawable?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, color)
-                wrapped
-            }
-        }
 
         val topBarRefreshIcon = ImageView(this).apply {
             setImageDrawable(tintDrawableFunc(menuDrawable, activeTextColor))
@@ -269,20 +399,12 @@ class NotesMainAct : Activity() {
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
-        val tintDrawable: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
-            drawable?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, color)
-                wrapped
-            }
-        }
-
-        val createIcon = tintDrawable(editNoteDrawable, activeTextColor)
-        val importIcon = tintDrawable(boxAddDrawable, activeTextColor)
+        val createIcon = tintDrawableFunc(editNoteDrawable, activeTextColor)
+        val importIcon = tintDrawableFunc(boxAddDrawable, activeTextColor)
 
         // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
-            text = "Create Notes"
+            text = getString(R.string.create_notes)
             textSize = 14f
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
@@ -302,7 +424,7 @@ class NotesMainAct : Activity() {
 
         // Menu Item: Import Notes Pill
         val importNotesItem = TextView(this).apply {
-            text = "Import Notes"
+            text = getString(R.string.import_notes)
             textSize = 14f
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
@@ -365,7 +487,7 @@ class NotesMainAct : Activity() {
 
         // Notes tab
         notesTabBtn = TextView(this).apply {
-            text = "Notes"
+            text = getString(R.string.nav_notes)
             textSize = 14f
             setTextColor(activeTextColor)
             setTypeface(null, Typeface.BOLD)
@@ -384,7 +506,7 @@ class NotesMainAct : Activity() {
 
         // Settings tab
         settingsTabBtn = TextView(this).apply {
-            text = "Settings"
+            text = getString(R.string.nav_settings)
             textSize = 14f
             setTextColor(secondaryTextColor)
             setTypeface(null, Typeface.BOLD)
@@ -512,7 +634,7 @@ class NotesMainAct : Activity() {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
-                appNamePill.text = if (toNotes) "Notes" else "Settings"
+                appNamePill.text = if (toNotes) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             }
         }
 
