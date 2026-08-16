@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base application theme -->
-    <style name="Theme.NoteApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color (used as fallback; overridden by Monet on Android 12+) -->
+<style name="Theme.NoteApp" parent="Theme.Material3Expressive.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_variant</item>
         <item name="colorOnPrimary">@color/on_primary</item>
