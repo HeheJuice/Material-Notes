@@ -33,6 +33,7 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.HeheJuice.Notes.R
 
 class NotesMainAct : AppCompatActivity() {
 
