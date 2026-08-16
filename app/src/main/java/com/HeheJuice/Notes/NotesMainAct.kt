@@ -11,6 +11,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -208,15 +209,21 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- M3 Expressive MaterialButtonGroup -----
-        val themeSelectorContainer = MaterialButtonGroup(this).apply {
+        // ----- M3 Expressive Connected MaterialButtonGroup -----
+        val connectedStyleRes = com.google.android.material.R.style.Widget_Material3_MaterialButtonGroup_Connected
+        val themeSelectorContainer = MaterialButtonGroup(
+            ContextThemeWrapper(this, connectedStyleRes),
+            null
+        ).apply {
             orientation = LinearLayout.HORIZONTAL
-            spacing = dpToPx(8f)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
+
+        val typedValue = TypedValue()
+        theme.resolveAttribute(com.google.android.material.R.attr.materialButtonOutlinedStyle, typedValue, true)
 
         val themeOptions = listOf(
             getString(R.string.theme_system),
@@ -227,17 +234,22 @@ class NotesMainAct : AppCompatActivity() {
         themeOptions.forEachIndexed { index, optionName ->
             val isSelected = (savedTheme == index)
 
-            val optionBtn = MaterialButton(this).apply {
+            val optionBtn = MaterialButton(ContextThemeWrapper(this, typedValue.resourceId)).apply {
                 text = optionName
                 textSize = 13f
                 isAllCaps = false
                 setTypeface(null, Typeface.BOLD)
+                minWidth = 0
+                minimumWidth = 0
+                setPadding(dpToPx(8f), 0, dpToPx(8f), 0)
 
-                backgroundTintList = ColorStateList.valueOf(if (isSelected) accentColor else secondaryBtnColor)
-                setTextColor(if (isSelected) activeTextColor else secondaryTextColor)
-                strokeColor = ColorStateList.valueOf(Color.TRANSPARENT)
-                strokeWidth = 0
-                cornerRadius = dpToPx(100f)
+                if (isSelected) {
+                    backgroundTintList = ColorStateList.valueOf(accentColor)
+                    setTextColor(activeTextColor)
+                } else {
+                    setTextColor(secondaryTextColor)
+                }
+
                 insetTop = 0
                 insetBottom = 0
 
