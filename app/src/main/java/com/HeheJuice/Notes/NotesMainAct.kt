@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -30,6 +31,8 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonGroup
 
 class NotesMainAct : AppCompatActivity() {
 
@@ -156,7 +159,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // App Theme Card
+        // ----- App Theme Card (now using M3 Connected ButtonGroup) -----
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -184,64 +187,80 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- MD3 Expressive Independent Pill Button Group (Text-only) -----
-        val themeSelectorContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        // ----- Material 3 Expressive Connected Button Group -----
+        val themeGroup = MaterialButtonGroup(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            // Connected style – no gaps, rounded outer corners
+            setStyle(MaterialButtonGroup.STYLE_CONNECTED)
+            isSingleSelection = true
+            // Save selection and recreate
+            setOnCheckedChangeListener { group, checkedId ->
+                val index = when (checkedId) {
+                    R.id.theme_system -> 0
+                    R.id.theme_light -> 1
+                    R.id.theme_dark -> 2
+                    else -> 0
+                }
+                if (savedTheme != index) {
+                    prefs.edit().putInt("app_theme", index).apply()
+                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                    recreate()
+                }
+            }
         }
 
-        val themeOptions = listOf(
-            Pair(getString(R.string.theme_system), 0),
-            Pair(getString(R.string.theme_light), 1),
-            Pair(getString(R.string.theme_dark), 2)
+        // State arrays for checked / unchecked
+        val states = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf()
         )
 
-        themeOptions.forEach { (optionName, index) ->
-            val isSelected = (savedTheme == index)
+        // Background: accent when checked, transparent otherwise
+        val bgColors = intArrayOf(accentColor, Color.TRANSPARENT)
+        val bgStateList = ColorStateList(states, bgColors)
 
-            val pillButton = TextView(this).apply {
+        // Stroke: accent when checked, secondary text color otherwise
+        val strokeColors = intArrayOf(accentColor, secondaryTextColor)
+        val strokeStateList = ColorStateList(states, strokeColors)
+
+        // Text color: active (onPrimary) when checked, secondary otherwise
+        val textColors = intArrayOf(activeTextColor, secondaryTextColor)
+        val textStateList = ColorStateList(states, textColors)
+
+        // Theme options: System, Light, Dark
+        val themeOptions = listOf(
+            Triple(getString(R.string.theme_system), 0, R.id.theme_system),
+            Triple(getString(R.string.theme_light), 1, R.id.theme_light),
+            Triple(getString(R.string.theme_dark), 2, R.id.theme_dark)
+        )
+
+        themeOptions.forEach { (optionName, index, id) ->
+            val button = MaterialButton(this).apply {
+                this.id = id
                 text = optionName
-                textSize = 13f
-                setTypeface(null, Typeface.BOLD)
-                gravity = Gravity.CENTER
-                
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dpToPx(100f).toFloat()
-                    setColor(if (isSelected) accentColor else pillUnselectedBg)
-                }
-
-                setTextColor(if (isSelected) activeTextColor else secondaryTextColor)
-                setPadding(dpToPx(12f), dpToPx(10f), dpToPx(12f), dpToPx(10f))
-
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    dpToPx(44f),
-                    1f
-                ).apply {
-                    if (index > 0) marginStart = dpToPx(8f)
-                }
-
+                // Use outlined style as base (required for connected groups)
+                style = com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
+                // Apply custom states
+                backgroundTintList = bgStateList
+                strokeColor = strokeStateList
+                setTextColor(textStateList)
+                // No icons
+                iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                icon = null
+                // Set initial checked state
+                isChecked = (savedTheme == index)
                 isClickable = true
                 isFocusable = true
                 setOnTouchListener(pressScaleTouchListener)
-
-                setOnClickListener {
-                    if (savedTheme != index) {
-                        prefs.edit().putInt("app_theme", index).apply()
-                        performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                        recreate()
-                    }
-                }
             }
-            themeSelectorContainer.addView(pillButton)
+            themeGroup.addView(button)
         }
 
         themeCard.addView(themeTitle)
-        themeCard.addView(themeSelectorContainer)
+        themeCard.addView(themeGroup)
         settingsContentLayout.addView(themeCard)
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
