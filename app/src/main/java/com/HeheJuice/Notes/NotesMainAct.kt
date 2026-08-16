@@ -32,7 +32,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
@@ -212,19 +211,19 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Material 3 Expressive (MD3E) Toggle Group Style -----
-        val toggleGroupContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
-        )
-
-        val themeSelectorContainer = MaterialButtonToggleGroup(toggleGroupContext).apply {
+        // ----- Custom Theme Selector Container using TextViews to Match Exact Colors -----
+        val themeSelectorContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(cardBgColor)
+            }
+            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            isSingleSelection = true
-            isSelectionRequired = true
         }
 
         val themeOptions = listOf(
@@ -233,76 +232,52 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
-        // FIX: Use Widget_Material3Expressive_Button (Filled) so backgroundTintList correctly matches Google Keep colors
-        val buttonContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3Expressive_Button
-        )
-
-        val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_200
-            )
-        } else {
-            secondaryBtnColor
-        }
-
-        val checkedState = intArrayOf(android.R.attr.state_checked)
-        val uncheckedState = intArrayOf(-android.R.attr.state_checked)
-
-        val buttonBgTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(accentColor, unselectedBgColor)
-        )
-
-        val buttonTextTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(activeTextColor, activeTextColor)
-        )
-
         var pendingTheme = savedTheme
+        val optionTextViews = mutableListOf<TextView>()
 
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
-            val optionBtn = MaterialButton(buttonContext).apply {
-                id = View.generateViewId()
+            val optionBtn = TextView(this).apply {
                 text = optionName
-                icon = null
                 textSize = 11.5f
                 isSingleLine = true
+                gravity = Gravity.CENTER
 
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    dpToPx(48f),
                     1f
                 )
 
-                backgroundTintList = buttonBgTint
-                setTextColor(buttonTextTint)
-                strokeWidth = 0
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(100f).toFloat()
+                    setColor(if (isActive) accentColor else Color.TRANSPARENT)
+                }
 
-                // Adjusted vertical padding for a slightly higher button height
-                setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
+                setTextColor(activeTextColor)
+                setTypeface(null, if (isActive) Typeface.BOLD else Typeface.NORMAL)
+
                 setOnTouchListener(pressScaleTouchListener)
-            }
+                setOnClickListener {
+                    if (pendingTheme != index) {
+                        pendingTheme = index
+                        it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-            themeSelectorContainer.addView(optionBtn)
-            if (isActive) {
-                themeSelectorContainer.check(optionBtn.id)
-            }
-        }
-
-        themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
-            if (isChecked) {
-                pendingTheme = when (checkedId) {
-                    group.getChildAt(0).id -> 0
-                    group.getChildAt(1).id -> 1
-                    group.getChildAt(2).id -> 2
-                    else -> savedTheme
+                        optionTextViews.forEachIndexed { i, tv ->
+                            val selected = (i == index)
+                            tv.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
+                            (tv.background as? GradientDrawable)?.setColor(
+                                if (selected) accentColor else Color.TRANSPARENT
+                            )
+                        }
+                    }
                 }
             }
+
+            optionTextViews.add(optionBtn)
+            themeSelectorContainer.addView(optionBtn)
         }
 
         // ----- Round & Monet Apply Theme Button -----
