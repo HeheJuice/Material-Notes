@@ -57,7 +57,7 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var contentHolder: FrameLayout
     private lateinit var appNamePill: TextView
 
-    // Colors (surface-based)
+    // Colors (surface-based & primary container rules)
     private var windowBgColor: Int = 0
     private var accentColor: Int = 0
     private var activeTextColor: Int = 0
@@ -125,11 +125,11 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Color Resolution (Accent 1 200/700 & Accent 2 50/900 rules) -----
+        // ----- Color Resolution (App Background = Surface Container, Selected/Apply Button = Primary Container) -----
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             windowBgColor = ContextCompat.getColor(
                 this,
-                if (isDark) android.R.color.system_accent2_900 else android.R.color.system_accent2_50
+                if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
             )
             accentColor = ContextCompat.getColor(
                 this,
@@ -141,13 +141,13 @@ class NotesMainAct : AppCompatActivity() {
             )
             cardBgColor = ContextCompat.getColor(
                 this,
-                if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
+                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_0
             )
         } else {
-            windowBgColor = if (isDark) Color.parseColor("#141218") else Color.parseColor("#F3EDF7")
+            windowBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
             accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
             activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
-            cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
+            cardBgColor = if (isDark) Color.parseColor("#141218") else Color.parseColor("#FFFFFF")
         }
 
         secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
@@ -244,7 +244,7 @@ class NotesMainAct : AppCompatActivity() {
         val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.getColor(
                 this,
-                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_200
+                if (isDark) android.R.color.system_neutral1_700 else android.R.color.system_neutral1_100
             )
         } else {
             secondaryBtnColor
@@ -307,7 +307,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Round & Monet Apply Theme Button (Matching Selected Theme & Selected Tab Colors) -----
+        // ----- Apply Theme Button (Primary Container) -----
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
@@ -553,7 +553,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background
+        // Sliding pill background (Primary Container)
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
                 setColor(accentColor)
