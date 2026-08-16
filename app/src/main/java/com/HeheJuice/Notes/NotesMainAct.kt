@@ -10,7 +10,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -31,8 +30,6 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonGroup
 import com.google.android.material.color.DynamicColors
 
 class NotesMainAct : AppCompatActivity() {
@@ -212,13 +209,9 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Material 3 Expressive Connected Button Group
-        val groupContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonGroup_Connected
-        )
-
-        val themeSelectorContainer = MaterialButtonGroup(groupContext).apply {
+        // Seamless Connected Button Group with Zero Gap & Single Selection Enforcement
+        val themeSelectorContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -231,11 +224,6 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_dark)
         )
 
-        val buttonContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
-        )
-
         val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.getColor(
                 this,
@@ -245,42 +233,49 @@ class NotesMainAct : AppCompatActivity() {
             secondaryBtnColor
         }
 
-        val checkedState = intArrayOf(android.R.attr.state_checked)
-        val uncheckedState = intArrayOf(-android.R.attr.state_checked)
+        val themeButtons = arrayOfNulls<TextView>(3)
+        val pillRadius = dpToPx(100f).toFloat()
 
-        val buttonBgTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(activeTextColor, unselectedBgColor) 
-        )
-
-        val buttonTextTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(cardBgColor, activeTextColor) 
-        )
+        val updateThemeSelection: (Int) -> Unit = { selectedIndex ->
+            themeOptions.indices.forEach { i ->
+                val btn = themeButtons[i]
+                val isSelected = (i == selectedIndex)
+                if (btn != null) {
+                    val bg = btn.background as? GradientDrawable
+                    bg?.setColor(if (isSelected) activeTextColor else unselectedBgColor)
+                    btn.setTextColor(if (isSelected) cardBgColor else activeTextColor)
+                }
+            }
+        }
 
         themeOptions.forEachIndexed { index, optionName ->
             val isActive = (savedTheme == index)
 
-            val optionBtn = MaterialButton(buttonContext).apply {
+            val optionBtn = TextView(this).apply {
                 text = optionName
-                icon = null 
                 textSize = 11.5f
                 isSingleLine = true
-                
+                gravity = Gravity.CENTER
+                setTypeface(null, Typeface.BOLD)
+
                 layoutParams = LinearLayout.LayoutParams(
                     0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    dpToPx(42f),
                     1f
                 )
 
-                isCheckable = true
-                isChecked = isActive
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(if (isActive) activeTextColor else unselectedBgColor)
+                    when (index) {
+                        0 -> cornerRadii = floatArrayOf(pillRadius, pillRadius, 0f, 0f, 0f, 0f, pillRadius, pillRadius)
+                        1 -> cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
+                        2 -> cornerRadii = floatArrayOf(0f, 0f, pillRadius, pillRadius, pillRadius, pillRadius, 0f, 0f)
+                    }
+                }
 
-                backgroundTintList = buttonBgTint
-                setTextColor(buttonTextTint)
-                strokeWidth = 0 // Completely remove stroke/border
-                
-                setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
+                setTextColor(if (isActive) cardBgColor else activeTextColor)
+                setPadding(dpToPx(4f), 0, dpToPx(4f), 0)
 
                 setOnTouchListener(pressScaleTouchListener)
 
@@ -288,10 +283,24 @@ class NotesMainAct : AppCompatActivity() {
                     if (savedTheme != index) {
                         prefs.edit().putInt("app_theme", index).apply()
                         performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                        updateThemeSelection(index)
+
+                        val mode = when (index) {
+                            0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                            1 -> AppCompatDelegate.MODE_NIGHT_NO
+                            2 -> AppCompatDelegate.MODE_NIGHT_YES
+                            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                        }
+                        AppCompatDelegate.setDefaultNightMode(mode)
+
+                        // Eliminate lag/transition flash when switching themes
+                        overridePendingTransition(0, 0)
                         recreate()
+                        overridePendingTransition(0, 0)
                     }
                 }
             }
+            themeButtons[index] = optionBtn
             themeSelectorContainer.addView(optionBtn)
         }
 
@@ -719,15 +728,12 @@ class NotesMainAct : AppCompatActivity() {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
 
-            // Push top bar down below the status bar
             topBarLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 topMargin = topInset
             }
 
-            // Ensure content doesn't hide behind the top bar
             contentHolder.setPadding(0, topInset + dpToPx(66f), 0, 0)
 
-            // Adjust bottom bar and expanding menu positions
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
             (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
             
