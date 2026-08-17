@@ -208,7 +208,7 @@ class NotesMainAct : AppCompatActivity() {
 
     private var primaryContainerColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
-    private var surfaceContainerColor: Int = 0
+    private var surfaceColor: Int = 0                     // 根背景色
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
@@ -263,25 +263,47 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
         val typedValue = TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
-        primaryContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
-        onPrimaryContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-        surfaceContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
-        surfaceContainerLowColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, typedValue, true)
-        surfaceContainerHighestColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-        onSurfaceVariantColor = typedValue.data
+        fun resolveColor(attrRes: Int, fallback: Int): Int {
+            return if (theme.resolveAttribute(attrRes, typedValue, true)) {
+                typedValue.data
+            } else {
+                fallback
+            }
+        }
+
+        primaryContainerColor = resolveColor(
+            com.google.android.material.R.attr.colorPrimaryContainer,
+            if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
+        )
+        onPrimaryContainerColor = resolveColor(
+            com.google.android.material.R.attr.colorOnPrimaryContainer,
+            if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
+        )
+        surfaceColor = resolveColor(
+            com.google.android.material.R.attr.colorSurface,
+            if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FFFBFE")
+        )
+        surfaceContainerLowColor = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainerLow,
+            if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
+        )
+        surfaceContainerHighestColor = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainerHighest,
+            if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF")
+        )
+        onSurfaceVariantColor = resolveColor(
+            com.google.android.material.R.attr.colorOnSurfaceVariant,
+            if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
+        )
         if (theme.resolveAttribute(android.R.attr.colorError, typedValue, true)) {
             redColor = typedValue.data
         } else {
             redColor = Color.parseColor("#FF3B30")
         }
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
+        val rootFrame = FrameLayout(this).apply {
+            setBackgroundColor(surfaceColor)   // 使用 colorSurface
+        }
 
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
