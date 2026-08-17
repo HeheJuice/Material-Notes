@@ -76,7 +76,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var toolbarContainer: LinearLayout
 
     private lateinit var splitButton: LinearLayout
-    private lateinit var trailingButton: MaterialButton
+    private lateinit var trailingChevronIcon: ImageView  // rotating chevron
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
 
@@ -202,7 +202,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- Custom Split Pill Container (with proper corner rounding) ----
+        // ---- Custom Split Pill Container ----
         val buttonHeight = dpToPx(52f)
         val innerCorner = dpToPx(4f).toFloat()
         val outerCorner = buttonHeight / 2f
@@ -247,24 +247,29 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – Chevron Icon (flat left, round right)
-        trailingButton = MaterialButton(
+        // ---- Trailing button container (fixed background + rotating chevron) ----
+        val trailingButtonContainer = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                buttonHeight,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            isClickable = true
+            isFocusable = true
+        }
+
+        // Background pill (flat left, round right)
+        val trailingBg = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
-            setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
             backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
-            setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
-            contentDescription = getString(R.string.more_options)
-            iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 0)
-            iconPadding = 0
             minHeight = 0
             minimumHeight = 0
             insetTop = 0
             insetBottom = 0
             insetLeft = 0
             insetRight = 0
+            isClickable = false
+            isFocusable = false
 
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
                 .setTopLeftCornerSize(innerCorner)
@@ -273,23 +278,37 @@ class NoteEditorActivity : AppCompatActivity() {
                 .setBottomRightCornerSize(outerCorner)
                 .build()
 
-            pivotX = buttonHeight / 2f
-            pivotY = buttonHeight / 2f
-            layoutParams = LinearLayout.LayoutParams(
-                buttonHeight,
-                LinearLayout.LayoutParams.MATCH_PARENT
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
         }
-        trailingButton.setOnClickListener {
+
+        // Rotating chevron icon
+        val chevronDrawable = ContextCompat.getDrawable(this, R.drawable.expand_more_24px)?.apply {
+            DrawableCompat.setTint(this, onPrimaryContainerColor)
+        }
+        trailingChevronIcon = ImageView(this).apply {
+            setImageDrawable(chevronDrawable)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        trailingButtonContainer.addView(trailingBg)
+        trailingButtonContainer.addView(trailingChevronIcon)
+        trailingButtonContainer.setOnClickListener {
             if (isMenuOpen) {
                 menuPopup?.dismiss()
             } else {
-                showMenu(splitButton) // Anchor to splitButton, not trailingButton
+                showMenu(splitButton) // anchor to splitButton
             }
         }
 
         splitButton.addView(leadingButton)
-        splitButton.addView(trailingButton)
+        splitButton.addView(trailingButtonContainer)
         topBar.addView(splitButton)
 
         root.addView(topBar)
@@ -528,7 +547,6 @@ class NoteEditorActivity : AppCompatActivity() {
         updateToolbarButtons()
 
         // ---- Dynamic status bar and keyboard insets ----
-        // ✅ Final offset: statusBarTop + dpToPx(12f) aligns perfectly with main menu
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -549,11 +567,12 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ========== CUSTOM POPUP MENU (anchored to splitButton, right-aligned) ==========
+    // ========== CUSTOM POPUP MENU (right-aligned, pre-measured) ==========
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
-        trailingButton.animate().rotation(180f).setDuration(200).start()
+        // Rotate only the inner chevron icon
+        trailingChevronIcon.animate().rotation(180f).setDuration(200).start()
 
         val menuView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -596,22 +615,30 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         menuView.addView(menuItem)
 
+        // Pre‑measure to get the exact width for alignment
+        menuView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+
         menuPopup = android.widget.PopupWindow(
             menuView,
-            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
             true
         ).apply {
             elevation = dpToPx(8f).toFloat()
             isOutsideTouchable = true
             isFocusable = true
+            animationStyle = android.R.style.Animation_Dialog
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener {
-                trailingButton.animate().rotation(0f).setDuration(200).start()
+                trailingChevronIcon.animate().rotation(0f).setDuration(200).start()
                 isMenuOpen = false
             }
-            // Align the right edge of the popup with the right edge of the split button
-            showAsDropDown(anchor, 0, dpToPx(8f), Gravity.END)
+            // Calculate offset so right edge of menu aligns with right edge of split button
+            val xOffset = anchor.width - menuView.measuredWidth
+            showAsDropDown(anchor, xOffset, dpToPx(8f))
             isMenuOpen = true
         }
     }
