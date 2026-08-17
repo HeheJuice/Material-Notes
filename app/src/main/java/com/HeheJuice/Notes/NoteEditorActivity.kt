@@ -27,6 +27,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -243,6 +244,20 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentLabel)
 
+        // ---- SCROLLVIEW + CONTENT EDIT (FIXED SCROLL) ----
+        val scrollContainer = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ).apply {
+                topMargin = dpToPx(8f)
+            }
+            isFillViewport = true
+            isVerticalScrollBarEnabled = true
+            overScrollMode = View.OVER_SCROLL_ALWAYS
+        }
+
         contentEdit = EditText(this).apply {
             hint = getString(R.string.write_content_hint)
             setHintTextColor(onSurfaceVariantColor)
@@ -252,23 +267,22 @@ class NoteEditorActivity : AppCompatActivity() {
                 cornerRadius = dpToPx(12f).toFloat()
                 setColor(surfaceLow)
             }
-            // Minimal padding: only top/bottom to avoid clipping
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
-            gravity = Gravity.TOP
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            ).apply { topMargin = dpToPx(8f) }
+            gravity = Gravity.TOP or Gravity.START
+            // Use FrameLayout params because it's inside ScrollView
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
             setGoogleSansFlexDefault(this, false)
-            // Optimisations for smooth scrolling
-            setHorizontallyScrolling(false)
-            // Enable vertical scrollbar
-            isVerticalScrollBarEnabled = true
-            // Over‑scroll to feel smooth
-            overScrollMode = View.OVER_SCROLL_ALWAYS
+            // FIX: Explicitly declare multiline input behavior for better performance
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            // FIX: Disable EditText's internal scroll so ScrollView takes over smoothly
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
         }
-        root.addView(contentEdit)
+        scrollContainer.addView(contentEdit)
+        root.addView(scrollContainer)
 
         // ---- Toolbar ----
         toolbarContainer = LinearLayout(this).apply {
@@ -366,13 +380,12 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
-        // ---- Load existing note ----
+        // ---- Load existing note (FIXED: bigger only applies size) ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
                 val spannable = SpannableStringBuilder(note.content)
 
-                // Apply each stored span
                 for (spanData in note.spans) {
                     when (spanData.type) {
                         "bold" -> {
@@ -387,29 +400,21 @@ class NoteEditorActivity : AppCompatActivity() {
                         }
                         "bigger" -> {
                             val size = spanData.size ?: 2.0f
-                            // Apply bold round first, then size
-                            if (googleSansFlex != null) {
-                                spannable.setSpan(
-                                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
-                                    spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                )
-                            } else {
-                                spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                            }
+                            // FIX: ONLY apply the RelativeSizeSpan here.
+                            // The bold span was already saved and applied by the case above.
                             spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                         }
                     }
                 }
 
                 contentEdit.setText(spannable)
-                // Single redraw after load
                 contentEdit.invalidate()
             }
         }
 
         setContentView(root)
 
-        // Selection listeners (now with optimisation)
+        // Selection listeners
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -490,8 +495,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        // Refresh without full reset (only setText if needed)
-        // We must set the text back to trigger redraw
         contentEdit.setText(spannable)
         Selection.setSelection(contentEdit.text, start, end)
         updateToolbarButtons()
