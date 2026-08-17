@@ -231,11 +231,11 @@ class NoteEditorActivity : AppCompatActivity() {
         }
 
         if (isNewNote) {
-            NoteRepository.saveNote(title, content)
+            NoteRepository.saveNote(title, content)   // ✅ two params
         } else {
-            // Delete old note and create a new one with the updated title
+            // Delete old note and create a new one with updated title
             NoteRepository.deleteNote(noteId)
-            NoteRepository.saveNote(title, content)
+            NoteRepository.saveNote(title, content)   // ✅ two params
         }
         setResult(Activity.RESULT_OK)
         finish()

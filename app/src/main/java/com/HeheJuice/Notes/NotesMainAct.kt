@@ -40,7 +40,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 import java.io.File
 
-// ----- Data class & Repository -----
+// ----- Data class -----
 data class Note(
     val id: String,
     val title: String,
@@ -48,6 +48,7 @@ data class Note(
     val lastModified: Long
 )
 
+// ----- Repository -----
 object NoteRepository {
     private const val NOTES_DIR = "notes"
     private lateinit var context: Context
@@ -60,14 +61,29 @@ object NoteRepository {
 
     private fun getNotesDir(): File = context.filesDir.resolve(NOTES_DIR)
 
+    private fun sanitizeTitle(title: String): String {
+        return title.replace(Regex("[^a-zA-Z0-9\\-\\_ ]"), "")
+            .replace(" ", "_")
+            .trim()
+            .ifEmpty { "note" }
+    }
+
+    private fun generateId(title: String): String {
+        val sanitized = sanitizeTitle(title)
+        return "$sanitized---${System.currentTimeMillis()}"
+    }
+
+    private fun getTitleFromFilename(filename: String): String {
+        val parts = filename.split("---")
+        return if (parts.isNotEmpty()) parts[0] else filename
+    }
+
     fun getAllNotes(): List<Note> {
         val dir = getNotesDir()
         return dir.listFiles { file -> file.extension == "txt" }
             ?.mapNotNull { file ->
-                val fullText = file.readText()
-                val lines = fullText.lines()
-                val title = if (lines.isNotEmpty()) lines.first() else file.nameWithoutExtension
-                val content = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
+                val content = file.readText()
+                val title = getTitleFromFilename(file.nameWithoutExtension)
                 Note(
                     id = file.nameWithoutExtension,
                     title = title,
@@ -82,26 +98,25 @@ object NoteRepository {
     fun getNote(id: String): Note? {
         val file = getNotesDir().resolve("$id.txt")
         return if (file.exists()) {
-            val fullText = file.readText()
-            val lines = fullText.lines()
-            val title = if (lines.isNotEmpty()) lines.first() else id
-            val content = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
+            val content = file.readText()
+            val title = getTitleFromFilename(id)
             Note(id, title, content, file.lastModified())
         } else null
     }
 
-    fun saveNote(id: String, title: String, content: String) {
+    fun saveNote(title: String, content: String) {
+        val id = generateId(title)
         val file = getNotesDir().resolve("$id.txt")
-        val fullText = if (content.isNotEmpty()) "$title\n$content" else title
-        file.writeText(fullText)
+        file.writeText(content)   // content only; title is in filename
     }
 
     fun deleteNote(id: String) {
         getNotesDir().resolve("$id.txt").delete()
     }
 
-    fun renameNote(oldId: String, newId: String): Boolean {
+    fun renameNote(oldId: String, newTitle: String): Boolean {
         val oldFile = getNotesDir().resolve("$oldId.txt")
+        val newId = generateId(newTitle)
         val newFile = getNotesDir().resolve("$newId.txt")
         return oldFile.renameTo(newFile)
     }
@@ -141,7 +156,7 @@ class NotesMainAct : AppCompatActivity() {
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
-    private var redColor: Int = 0   // ← added
+    private var redColor: Int = 0
 
     // GoogleSansFlex typeface
     private var googleSansFlex: Typeface? = null
@@ -1053,7 +1068,7 @@ class NotesMainAct : AppCompatActivity() {
                 setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.delete_24px))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(redColor)  // ← now using resolved redColor
+                    setColor(redColor)
                 }
                 setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
                 layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply {
