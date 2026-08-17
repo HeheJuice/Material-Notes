@@ -331,24 +331,29 @@ class NotesMainAct : AppCompatActivity() {
                 cornerRadius = dpToPx(24f).toFloat()
                 setColor(surfaceContainerHighestColor)
             }
-            setPadding(dpToPx(20f), dpToPx(8f), dpToPx(20f), dpToPx(8f))  // reduced vertical padding for tighter layout
+            setPadding(dpToPx(20f), dpToPx(12f), dpToPx(20f), dpToPx(12f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
-        // 1. Follow system switch row
-        val followSystemRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            minHeight = dpToPx(56f)  // fixed height to match theme mode row
-            setPadding(0, 0, 0, 0)
+        // Helper to create equal-height rows
+        fun createRow(): LinearLayout {
+            return LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                setMinimumHeight(dpToPx(48f))  // compact height
+                setPadding(0, 0, 0, 0)
+            }
         }
+
+        // 1. Follow system switch row
+        val followSystemRow = createRow()
         val followLabel = TextView(this).apply {
             text = getString(R.string.setting_follow_system)
             textSize = 16f
@@ -411,7 +416,7 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dpToPx(1f)
-            ).apply { 
+            ).apply {
                 topMargin = dpToPx(4f)
                 bottomMargin = dpToPx(4f)
             }
@@ -420,25 +425,8 @@ class NotesMainAct : AppCompatActivity() {
         }
         themeCard.addView(divider)
 
-        // 2. Theme Mode row (clickable) – no chevron icon
-        val themeModeRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            minHeight = dpToPx(56f)  // same height as follow row
-            setPadding(0, 0, 0, 0)
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
-            setOnClickListener {
-                if (!followSystem) {
-                    showThemeModePopup(this)
-                }
-            }
-        }
+        // 2. Theme Mode row (clickable) – no chevron
+        val themeModeRow = createRow()
         val themeModeLabel = TextView(this).apply {
             text = getString(R.string.setting_theme_mode)
             textSize = 16f
@@ -462,6 +450,14 @@ class NotesMainAct : AppCompatActivity() {
         }
         themeModeRow.addView(themeModeLabel)
         themeModeRow.addView(themeModeSubtitle)
+        themeModeRow.isClickable = true
+        themeModeRow.isFocusable = true
+        themeModeRow.setOnTouchListener(pressScaleTouchListener)
+        themeModeRow.setOnClickListener {
+            if (!followSystem) {
+                showThemeModePopup(this)
+            }
+        }
         themeCard.addView(themeModeRow)
 
         // Row state updater
