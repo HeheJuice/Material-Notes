@@ -894,37 +894,37 @@ class NoteEditorActivity : AppCompatActivity() {
         updateToolbarButtons()
     }
 
-    private fun applyBiggerRoundToSelection() {
+        private fun applyBiggerRoundToSelection() {
         val rawStart = contentEdit.selectionStart
         val rawEnd = contentEdit.selectionEnd
         if (rawStart == rawEnd) return
         val selStart = minOf(rawStart, rawEnd)
         val selEnd = maxOf(rawStart, rawEnd)
 
-        val spannable = contentEdit.text as Spannable
+        val editableText = contentEdit.text
 
-        val sizeSpans = spannable.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
+        val sizeSpans = editableText.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
         if (sizeSpans.isNotEmpty()) {
             for (span in sizeSpans) {
-                spannable.removeSpan(span)
+                editableText.removeSpan(span)
             }
-            val boldSpans = spannable.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
+            val boldSpans = editableText.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
-                spannable.removeSpan(span)
+                editableText.removeSpan(span)
             }
         } else {
             val font = googleSansFlex
             if (font != null) {
-                spannable.setSpan(
+                editableText.setSpan(
                     GoogleSansFlexBoldRoundSpan(font),
                     selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                spannable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editableText.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            spannable.setSpan(RelativeSizeSpan(2.0f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            editableText.setSpan(RelativeSizeSpan(2.0f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        contentEdit.setText(spannable)
+        contentEdit.setText(editableText)
         Selection.setSelection(contentEdit.text, selStart, selEnd)
         updateToolbarButtons()
     }
