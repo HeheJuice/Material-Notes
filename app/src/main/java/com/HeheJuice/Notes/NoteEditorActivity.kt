@@ -155,7 +155,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
-        // ---- Top bar (with clip disabled to prevent rounded corners clipping) ----
+        // ---- Top bar (with clip disabled) ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -202,20 +202,21 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- SPLIT BUTTON (with clipping disabled and minHeight cleared) ----
+        // ---- SPLIT BUTTON (container height fixed, children MATCH_PARENT) ----
+        val buttonHeight = dpToPx(50f)
+
         splitButton = MaterialSplitButton(this).apply {
             clipChildren = false
             clipToPadding = false
+            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                buttonHeight
             )
             setSpacing(dpToPx(4f))
         }
 
-        val buttonHeight = dpToPx(50f)
-
-        // Leading button – "Save" (Filled style + backgroundTintList for tonal look)
+        // Leading button – "Save"
         val leadingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
         ).apply {
@@ -226,19 +227,18 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
             gravity = Gravity.CENTER
             setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
-            // Clear theme minHeight to prevent bottom clipping
             minHeight = 0
             minimumHeight = 0
             insetTop = 0
             insetBottom = 0
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                buttonHeight
+                LinearLayout.LayoutParams.MATCH_PARENT
             )
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – icon only, square (Filled style + backgroundTintList)
+        // Trailing button – Chevron Icon (no checkable, will use animation)
         trailingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
         ).apply {
@@ -246,12 +246,10 @@ class NoteEditorActivity : AppCompatActivity() {
             backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
             setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
             contentDescription = getString(R.string.more_options)
-            // Center icon in the button
             iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
             iconPadding = 0
-            // Clear theme minHeight & insets
             minHeight = 0
             minimumHeight = 0
             insetTop = 0
@@ -260,9 +258,8 @@ class NoteEditorActivity : AppCompatActivity() {
             insetRight = 0
             layoutParams = LinearLayout.LayoutParams(
                 buttonHeight, // width = height
-                buttonHeight
+                LinearLayout.LayoutParams.MATCH_PARENT
             )
-            isCheckable = true
         }
         trailingButton.setOnClickListener {
             if (isMenuOpen) {
@@ -512,15 +509,16 @@ class NoteEditorActivity : AppCompatActivity() {
         updateToolbarButtons()
 
         // ---- Dynamic status bar and keyboard insets ----
+        // ✅ FIX: removed + dpToPx(8f) to match main activity's exact Y position
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val keyboardHeight = imeInsets.bottom
 
-            // Set top padding dynamically to align back button Y-position with main activity
+            // Exactly matches main activity: statusBarTop only (no extra offset)
             root.setPadding(
                 dpToPx(20f),
-                statusBarTop + dpToPx(8f),
+                statusBarTop,
                 dpToPx(20f),
                 dpToPx(20f)
             )
@@ -533,16 +531,16 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ========== CUSTOM POPUP MENU (exact match to "Create Notes") ==========
+    // ========== CUSTOM POPUP MENU with chevron rotation ==========
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
-        trailingButton.isChecked = true
+        // Smoothly rotate chevron up 180°
+        trailingButton.animate().rotation(180f).setDuration(200).start()
 
         val menuView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.END
-            // Remove container padding so pill height is determined only by the menu item
             setPadding(0, 0, 0, 0)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -593,7 +591,8 @@ class NoteEditorActivity : AppCompatActivity() {
             isFocusable = true
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener {
-                trailingButton.isChecked = false
+                // Rotate chevron back to normal
+                trailingButton.animate().rotation(0f).setDuration(200).start()
                 isMenuOpen = false
             }
             showAsDropDown(anchor, 0, dpToPx(8f), Gravity.END)
