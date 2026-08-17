@@ -365,9 +365,8 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // ------- PORTED SWITCH LOGIC FROM DeveloperOptionsActivity -------
-        // Resolve colors matching DeveloperOptionsActivity.kt
-        val accentColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.parseColor("#E8DEF8"))
+
+val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, Color.parseColor("#E8DEF8"))
         val trackOnColor = accentColor
 
         val trackOffColor = if (isDark) {
