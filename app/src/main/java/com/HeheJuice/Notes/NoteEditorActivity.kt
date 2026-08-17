@@ -76,6 +76,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
 
+    // Update button state: only icon tint and alpha; background stays primary container
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
         btn.alpha = if (enabled) 1.0f else 0.5f
@@ -259,6 +260,8 @@ class NoteEditorActivity : AppCompatActivity() {
                 1f
             ).apply { topMargin = dpToPx(8f) }
             setGoogleSansFlexDefault(this, false)
+            // Optimization: prevent horizontal scrolling to improve vertical scroll performance
+            setHorizontallyScrolling(false)
         }
         root.addView(contentEdit)
 
@@ -358,45 +361,43 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
-        // ---- Load existing note with improved span ordering ----
+        // ---- Load existing note ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
                 val spannable = SpannableStringBuilder(note.content)
 
-                // Apply bold spans first, then size spans, to avoid style overriding
-                val boldSpans = note.spans.filter { it.type == "bold" }
-                val biggerSpans = note.spans.filter { it.type == "bigger" }
-
-                // Apply bold spans
-                for (spanData in boldSpans) {
-                    if (googleSansFlex != null) {
-                        spannable.setSpan(
-                            GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
-                            spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    } else {
-                        spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                // Apply each stored span
+                for (spanData in note.spans) {
+                    when (spanData.type) {
+                        "bold" -> {
+                            if (googleSansFlex != null) {
+                                spannable.setSpan(
+                                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                                    spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            } else {
+                                spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            }
+                        }
+                        "bigger" -> {
+                            val size = spanData.size ?: 2.0f
+                            // Apply bold round first, then size
+                            if (googleSansFlex != null) {
+                                spannable.setSpan(
+                                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                                    spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            } else {
+                                spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            }
+                            spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
                     }
-                }
-
-                // Apply bigger spans (size + bold)
-                for (spanData in biggerSpans) {
-                    val size = spanData.size ?: 2.0f
-                    // Apply bold round first
-                    if (googleSansFlex != null) {
-                        spannable.setSpan(
-                            GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
-                            spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    } else {
-                        spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                    // Then apply size
-                    spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
 
                 contentEdit.setText(spannable)
+                contentEdit.invalidate()
             }
         }
 
@@ -461,6 +462,7 @@ class NoteEditorActivity : AppCompatActivity() {
         clipboard.setPrimaryClip(ClipData.newPlainText("note_text", text))
     }
 
+    // ----- Bold Round toggle -----
     private fun applyBoldRoundToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
@@ -487,6 +489,7 @@ class NoteEditorActivity : AppCompatActivity() {
         updateToolbarButtons()
     }
 
+    // ----- Bigger Round toggle (size + bold round) -----
     private fun applyBiggerRoundToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
