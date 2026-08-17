@@ -3,12 +3,9 @@ package com.HeheJuice.Notes
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
-import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -36,18 +33,11 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.color.utilities.Hct
-import com.google.android.material.color.utilities.SchemeFidelity
-import com.google.android.material.color.utilities.QuantizerCelebi
-import com.google.android.material.color.utilities.Score
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.google.android.material.color.DynamicColors
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -98,34 +88,47 @@ object NoteRepository {
 
     private fun getMetaFile(id: String): File = getNotesDir().resolve("$id.meta")
 
-    // ========== 改为 suspend 并切换至 IO 线程 ==========
-    suspend fun getAllNotes(): List<Note> = withContext(Dispatchers.IO) {
+    fun getAllNotes(): List<Note> {
         val dir = getNotesDir()
-        dir.listFiles { file -> file.extension == "txt" }
+        return dir.listFiles { file -> file.extension == "txt" }
             ?.mapNotNull { file ->
                 val id = file.nameWithoutExtension
                 val plainText = file.readText()
                 val title = getTitleFromFilename(id)
                 val metaFile = getMetaFile(id)
-                val spans = if (metaFile.exists()) parseSpans(metaFile.readText()) else emptyList()
-                Note(id, title, plainText, spans, file.lastModified())
+                val spans = if (metaFile.exists()) {
+                    parseSpans(metaFile.readText())
+                } else {
+                    emptyList()
+                }
+                Note(
+                    id = id,
+                    title = title,
+                    content = plainText,
+                    spans = spans,
+                    lastModified = file.lastModified()
+                )
             }
             ?.sortedByDescending { it.lastModified }
             ?: emptyList()
     }
 
-    suspend fun getNote(id: String): Note? = withContext(Dispatchers.IO) {
+    fun getNote(id: String): Note? {
         val file = getNotesDir().resolve("$id.txt")
         val metaFile = getMetaFile(id)
-        if (file.exists()) {
+        return if (file.exists()) {
             val plainText = file.readText()
             val title = getTitleFromFilename(id)
-            val spans = if (metaFile.exists()) parseSpans(metaFile.readText()) else emptyList()
+            val spans = if (metaFile.exists()) {
+                parseSpans(metaFile.readText())
+            } else {
+                emptyList()
+            }
             Note(id, title, plainText, spans, file.lastModified())
         } else null
     }
 
-    suspend fun saveNote(title: String, plainText: String, spans: List<SpanData>) = withContext(Dispatchers.IO) {
+    fun saveNote(title: String, plainText: String, spans: List<SpanData>) {
         val id = generateId(title)
         val file = getNotesDir().resolve("$id.txt")
         val metaFile = getMetaFile(id)
@@ -134,12 +137,11 @@ object NoteRepository {
         if (spans.isNotEmpty()) {
             val json = JSONArray()
             for (span in spans) {
-                val obj = JSONObject().apply {
-                    put("start", span.start)
-                    put("end", span.end)
-                    put("type", span.type)
-                    span.size?.let { put("size", it) }
-                }
+                val obj = JSONObject()
+                obj.put("start", span.start)
+                obj.put("end", span.end)
+                obj.put("type", span.type)
+                span.size?.let { obj.put("size", it) }
                 json.put(obj)
             }
             metaFile.writeText(json.toString())
@@ -148,12 +150,12 @@ object NoteRepository {
         }
     }
 
-    suspend fun deleteNote(id: String) = withContext(Dispatchers.IO) {
+    fun deleteNote(id: String) {
         getNotesDir().resolve("$id.txt").delete()
         getMetaFile(id).delete()
     }
 
-    suspend fun renameNote(oldId: String, newTitle: String): Boolean = withContext(Dispatchers.IO) {
+    fun renameNote(oldId: String, newTitle: String): Boolean {
         val oldFile = getNotesDir().resolve("$oldId.txt")
         val oldMeta = getMetaFile(oldId)
         val newId = generateId(newTitle)
@@ -161,7 +163,7 @@ object NoteRepository {
         val newMeta = getMetaFile(newId)
         val result = oldFile.renameTo(newFile)
         if (oldMeta.exists()) oldMeta.renameTo(newMeta)
-        return@withContext result
+        return result
     }
 
     private fun parseSpans(jsonString: String): List<SpanData> {
@@ -208,7 +210,7 @@ class NotesMainAct : AppCompatActivity() {
     private var onPrimaryContainerColor: Int = 0
     private var surfaceContainerColor: Int = 0
     private var surfaceContainerLowColor: Int = 0
-    private var surfaceContainerHighestColor: Int = 0
+    private var surfaceContainerHighestColor: Int = 0   // 仅声明一次
     private var onSurfaceVariantColor: Int = 0
     private var redColor: Int = 0
     private var googleSansFlex: Typeface? = null
@@ -230,9 +232,6 @@ class NotesMainAct : AppCompatActivity() {
         false
     }
 
-    private var isColorInitialized = false
-    private var rootFrame: FrameLayout? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         val prefs = getPreferences(Context.MODE_PRIVATE)
         val savedTheme = prefs.getInt("app_theme", 0)
@@ -248,6 +247,13 @@ class NotesMainAct : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        DynamicColors.applyToActivityIfAvailable(this)
+        NoteRepository.init(applicationContext)
+
+        googleSansFlex = try {
+            Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
+        } catch (_: Exception) { null }
+
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
@@ -256,72 +262,26 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        NoteRepository.init(applicationContext)
-
-        googleSansFlex = try {
-            Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
-        } catch (_: Exception) { null }
-
-        // 异步提取壁纸颜色
-        lifecycleScope.launch {
-            val seedColor = withContext(Dispatchers.Default) {
-                getWallpaperSeedColor(this@NotesMainAct)
-            }
-            val scheme = SchemeFidelity(Hct.fromInt(seedColor), isDark, 0.0)
-
-            primaryContainerColor = scheme.primaryContainer
-            onPrimaryContainerColor = scheme.onPrimaryContainer
-            surfaceContainerColor = scheme.surfaceContainer
-            surfaceContainerLowColor = scheme.surfaceContainerLow
-            surfaceContainerHighestColor = scheme.surfaceContainerHighest
-            onSurfaceVariantColor = scheme.onSurfaceVariant
-            redColor = scheme.error
-
-            isColorInitialized = true
-            // 构建 UI
-            buildUI()
+        val typedValue = TypedValue()
+        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+        primaryContainerColor = typedValue.data
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+        onPrimaryContainerColor = typedValue.data
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+        surfaceContainerColor = typedValue.data
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
+        surfaceContainerLowColor = typedValue.data
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, typedValue, true)
+        surfaceContainerHighestColor = typedValue.data
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+        onSurfaceVariantColor = typedValue.data
+        if (theme.resolveAttribute(android.R.attr.colorError, typedValue, true)) {
+            redColor = typedValue.data
+        } else {
+            redColor = Color.parseColor("#FF3B30")
         }
 
-        // 先创建一个临时根布局避免空指针（后续会被替换）
-        val tempRoot = FrameLayout(this).apply {
-            setBackgroundColor(Color.WHITE)
-        }
-        setContentView(tempRoot)
-    }
-
-    // 提取壁纸种子色（纯函数）
-    private fun getWallpaperSeedColor(context: Context): Int {
-        return try {
-            val wallpaperManager = WallpaperManager.getInstance(context)
-            val drawable = wallpaperManager.drawable ?: return Color.parseColor("#6750A4")
-
-            val w = 112
-            val h = 112
-            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bmp)
-            drawable.setBounds(0, 0, w, h)
-            drawable.draw(canvas)
-
-            val pixels = IntArray(w * h)
-            bmp.getPixels(pixels, 0, w, 0, 0, w, h)
-            bmp.recycle()
-
-            val quantized = QuantizerCelebi.quantize(pixels, 128)
-            val colors = Score.score(quantized)
-            if (colors.isNotEmpty()) colors.first() else Color.parseColor("#6750A4")
-        } catch (e: Exception) {
-            Color.parseColor("#6750A4")
-        }
-    }
-
-    // 构建 UI
-    private fun buildUI() {
-        if (!isColorInitialized) return
-        if (rootFrame != null) return // 防止重复
-
-        rootFrame = FrameLayout(this).apply {
-            setBackgroundColor(surfaceContainerColor)
-        }
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
 
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -362,7 +322,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // 主题卡片
+        // 主题卡片 – 使用 Surface bright
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -409,8 +369,6 @@ class NotesMainAct : AppCompatActivity() {
             this,
             com.google.android.material.R.style.Widget_Material3Expressive_Button_OutlinedButton
         )
-        val prefs = getPreferences(Context.MODE_PRIVATE)
-        val savedTheme = prefs.getInt("app_theme", 0)
         val buttonBgTint = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
             intArrayOf(primaryContainerColor, surfaceContainerHighestColor)
@@ -504,7 +462,7 @@ class NotesMainAct : AppCompatActivity() {
             addView(notesContainer)
             addView(settingsContainer)
         }
-        rootFrame!!.addView(contentHolder)
+        rootFrame.addView(contentHolder)
 
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -515,6 +473,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
         }
 
+        // App Name Pill – 使用 Surface bright
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
@@ -542,6 +501,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // 右上角更多按钮容器 – 使用 Surface bright
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -562,7 +522,7 @@ class NotesMainAct : AppCompatActivity() {
         topBarRefreshContainer.addView(topBarRefreshIcon)
         topBarLayout.addView(appNamePill)
         topBarLayout.addView(topBarRefreshContainer)
-        rootFrame!!.addView(topBarLayout)
+        rootFrame.addView(topBarLayout)
 
         dimOverlay = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -576,7 +536,7 @@ class NotesMainAct : AppCompatActivity() {
                 if (isMenuExpanded) closeMenu()
             }
         }
-        rootFrame!!.addView(dimOverlay)
+        rootFrame.addView(dimOverlay)
 
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -649,7 +609,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         menuOverlayContainer.addView(createNotesItem)
         menuOverlayContainer.addView(importNotesItem)
-        rootFrame!!.addView(menuOverlayContainer)
+        rootFrame.addView(menuOverlayContainer)
 
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -753,9 +713,8 @@ class NotesMainAct : AppCompatActivity() {
         }
         bottomBarLayout.addView(tabPillContainer)
         bottomBarLayout.addView(plusBtnRef)
-        rootFrame!!.addView(bottomBarLayout)
+        rootFrame.addView(bottomBarLayout)
 
-        // 替换当前视图
         setContentView(rootFrame)
 
         notesAdapter = NotesListAdapter(emptyList()) { note ->
@@ -765,11 +724,7 @@ class NotesMainAct : AppCompatActivity() {
             startActivity(intent)
         }
         notesRecyclerView.adapter = notesAdapter
-
-        // 异步加载笔记列表
-        lifecycleScope.launch {
-            loadNotesList()
-        }
+        loadNotesList()
 
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
@@ -858,7 +813,7 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        rootFrame!!.setOnApplyWindowInsetsListener { _, insets ->
+        rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
             } else {
@@ -879,11 +834,7 @@ class NotesMainAct : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::notesAdapter.isInitialized) {
-            lifecycleScope.launch {
-                loadNotesList()
-            }
-        }
+        if (::notesAdapter.isInitialized) loadNotesList()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -891,8 +842,7 @@ class NotesMainAct : AppCompatActivity() {
         outState.putBoolean("is_notes_active", isNotesActive)
     }
 
-    // 异步加载笔记列表
-    private suspend fun loadNotesList() {
+    private fun loadNotesList() {
         val notes = NoteRepository.getAllNotes()
         notesAdapter.updateItems(notes)
     }
@@ -981,6 +931,7 @@ class NotesMainAct : AppCompatActivity() {
                     rightMargin = dpToPx(12f)
                 }
             }
+            // Notes Card – 使用 Surface bright
             val noteText = TextView(parent.context).apply {
                 textSize = 16f
                 setTextColor(onPrimaryContainerColor)
@@ -1045,11 +996,9 @@ class NotesMainAct : AppCompatActivity() {
             }
             val deleteBtn = holder.actionContainer.getChildAt(0) as ImageView
             deleteBtn.setOnClickListener {
-                lifecycleScope.launch {
-                    NoteRepository.deleteNote(note.id)
-                    expandedPositions.remove(position)
-                    loadNotesList()
-                }
+                NoteRepository.deleteNote(note.id)
+                expandedPositions.remove(position)
+                loadNotesList()
             }
             val cancelBtn = holder.actionContainer.getChildAt(1) as ImageView
             cancelBtn.setOnClickListener {

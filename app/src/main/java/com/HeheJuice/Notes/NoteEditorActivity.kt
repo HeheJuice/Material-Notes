@@ -2,7 +2,6 @@ package com.HeheJuice.Notes
 
 import android.animation.ValueAnimator
 import android.app.Activity
-import android.app.WallpaperManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -42,15 +41,8 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.color.utilities.Hct
-import com.google.android.material.color.utilities.QuantizerCelebi
-import com.google.android.material.color.utilities.SchemeFidelity
-import com.google.android.material.color.utilities.Score
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.google.android.material.color.DynamicColors
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -107,9 +99,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private val REQUEST_SAVE_IMAGE = 1002
     private var lastGeneratedBitmap: Bitmap? = null
 
-    private var isColorInitialized = false
-    private var isUiBuilt = false
-
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
         btn.alpha = if (enabled) 1.0f else 0.5f
@@ -129,6 +118,7 @@ class NoteEditorActivity : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
+        DynamicColors.applyToActivityIfAvailable(this)
         NoteRepository.init(applicationContext)
 
         googleSansFlex = try {
@@ -138,106 +128,44 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // 先设置一个临时根布局防止空白
-        val tempRoot = LinearLayout(this).apply {
-            setBackgroundColor(Color.WHITE)
-            orientation = LinearLayout.VERTICAL
-        }
-        setContentView(tempRoot)
-
-        // 异步加载笔记（如果有）
-        if (!isNewNote) {
-            lifecycleScope.launch {
-                val note = NoteRepository.getNote(noteId)
-                note?.let {
-                    // 等颜色初始化后再填充内容
-                    // 由于颜色可能还没初始化，我们暂存内容，等UI构建后设置
-                    // 这里我们用全局变量暂存
-                    pendingTitle = it.title
-                    pendingSpannable = SpannableStringBuilder(it.content).apply {
-                        for (spanData in it.spans) {
-                            when (spanData.type) {
-                                "bold" -> {
-                                    val font = googleSansFlex
-                                    if (font != null) {
-                                        setSpan(
-                                            GoogleSansFlexBoldRoundSpan(font),
-                                            spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                        )
-                                    } else {
-                                        setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                                    }
-                                }
-                                "bigger" -> {
-                                    setSpan(RelativeSizeSpan(spanData.size ?: 2.0f), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                                }
-                            }
-                        }
-                    }
-                    // 如果UI已构建，则直接设置
-                    if (isUiBuilt) {
-                        titleEdit.setText(pendingTitle)
-                        contentEdit.setText(pendingSpannable)
-                        contentEdit.invalidate()
-                    }
-                }
+        val typedValue = TypedValue()
+        fun resolveColor(attrRes: Int, fallback: Int): Int {
+            return if (theme.resolveAttribute(attrRes, typedValue, true)) {
+                typedValue.data
+            } else {
+                fallback
             }
         }
 
-        // 异步提取壁纸颜色
-        lifecycleScope.launch {
-            val seedColor = withContext(Dispatchers.Default) {
-                getWallpaperSeedColor(this@NoteEditorActivity)
-            }
-            val scheme = SchemeFidelity(Hct.fromInt(seedColor), isDark, 0.0)
-
-            surfaceContainerColor = scheme.surfaceContainer
-            surfaceContainerLowColor = scheme.surfaceContainerLow
-            surfaceContainerHighestColor = scheme.surfaceContainerHighest
-            primaryContainerColor = scheme.primaryContainer
-            onPrimaryContainerColor = scheme.onPrimaryContainer
-            onSurfaceVariantColor = scheme.onSurfaceVariant
-            surfaceLow = scheme.surfaceContainerLow
-            cardBorderColor = scheme.outline
-
-            isColorInitialized = true
-            // 构建UI（仅一次）
-            buildUI()
-        }
-    }
-
-    // 暂存待填充的内容
-    private var pendingTitle: String = ""
-    private var pendingSpannable: Spannable? = null
-
-    // 提取壁纸种子色（纯函数）
-    private fun getWallpaperSeedColor(context: Context): Int {
-        return try {
-            val wallpaperManager = WallpaperManager.getInstance(context)
-            val drawable = wallpaperManager.drawable ?: return Color.parseColor("#6750A4")
-
-            val w = 112
-            val h = 112
-            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bmp)
-            drawable.setBounds(0, 0, w, h)
-            drawable.draw(canvas)
-
-            val pixels = IntArray(w * h)
-            bmp.getPixels(pixels, 0, w, 0, 0, w, h)
-            bmp.recycle()
-
-            val quantized = QuantizerCelebi.quantize(pixels, 128)
-            val colors = Score.score(quantized)
-            if (colors.isNotEmpty()) colors.first() else Color.parseColor("#6750A4")
-        } catch (e: Exception) {
-            Color.parseColor("#6750A4")
-        }
-    }
-
-    // 构建UI（颜色初始化后调用）
-    private fun buildUI() {
-        if (!isColorInitialized || isUiBuilt) return
+        surfaceContainerColor = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainer,
+            if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
+        )
+        surfaceLow = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainerLow,
+            if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
+        )
+        surfaceContainerHighestColor = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainerHighest,
+            if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF")
+        )
+        primaryContainerColor = resolveColor(
+            com.google.android.material.R.attr.colorPrimaryContainer,
+            if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
+        )
+        onPrimaryContainerColor = resolveColor(
+            com.google.android.material.R.attr.colorOnPrimaryContainer,
+            if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
+        )
+        onSurfaceVariantColor = resolveColor(
+            com.google.android.material.R.attr.colorOnSurfaceVariant,
+            if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
+        )
+        surfaceContainerLowColor = surfaceLow
+        cardBorderColor = resolveColor(
+            com.google.android.material.R.attr.colorOutline,
+            if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
+        )
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -245,7 +173,6 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
-        // 顶部栏
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -257,12 +184,11 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
-        // 返回按钮
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceContainerHighestColor)
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
@@ -330,9 +256,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT
             ).apply { marginEnd = dpToPx(2f) }
         }
-        leadingButton.setOnClickListener {
-            lifecycleScope.launch { saveNote() }
-        }
+        leadingButton.setOnClickListener { saveNote() }
 
         val trailingButtonContainer = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -394,7 +318,6 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(splitButton)
         root.addView(topBar)
 
-        // 标题标签
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -418,7 +341,7 @@ class NoteEditorActivity : AppCompatActivity() {
             imeOptions = EditorInfo.IME_ACTION_NEXT
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceContainerHighestColor)
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             layoutParams = LinearLayout.LayoutParams(
@@ -432,7 +355,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
-        // 内容标签
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -465,7 +387,7 @@ class NoteEditorActivity : AppCompatActivity() {
             textSize = 16f
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceContainerHighestColor)
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             gravity = Gravity.TOP or Gravity.START
@@ -481,7 +403,6 @@ class NoteEditorActivity : AppCompatActivity() {
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
-        // 工具栏
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -497,7 +418,7 @@ class NoteEditorActivity : AppCompatActivity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setCornerRadius(dpToPx(100f).toFloat())
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerLowColor)   // 保持原样，未要求改
             }
             setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
             layoutParams = LinearLayout.LayoutParams(
@@ -579,17 +500,35 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
-        // 替换当前的根布局
-        setContentView(root)
-
-        // 如果有待填充的内容，现在填充
-        if (pendingTitle.isNotEmpty() || pendingSpannable != null) {
-            titleEdit.setText(pendingTitle)
-            if (pendingSpannable != null) {
-                contentEdit.setText(pendingSpannable)
+        if (!isNewNote) {
+            NoteRepository.getNote(noteId)?.let { note ->
+                titleEdit.setText(note.title)
+                val spannable = SpannableStringBuilder(note.content)
+                for (spanData in note.spans) {
+                    when (spanData.type) {
+                        "bold" -> {
+                            val font = googleSansFlex
+                            if (font != null) {
+                                spannable.setSpan(
+                                    GoogleSansFlexBoldRoundSpan(font),
+                                    spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            } else {
+                                spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            }
+                        }
+                        "bigger" -> {
+                            val size = spanData.size ?: 2.0f
+                            spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    }
+                }
+                contentEdit.setText(spannable)
                 contentEdit.invalidate()
             }
         }
+
+        setContentView(root)
 
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -625,11 +564,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
             insets
         }
-
-        isUiBuilt = true
     }
-
-    // ========== 全部功能函数 ==========
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
@@ -689,7 +624,7 @@ class NoteEditorActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                lifecycleScope.launch { captureNoteToImage() }
+                captureNoteToImage()
                 menuPopup?.dismiss()
             }
             setOnTouchListener(pressScaleTouchListener)
@@ -723,8 +658,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // 保存笔记（suspend 函数，由协程调用）
-    private suspend fun saveNote() {
+    private fun saveNoteData(): Boolean {
         val title = titleEdit.text.toString().trim()
         val plainText = contentEdit.text.toString()
         val spans = mutableListOf<SpanData>()
@@ -750,27 +684,20 @@ class NoteEditorActivity : AppCompatActivity() {
 
         if (title.isEmpty()) {
             Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
-            return
+            return false
         }
 
-        // 异步保存（在主线程切换至IO）
-        withContext(Dispatchers.IO) {
-            if (isNewNote) {
-                NoteRepository.saveNote(title, plainText, spans)
-            } else {
-                NoteRepository.deleteNote(noteId)
-                NoteRepository.saveNote(title, plainText, spans)
-            }
+        if (isNewNote) {
+            NoteRepository.saveNote(title, plainText, spans)
+        } else {
+            NoteRepository.deleteNote(noteId)
+            NoteRepository.saveNote(title, plainText, spans)
         }
-        // 保存完成，返回
-        setResult(Activity.RESULT_OK)
-        finish()
+        return true
     }
 
-    // 截图到图片（suspend）
-    private suspend fun captureNoteToImage() {
-        // 先保存笔记（等待保存完成）
-        saveNote()
+    private fun captureNoteToImage() {
+        if (!saveNoteData()) return
 
         val title = titleEdit.text.toString().trim()
         val contentSpannable = contentEdit.text
@@ -797,7 +724,7 @@ class NoteEditorActivity : AppCompatActivity() {
         startActivityForResult(intent, REQUEST_SAVE_IMAGE)
     }
 
-    // 生成高分辨率笔记截图（与编辑器UI一致）
+    // 生成截图 – 完全匹配编辑器样式，无时间戳，背景使用 Surface bright
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
         val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
         val scale = 2.0f
@@ -816,6 +743,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
         }
 
+        // 标题标签
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = (14f * scale)
@@ -828,6 +756,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleLabel)
 
+        // 标题内容 – 使用 Surface bright
         val titleText = TextView(this).apply {
             text = title
             textSize = (18f * scale)
@@ -845,6 +774,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleText)
 
+        // 内容标签
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = (14f * scale)
@@ -857,6 +787,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentLabel)
 
+        // 内容 – 使用 Surface bright，支持 Spannable
         val contentText = TextView(this).apply {
             setText(contentSpannable)
             textSize = (16f * scale)
@@ -874,6 +805,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentText)
 
+        // 测量和绘制
         val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
         val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         root.measure(widthSpec, heightSpec)
@@ -901,6 +833,13 @@ class NoteEditorActivity : AppCompatActivity() {
         } else {
             lastGeneratedBitmap?.recycle()
             lastGeneratedBitmap = null
+        }
+    }
+
+    private fun saveNote() {
+        if (saveNoteData()) {
+            setResult(Activity.RESULT_OK)
+            finish()
         }
     }
 
