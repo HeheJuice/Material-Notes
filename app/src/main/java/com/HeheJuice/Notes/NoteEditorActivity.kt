@@ -156,7 +156,7 @@ class NoteEditorActivity : AppCompatActivity() {
             ).apply { bottomMargin = dpToPx(24f) }
         }
 
-        // Back button
+        // Back button (50dp)
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
@@ -197,27 +197,48 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            setSpacing(0)
         }
 
-        // Leading button – using ContextThemeWrapper to apply the split-button style
+        val buttonHeight = dpToPx(50f) // matches back button
+
+        // Leading button – "Save" text
         val leadingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
         ).apply {
             text = getString(R.string.save)
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
+            setBackgroundColor(primaryContainerColor)
+            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                buttonHeight
+            )
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – using ContextThemeWrapper
+        // Trailing button – icon only, square
         trailingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
         ).apply {
             setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
+            setBackgroundColor(primaryContainerColor)
+            setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
             contentDescription = getString(R.string.more_options)
+            setPadding(0, 0, 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                buttonHeight, // width = height
+                buttonHeight
+            )
+            gravity = Gravity.CENTER
         }
         trailingButton.setOnClickListener {
-            showMenu(it)
+            if (menuPopup?.isShowing == true) {
+                menuPopup?.dismiss()
+            } else {
+                showMenu(it)
+            }
         }
 
         splitButton.addView(leadingButton)
@@ -481,7 +502,7 @@ class NoteEditorActivity : AppCompatActivity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerLowColor)
+                setColor(primaryContainerColor)
             }
             elevation = dpToPx(8f).toFloat()
         }
