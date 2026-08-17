@@ -4,6 +4,8 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -31,10 +33,81 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
+import java.io.File
 
+// ----- Data class & Repository -----
+data class Note(
+    val id: String,
+    val title: String,
+    val content: String,
+    val lastModified: Long
+)
+
+object NoteRepository {
+    private const val NOTES_DIR = "notes"
+    private lateinit var context: Context
+
+    fun init(context: Context) {
+        this.context = context.applicationContext
+        val dir = getNotesDir()
+        if (!dir.exists()) dir.mkdirs()
+    }
+
+    private fun getNotesDir(): File = context.filesDir.resolve(NOTES_DIR)
+
+    fun getAllNotes(): List<Note> {
+        val dir = getNotesDir()
+        return dir.listFiles { file -> file.extension == "txt" }
+            ?.mapNotNull { file ->
+                val fullText = file.readText()
+                val lines = fullText.lines()
+                val title = if (lines.isNotEmpty()) lines.first() else file.nameWithoutExtension
+                val content = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
+                Note(
+                    id = file.nameWithoutExtension,
+                    title = title,
+                    content = content,
+                    lastModified = file.lastModified()
+                )
+            }
+            ?.sortedByDescending { it.lastModified }
+            ?: emptyList()
+    }
+
+    fun getNote(id: String): Note? {
+        val file = getNotesDir().resolve("$id.txt")
+        return if (file.exists()) {
+            val fullText = file.readText()
+            val lines = fullText.lines()
+            val title = if (lines.isNotEmpty()) lines.first() else id
+            val content = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
+            Note(id, title, content, file.lastModified())
+        } else null
+    }
+
+    fun saveNote(id: String, title: String, content: String) {
+        val file = getNotesDir().resolve("$id.txt")
+        val fullText = if (content.isNotEmpty()) "$title\n$content" else title
+        file.writeText(fullText)
+    }
+
+    fun deleteNote(id: String) {
+        getNotesDir().resolve("$id.txt").delete()
+    }
+
+    fun renameNote(oldId: String, newId: String): Boolean {
+        val oldFile = getNotesDir().resolve("$oldId.txt")
+        val newFile = getNotesDir().resolve("$newId.txt")
+        return oldFile.renameTo(newFile)
+    }
+}
+
+// ----- Main Activity -----
 class NotesMainAct : AppCompatActivity() {
 
     private lateinit var slidingPillView: View
@@ -57,13 +130,20 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var contentHolder: FrameLayout
     private lateinit var appNamePill: TextView
 
-    // Colors (surface-based)
-    private var windowBgColor: Int = 0
-    private var accentColor: Int = 0
-    private var activeTextColor: Int = 0
-    private var secondaryTextColor: Int = 0
-    private var cardBgColor: Int = 0
-    private var secondaryBtnColor: Int = 0
+    // Notes list
+    private lateinit var notesRecyclerView: RecyclerView
+    private lateinit var notesAdapter: NotesListAdapter
+
+    // Colors (resolved from theme)
+    private var primaryContainerColor: Int = 0
+    private var onPrimaryContainerColor: Int = 0
+    private var surfaceContainerColor: Int = 0
+    private var surfaceContainerLowColor: Int = 0
+    private var surfaceContainerHighestColor: Int = 0
+    private var onSurfaceVariantColor: Int = 0
+
+    // GoogleSansFlex typeface
+    private var googleSansFlex: Typeface? = null
 
     // Press-scale touch listener
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
@@ -97,14 +177,13 @@ class NotesMainAct : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // ----- Apply Saved Theme Preference before super.onCreate -----
         val prefs = getPreferences(Context.MODE_PRIVATE)
-        val savedTheme = prefs.getInt("app_theme", 0) // 0: System, 1: Light, 2: Dark
+        val savedTheme = prefs.getInt("app_theme", 0)
         when (savedTheme) {
             0 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
             1 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
             2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         }
 
-        // Restore active tab state if available
         if (savedInstanceState != null) {
             isNotesActive = savedInstanceState.getBoolean("is_notes_active", true)
         }
@@ -116,41 +195,48 @@ class NotesMainAct : AppCompatActivity() {
         // ----- Force Dynamic Colors Application -----
         DynamicColors.applyToActivityIfAvailable(this)
 
+        // Initialize repository
+        NoteRepository.init(applicationContext)
+
+        // Load GoogleSansFlex
+        googleSansFlex = try {
+            Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
+        } catch (e: Exception) {
+            null
+        }
+
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- Status Bar Visibility Fix for Light Mode -----
+        // ----- Status Bar Visibility -----
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Color Resolution (Accent 1 200 / Accent 1 700 rules) -----
-        windowBgColor = if (isDark) Color.BLACK else Color.WHITE
+        // ----- Resolve all required container colors from the current theme -----
+        val typedValue = TypedValue()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            accentColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_accent1_700 else android.R.color.system_accent1_200
-            )
-            activeTextColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_700
-            )
-            cardBgColor = ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
-            )
-        } else {
-            accentColor = if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
-            activeTextColor = if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
-            cardBgColor = if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
-        }
+        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+        primaryContainerColor = typedValue.data
 
-        secondaryTextColor = if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
-        secondaryBtnColor = if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+        onPrimaryContainerColor = typedValue.data
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(windowBgColor) }
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+        surfaceContainerColor = typedValue.data
+
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
+        surfaceContainerLowColor = typedValue.data
+
+        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, typedValue, true)
+        surfaceContainerHighestColor = typedValue.data
+
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+        onSurfaceVariantColor = typedValue.data
+
+        // ----- Root background: Surface Container -----
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
 
         // ----- Content containers -----
         notesContainer = FrameLayout(this).apply {
@@ -158,7 +244,18 @@ class NotesMainAct : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
             )
             visibility = if (isNotesActive) View.VISIBLE else View.GONE
+
+            val rv = RecyclerView(this@NotesMainAct).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                layoutManager = LinearLayoutManager(this@NotesMainAct)
+            }
+            notesRecyclerView = rv
+            addView(rv)
         }
+
         settingsContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -178,19 +275,19 @@ class NotesMainAct : AppCompatActivity() {
         val settingsContentLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
             )
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // App Theme Card
+        // ----- App Theme Card -----
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(24f).toFloat()
-                setColor(cardBgColor)
+                setColor(surfaceContainerLowColor)
             }
             setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
             layoutParams = LinearLayout.LayoutParams(
@@ -202,8 +299,8 @@ class NotesMainAct : AppCompatActivity() {
         val themeTitle = TextView(this).apply {
             text = getString(R.string.setting_app_theme)
             textSize = 16f
-            setTextColor(activeTextColor)
-            setTypeface(null, Typeface.BOLD)
+            setTextColor(onSurfaceVariantColor)
+            applyGoogleSansBoldRound(this)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -212,7 +309,7 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Material 3 Expressive (MD3E) Toggle Group Style -----
+        // --- Expressive Toggle Group ---
         val toggleGroupContext = ContextThemeWrapper(
             this,
             com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
@@ -235,29 +332,23 @@ class NotesMainAct : AppCompatActivity() {
 
         val buttonContext = ContextThemeWrapper(
             this,
-            com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
+            com.google.android.material.R.style.Widget_Material3Expressive_Button_OutlinedButton
         )
 
-        val unselectedBgColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.getColor(
-                this,
-                if (isDark) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_200
-            )
-        } else {
-            secondaryBtnColor
-        }
-
-        val checkedState = intArrayOf(android.R.attr.state_checked)
-        val uncheckedState = intArrayOf(-android.R.attr.state_checked)
-
-        val buttonBgTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(accentColor, unselectedBgColor)
+        val buttonBgTint = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(primaryContainerColor, surfaceContainerHighestColor)
         )
 
-        val buttonTextTint = android.content.res.ColorStateList(
-            arrayOf(checkedState, uncheckedState),
-            intArrayOf(activeTextColor, activeTextColor)
+        val buttonTextTint = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(onPrimaryContainerColor, onSurfaceVariantColor)
         )
 
         var pendingTheme = savedTheme
@@ -282,7 +373,6 @@ class NotesMainAct : AppCompatActivity() {
                 setTextColor(buttonTextTint)
                 strokeWidth = 0
 
-                // Adjusted vertical padding for a slightly higher button height
                 setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
                 setOnTouchListener(pressScaleTouchListener)
             }
@@ -304,17 +394,17 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Round & Monet Apply Theme Button (Matching Selected Theme & Selected Tab Colors) -----
+        // Apply Theme Button
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
-            setTextColor(activeTextColor)
+            setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(accentColor)
+                setColor(primaryContainerColor)
             }
             setPadding(dpToPx(24f), dpToPx(16f), dpToPx(24f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
@@ -355,6 +445,7 @@ class NotesMainAct : AppCompatActivity() {
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
+        // --- Continue with rest of UI ---
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -371,20 +462,20 @@ class NotesMainAct : AppCompatActivity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
             setBackgroundColor(Color.TRANSPARENT)
-            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
+            setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
         }
 
-        // App Name Pill (Left)
+        // App Name Pill
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
-            setTextColor(activeTextColor)
-            setTypeface(null, Typeface.BOLD)
+            setTextColor(onSurfaceVariantColor)
+            applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(cardBgColor)
+                setColor(surfaceContainerLowColor)
             }
             setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
             layoutParams = FrameLayout.LayoutParams(
@@ -402,25 +493,23 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Menu Button Container (Right)
+        // More button
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(cardBgColor)
+                setColor(surfaceContainerLowColor)
             }
             layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
             isFocusable = true
-            setOnClickListener {
-                // Empty as requested
-            }
+            setOnClickListener { /* empty */ }
             setOnTouchListener(pressScaleTouchListener)
         }
 
         val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (e: Exception) { null }
 
         val topBarRefreshIcon = ImageView(this).apply {
-            setImageDrawable(tintDrawableFunc(menuDrawable, activeTextColor))
+            setImageDrawable(tintDrawableFunc(menuDrawable, onSurfaceVariantColor))
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             layoutParams = FrameLayout.LayoutParams(
                 dpToPx(26f),
@@ -434,7 +523,7 @@ class NotesMainAct : AppCompatActivity() {
         topBarLayout.addView(topBarRefreshContainer)
         rootFrame.addView(topBarLayout)
 
-        // ----- Dim Background Overlay for Menu -----
+        // ----- Dim Overlay -----
         dimOverlay = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -449,7 +538,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- Expanding Menu Container -----
+        // ----- Menu -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -467,7 +556,7 @@ class NotesMainAct : AppCompatActivity() {
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(cardBgColor)
+                setColor(primaryContainerColor)
             }
         }
 
@@ -482,14 +571,13 @@ class NotesMainAct : AppCompatActivity() {
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (e: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (e: Exception) { null }
 
-        val createIcon = tintDrawableFunc(editNoteDrawable, activeTextColor)
-        val importIcon = tintDrawableFunc(boxAddDrawable, activeTextColor)
+        val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
+        val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
 
-        // Menu Item: Create Notes Pill
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
             textSize = 14f
-            setTextColor(activeTextColor)
+            setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
@@ -501,15 +589,15 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                Toast.makeText(this@NotesMainAct, "Create Notes clicked", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this@NotesMainAct, NoteEditorActivity::class.java)
+                startActivity(intent)
             }
         }
 
-        // Menu Item: Import Notes Pill
         val importNotesItem = TextView(this).apply {
             text = getString(R.string.import_notes)
             textSize = 14f
-            setTextColor(activeTextColor)
+            setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
             background = createPillBackground()
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
@@ -521,7 +609,7 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                Toast.makeText(this@NotesMainAct, "Import Notes clicked", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@NotesMainAct, getString(R.string.import_notes_toast), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -529,7 +617,7 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
-        // ----- Bottom bar layout -----
+        // ----- Bottom bar -----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -540,20 +628,18 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // ----- Tab pill container -----
         val tabPillContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(cardBgColor)
+                setColor(surfaceContainerLowColor)
             }
             setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
         }
 
-        // Sliding pill background
         slidingPillView = View(this).apply {
             background = GradientDrawable().apply {
-                setColor(accentColor)
+                setColor(primaryContainerColor)
                 cornerRadius = dpToPx(100f).toFloat()
             }
             layoutParams = FrameLayout.LayoutParams(0, dpToPx(44f), Gravity.CENTER_VERTICAL)
@@ -571,12 +657,11 @@ class NotesMainAct : AppCompatActivity() {
         val notesDrawable = try { ContextCompat.getDrawable(this, R.drawable.note_stack_24px) } catch (e: Exception) { null }
         val settingsDrawable = try { ContextCompat.getDrawable(this, R.drawable.settings_24px) } catch (e: Exception) { null }
 
-        // Notes tab
         notesTabBtn = TextView(this).apply {
             text = getString(R.string.nav_notes)
             textSize = 14f
-            setTextColor(if (isNotesActive) activeTextColor else secondaryTextColor)
-            setTypeface(null, Typeface.BOLD)
+            setTextColor(if (isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
+            applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
@@ -594,12 +679,11 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
         }
 
-        // Settings tab
         settingsTabBtn = TextView(this).apply {
             text = getString(R.string.nav_settings)
             textSize = 14f
-            setTextColor(if (!isNotesActive) activeTextColor else secondaryTextColor)
-            setTypeface(null, Typeface.BOLD)
+            setTextColor(if (!isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
+            applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
@@ -623,15 +707,15 @@ class NotesMainAct : AppCompatActivity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        // ----- + Button (FAB-like) -----
-        plusIconDrawable = PlusDrawable(activeTextColor, dpToPx(3f).toFloat())
+        // + button
+        plusIconDrawable = PlusDrawable(onSurfaceVariantColor, dpToPx(3f).toFloat())
         plusBtnRef = ImageView(this).apply {
             setImageDrawable(plusIconDrawable)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(cardBgColor)
+                setColor(surfaceContainerLowColor)
             }
-            contentDescription = "Add"
+            contentDescription = getString(R.string.add_button_content_desc)
             isClickable = true
             isFocusable = true
             layoutParams = LinearLayout.LayoutParams(dpToPx(52f), dpToPx(52f)).apply {
@@ -653,7 +737,17 @@ class NotesMainAct : AppCompatActivity() {
 
         setContentView(rootFrame)
 
-        // ----- Tab switching logic & Pill animation -----
+        // ----- Notes adapter -----
+        notesAdapter = NotesListAdapter(emptyList()) { note ->
+            val intent = Intent(this, NoteEditorActivity::class.java).apply {
+                putExtra("note_id", note.id)
+            }
+            startActivity(intent)
+        }
+        notesRecyclerView.adapter = notesAdapter
+        loadNotesList()
+
+        // ----- Tab switching logic (unchanged) -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -665,9 +759,9 @@ class NotesMainAct : AppCompatActivity() {
         }
 
         if (isNotesActive) {
-            tintDrawableColor(notesTabBtn, activeTextColor)
+            tintDrawableColor(notesTabBtn, onPrimaryContainerColor)
         } else {
-            tintDrawableColor(settingsTabBtn, activeTextColor)
+            tintDrawableColor(settingsTabBtn, onPrimaryContainerColor)
         }
 
         val updatePillPosition: (Float) -> Unit = { progress ->
@@ -687,19 +781,19 @@ class NotesMainAct : AppCompatActivity() {
             }
 
             if (p < 0.5f) {
-                notesTabBtn.setTextColor(activeTextColor)
+                notesTabBtn.setTextColor(onPrimaryContainerColor)
                 notesTabBtn.setCompoundDrawablesWithIntrinsicBounds(notesDrawable, null, null, null)
-                tintDrawableColor(notesTabBtn, activeTextColor)
+                tintDrawableColor(notesTabBtn, onPrimaryContainerColor)
 
-                settingsTabBtn.setTextColor(secondaryTextColor)
+                settingsTabBtn.setTextColor(onSurfaceVariantColor)
                 settingsTabBtn.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
             } else {
-                notesTabBtn.setTextColor(secondaryTextColor)
+                notesTabBtn.setTextColor(onSurfaceVariantColor)
                 notesTabBtn.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
 
-                settingsTabBtn.setTextColor(activeTextColor)
+                settingsTabBtn.setTextColor(onPrimaryContainerColor)
                 settingsTabBtn.setCompoundDrawablesWithIntrinsicBounds(settingsDrawable, null, null, null)
-                tintDrawableColor(settingsTabBtn, activeTextColor)
+                tintDrawableColor(settingsTabBtn, onPrimaryContainerColor)
             }
         }
 
@@ -736,7 +830,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Click listeners for tabs -----
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
                 notesTabBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -751,7 +844,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ----- Initial pill layout -----
         tabPillContainer.doOnLayout {
             val targetBtn = if (isNotesActive) notesTabBtn else settingsTabBtn
             slidingPillView.layoutParams = slidingPillView.layoutParams.apply { width = targetBtn.width }
@@ -759,7 +851,6 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        // ----- Window insets (Dynamic Spacing) -----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
@@ -786,9 +877,21 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::notesAdapter.isInitialized) {
+            loadNotesList()
+        }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("is_notes_active", isNotesActive)
+    }
+
+    private fun loadNotesList() {
+        val notes = NoteRepository.getAllNotes()
+        notesAdapter.updateItems(notes)
     }
 
     private fun openMenu() {
@@ -867,6 +970,175 @@ class NotesMainAct : AppCompatActivity() {
             }.start()
     }
 
+    // Helper to apply GoogleSansFlex Bold + Round
+    private fun applyGoogleSansBoldRound(textView: TextView) {
+        googleSansFlex?.let { font ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                textView.typeface = Typeface.create(font, 700, false)
+                textView.fontVariationSettings = "'wght' 700, 'ROND' 100"
+            } else {
+                textView.setTypeface(font, Typeface.BOLD)
+            }
+        }
+    }
+
+    // ----- Inner adapter for notes list (with long-press action buttons) -----
+    inner class NotesListAdapter(
+        private var items: List<Note>,
+        private val onItemClick: (Note) -> Unit
+    ) : RecyclerView.Adapter<NotesListAdapter.ViewHolder>() {
+
+        // Track expanded positions
+        private val expandedPositions = mutableSetOf<Int>()
+
+        inner class ViewHolder(
+            val root: LinearLayout,          // horizontal container
+            val noteText: TextView,           // left part (title)
+            val actionContainer: LinearLayout // right part (buttons)
+        ) : RecyclerView.ViewHolder(root)
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            // Horizontal root
+            val root = LinearLayout(parent.context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT,
+                    RecyclerView.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = dpToPx(8f)
+                    leftMargin = dpToPx(12f)
+                    rightMargin = dpToPx(12f)
+                }
+            }
+
+            // Left: note title (click to open)
+            val noteText = TextView(parent.context).apply {
+                textSize = 16f
+                setTextColor(onPrimaryContainerColor)
+                setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(16f))
+                background = GradientDrawable().apply {
+                    cornerRadius = dpToPx(12f).toFloat()
+                    setColor(surfaceContainerLowColor)
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+                isClickable = true
+                isFocusable = true
+            }
+
+            // Right: action buttons container (initially invisible)
+            val actionContainer = LinearLayout(parent.context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                visibility = View.GONE
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = dpToPx(8f)
+                }
+            }
+
+            // Delete button
+            val deleteBtn = ImageView(parent.context).apply {
+                setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.delete_24px))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(redBtnColor ?: Color.parseColor("#FF3B30"))
+                }
+                setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
+                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply {
+                    marginEnd = dpToPx(8f)
+                }
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+            }
+
+            // Cancel button
+            val cancelBtn = ImageView(parent.context).apply {
+                setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.close_24px))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(surfaceContainerLowColor)
+                }
+                setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
+                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f))
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+            }
+
+            actionContainer.addView(deleteBtn)
+            actionContainer.addView(cancelBtn)
+
+            root.addView(noteText)
+            root.addView(actionContainer)
+
+            return ViewHolder(root, noteText, actionContainer)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val note = items[position]
+            holder.noteText.text = note.title
+
+            // Click to open note
+            holder.noteText.setOnClickListener { onItemClick(note) }
+
+            // Long press to toggle expansion
+            holder.root.setOnLongClickListener {
+                toggleExpansion(position)
+                true
+            }
+
+            // Delete button
+            val deleteBtn = holder.actionContainer.getChildAt(0) as ImageView
+            deleteBtn.setOnClickListener {
+                NoteRepository.deleteNote(note.id)
+                expandedPositions.remove(position)
+                loadNotesList()
+            }
+
+            // Cancel button
+            val cancelBtn = holder.actionContainer.getChildAt(1) as ImageView
+            cancelBtn.setOnClickListener {
+                expandedPositions.remove(position)
+                notifyItemChanged(position)
+            }
+
+            // Show/hide action container based on expanded state
+            val isExpanded = expandedPositions.contains(position)
+            holder.actionContainer.visibility = if (isExpanded) View.VISIBLE else View.GONE
+
+            // Tint icons (optional: use the same accent colour)
+            val tintColor = if (isExpanded) onPrimaryContainerColor else Color.TRANSPARENT
+            // We'll just keep them as is; they use the drawable's tint.
+        }
+
+        private fun toggleExpansion(position: Int) {
+            if (expandedPositions.contains(position)) {
+                expandedPositions.remove(position)
+            } else {
+                expandedPositions.clear()
+                expandedPositions.add(position)
+            }
+            notifyDataSetChanged()
+        }
+
+        override fun getItemCount() = items.size
+
+        fun updateItems(newItems: List<Note>) {
+            items = newItems
+            expandedPositions.clear()
+            notifyDataSetChanged()
+        }
+    }
+
+    // ----- Plus drawable helper -----
     private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = colorInt
