@@ -8,7 +8,10 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.StateListDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -36,9 +39,9 @@ import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.materialswitch.MaterialSwitch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -207,6 +210,7 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var notesRecyclerView: RecyclerView
     private lateinit var notesAdapter: NotesListAdapter
 
+    // Theme-related variables
     private var primaryContainerColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
     private var surfaceContainerColor: Int = 0
@@ -215,6 +219,11 @@ class NotesMainAct : AppCompatActivity() {
     private var onSurfaceVariantColor: Int = 0
     private var redColor: Int = 0
     private var googleSansFlex: Typeface? = null
+
+    // New theme preferences
+    private lateinit var prefs: android.content.SharedPreferences
+    private var followSystem: Boolean = true
+    private var themeMode: Int = 0  // 0 = Light, 1 = Dark
 
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
         val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
@@ -234,13 +243,12 @@ class NotesMainAct : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val prefs = getPreferences(Context.MODE_PRIVATE)
-        val savedTheme = prefs.getInt("app_theme", 0)
-        when (savedTheme) {
-            0 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-            1 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-        }
+        prefs = getPreferences(Context.MODE_PRIVATE)
+        followSystem = prefs.getBoolean("follow_system", true)
+        themeMode = prefs.getInt("theme_mode", 0)
+
+        applyThemeFromPrefs()
+
         if (savedInstanceState != null) {
             isNotesActive = savedInstanceState.getBoolean("is_notes_active", true)
         }
@@ -271,14 +279,11 @@ class NotesMainAct : AppCompatActivity() {
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, Color.parseColor("#FFFFFF"))
         onSurfaceVariantColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.parseColor("#49454F"))
 
-        // Get the main error color
         redColor = MaterialColors.getColor(this, android.R.attr.colorError, Color.parseColor("#FF3B30"))
-
-        // Get the bright Surface color for the background
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
         // -------------------------------------------------
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) } // fixed
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -319,7 +324,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // 主题卡片 – 使用 Surface bright
+        // -------- NEW THEME SETTINGS CARD ----------
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -334,123 +339,140 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        val themeTitle = TextView(this).apply {
-            text = getString(R.string.setting_app_theme)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(14f) }
-        }
-
-        // Fixed: use non-Expressive widget style
-        val toggleGroupContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3_MaterialButtonToggleGroup
-        )
-        val themeSelectorContainer = MaterialButtonToggleGroup(toggleGroupContext).apply {
+        // 1. Follow system switch row
+        val followSystemRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            isSingleSelection = true
-            isSelectionRequired = true
         }
-        val themeOptions = listOf(
-            getString(R.string.theme_system),
-            getString(R.string.theme_light),
-            getString(R.string.theme_dark)
-        )
-        // Fixed: use non-Expressive button style
-        val buttonContext = ContextThemeWrapper(
-            this,
-            com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
-        )
-        val buttonBgTint = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
-            intArrayOf(primaryContainerColor, surfaceContainerHighestColor)
-        )
-        val buttonTextTint = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
-            intArrayOf(onPrimaryContainerColor, onSurfaceVariantColor)
-        )
-        var pendingTheme = savedTheme
-
-        themeOptions.forEachIndexed { index, optionName ->
-            val isActive = (savedTheme == index)
-            val optionBtn = MaterialButton(buttonContext).apply {
-                id = View.generateViewId()
-                text = optionName
-                icon = null
-                textSize = 11.5f
-                isSingleLine = true
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                backgroundTintList = buttonBgTint
-                setTextColor(buttonTextTint)
-                strokeWidth = 0
-                setPadding(dpToPx(4f), dpToPx(16f), dpToPx(4f), dpToPx(16f))
-                setOnTouchListener(pressScaleTouchListener)
-            }
-            themeSelectorContainer.addView(optionBtn)
-            if (isActive) themeSelectorContainer.check(optionBtn.id)
-        }
-
-        themeSelectorContainer.addOnButtonCheckedListener { group, checkedId, isChecked ->
-            if (isChecked) {
-                pendingTheme = when (checkedId) {
-                    group.getChildAt(0).id -> 0
-                    group.getChildAt(1).id -> 1
-                    group.getChildAt(2).id -> 2
-                    else -> savedTheme
-                }
-            }
-        }
-
-        val applyThemeBtn = TextView(this).apply {
-            text = getString(R.string.themerestart)
-            textSize = 14f
-            setTextColor(onPrimaryContainerColor)
+        val followLabel = TextView(this).apply {
+            text = getString(R.string.setting_follow_system)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
             setGoogleSansFlexDefault(this, true)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(primaryContainerColor)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        val followSwitch = MaterialSwitch(this).apply {
+            isChecked = followSystem
+
+            // ---- Custom thumb drawable with check/cross ----
+            thumbDrawable = createThumbDrawable()
+            // Tint the thumb background (the circle) – we are using layer drawables with colors, so no tint needed.
+            // But we set the thumbTintList to null to avoid overriding our custom colors.
+            thumbTintList = null
+
+            setOnCheckedChangeListener { _, isChecked ->
+                followSystem = isChecked
+                prefs.edit().putBoolean("follow_system", followSystem).apply()
+                updateThemeModeRowState()
+                applyThemeFromPrefs()
+                recreate()
             }
-            setPadding(dpToPx(24f), dpToPx(16f), dpToPx(24f), dpToPx(16f))
+        }
+        followSystemRow.addView(followLabel)
+        followSystemRow.addView(followSwitch)
+        themeCard.addView(followSystemRow)
+
+        // Divider
+        val divider = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dpToPx(1f)
+            ).apply { topMargin = dpToPx(16f); bottomMargin = dpToPx(16f) }
+            setBackgroundColor(onSurfaceVariantColor)
+            alpha = 0.3f
+        }
+        themeCard.addView(divider)
+
+        // 2. Theme Mode row (clickable)
+        val themeModeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dpToPx(16f) }
+            )
             isClickable = true
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
-                if (savedTheme != pendingTheme) {
-                    prefs.edit().putInt("app_theme", pendingTheme).apply()
-                    it.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                    val mode = when (pendingTheme) {
-                        0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                        1 -> AppCompatDelegate.MODE_NIGHT_NO
-                        2 -> AppCompatDelegate.MODE_NIGHT_YES
-                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                    }
-                    AppCompatDelegate.setDefaultNightMode(mode)
-                    overridePendingTransition(0, 0)
-                    recreate()
-                    overridePendingTransition(0, 0)
-                } else {
-                    Toast.makeText(this@NotesMainAct, "Selected theme is already applied", Toast.LENGTH_SHORT).show()
+                if (!followSystem) {
+                    showThemeModePopup(this)
                 }
             }
         }
+        val themeModeLabel = TextView(this).apply {
+            text = getString(R.string.setting_theme_mode)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        val themeModeSubtitle = TextView(this).apply {
+            text = if (themeMode == 0) getString(R.string.theme_light) else getString(R.string.theme_dark)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = dpToPx(8f) }
+        }
+        val chevronIcon = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@NotesMainAct, R.drawable.chevron_right_24px))
+            setColorFilter(onSurfaceVariantColor)
+            layoutParams = LinearLayout.LayoutParams(
+                dpToPx(24f),
+                dpToPx(24f)
+            )
+        }
+        themeModeRow.addView(themeModeLabel)
+        themeModeRow.addView(themeModeSubtitle)
+        themeModeRow.addView(chevronIcon)
+        themeCard.addView(themeModeRow)
 
-        themeCard.addView(themeTitle)
-        themeCard.addView(themeSelectorContainer)
-        themeCard.addView(applyThemeBtn)
+        // Store references for later state updates
+        val themeModeSubtitleRef = themeModeSubtitle
+        val themeModeRowRef = themeModeRow
+        // Function to update row state
+        val updateRowState = {
+            val enabled = !followSystem
+            themeModeRowRef.isEnabled = enabled
+            themeModeRowRef.alpha = if (enabled) 1.0f else 0.5f
+            if (enabled) {
+                themeModeSubtitleRef.text = if (themeMode == 0) getString(R.string.theme_light) else getString(R.string.theme_dark)
+                themeModeSubtitleRef.setTextColor(onSurfaceVariantColor)
+            } else {
+                themeModeSubtitleRef.text = getString(R.string.theme_system)
+                themeModeSubtitleRef.setTextColor(onSurfaceVariantColor)
+            }
+        }
+        updateRowState()
+
+        // Override the switch listener to also update row state (already set above, but we'll re-set to include updateRowState)
+        followSwitch.setOnCheckedChangeListener { _, isChecked ->
+            followSystem = isChecked
+            prefs.edit().putBoolean("follow_system", followSystem).apply()
+            updateRowState()
+            applyThemeFromPrefs()
+            recreate()
+        }
+
+        // Add card to settings
         settingsContentLayout.addView(themeCard)
+        // -----------------------------------------
+
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
@@ -472,7 +494,6 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
         }
 
-        // App Name Pill – 使用 Surface bright
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
@@ -500,7 +521,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // 右上角更多按钮容器 – 使用 Surface bright
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -831,6 +851,153 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
+    // ---- Theme application helper ----
+    private fun applyThemeFromPrefs() {
+        val mode = if (followSystem) {
+            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        } else {
+            if (themeMode == 0) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+        }
+        AppCompatDelegate.setDefaultNightMode(mode)
+    }
+
+    // ---- Popup for Theme Mode selection ----
+    private fun showThemeModePopup(anchor: View) {
+        val popupView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 0)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setCornerRadius(dpToPx(100f).toFloat())
+                setColor(primaryContainerColor)
+            }
+            elevation = dpToPx(8f).toFloat()
+        }
+
+        val lightItem = TextView(this).apply {
+            text = getString(R.string.theme_light)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            background = GradientDrawable().apply {
+                setCornerRadius(dpToPx(100f).toFloat())
+                setColor(Color.TRANSPARENT)
+            }
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                themeMode = 0
+                prefs.edit().putInt("theme_mode", themeMode).apply()
+                applyThemeFromPrefs()
+                recreate()
+                popupWindow?.dismiss()
+            }
+        }
+        popupView.addView(lightItem)
+
+        val darkItem = TextView(this).apply {
+            text = getString(R.string.theme_dark)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            background = GradientDrawable().apply {
+                setCornerRadius(dpToPx(100f).toFloat())
+                setColor(Color.TRANSPARENT)
+            }
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                themeMode = 1
+                prefs.edit().putInt("theme_mode", themeMode).apply()
+                applyThemeFromPrefs()
+                recreate()
+                popupWindow?.dismiss()
+            }
+        }
+        popupView.addView(darkItem)
+
+        popupView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+
+        val popupWindow = android.widget.PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = dpToPx(8f).toFloat()
+            isOutsideTouchable = true
+            isFocusable = true
+            animationStyle = android.R.style.Animation_Dialog
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            showAsDropDown(anchor, 0, dpToPx(8f))
+        }
+    }
+
+    // ---- Custom thumb drawable for switch ----
+    private fun createThumbDrawable(): Drawable {
+        val checkIcon = ContextCompat.getDrawable(this, R.drawable.check_24px)
+        val closeIcon = ContextCompat.getDrawable(this, R.drawable.close_24px)
+
+        // If icons are missing, fallback to text drawables
+        val checkDrawable = if (checkIcon != null) {
+            createIconLayerDrawable(checkIcon, primaryContainerColor)
+        } else {
+            createTextDrawable("✓", primaryContainerColor)
+        }
+        val closeDrawable = if (closeIcon != null) {
+            createIconLayerDrawable(closeIcon, onSurfaceVariantColor)
+        } else {
+            createTextDrawable("✕", onSurfaceVariantColor)
+        }
+
+        val stateList = StateListDrawable()
+        stateList.addState(intArrayOf(android.R.attr.state_checked), checkDrawable)
+        stateList.addState(intArrayOf(-android.R.attr.state_checked), closeDrawable)
+        return stateList
+    }
+
+    private fun createIconLayerDrawable(icon: Drawable, bgColor: Int): Drawable {
+        val size = dpToPx(20f)
+        // Circle background
+        val shape = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(bgColor)
+            setSize(size, size)
+        }
+        // Scale the icon to fit inside the circle
+        val scaledIcon = icon.mutate()
+        val padding = dpToPx(4f)
+        scaledIcon.setBounds(padding, padding, size - padding, size - padding)
+        // Layer the background and icon
+        val layers = arrayOf(shape, scaledIcon)
+        val layerDrawable = LayerDrawable(layers)
+        layerDrawable.setLayerSize(1, size, size)
+        return layerDrawable
+    }
+
+    private fun createTextDrawable(text: String, color: Int): Drawable {
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            textSize = dpToPx(14f).toFloat()
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        val size = dpToPx(20f)
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawText(text, size / 2f, size / 2f + (paint.textSize / 3f), paint)
+        return android.graphics.drawable.BitmapDrawable(resources, bitmap)
+    }
+
+    // ---- Existing methods ----
     override fun onResume() {
         super.onResume()
         if (::notesAdapter.isInitialized) loadNotesList()
@@ -930,7 +1097,6 @@ class NotesMainAct : AppCompatActivity() {
                     rightMargin = dpToPx(12f)
                 }
             }
-            // Notes Card – 使用 Surface bright
             val noteText = TextView(parent.context).apply {
                 textSize = 16f
                 setTextColor(onPrimaryContainerColor)

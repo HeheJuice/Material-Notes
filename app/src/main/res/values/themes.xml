@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 1. Changed to standard Material3 (Tonal Spot) instead of Expressive -->
-    <style name="Theme.NoteApp" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.NoteApp" parent="Theme.Material3Expressive.DayNight.NoActionBar">
         
         <!-- 2. Fallback colors (used if Dynamic Colors are disabled/unavailable) -->
         <item name="colorPrimary">@color/primary</item>

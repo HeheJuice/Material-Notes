@@ -12,7 +12,9 @@
 <string name="theme_light">Light Mode</string>
 <string name="theme_dark">Dark Mode</string>
 <string name="themerestart">Apply Selected Theme</string>
-
+<string name="setting_follow_system">Follow system theme</string>
+<string name="setting_theme_mode">Theme Mode</string>
+<string name="theme_system">System</string>
 <!-- Menu Actions -->
 <string name="create_notes">Create Notes</string>
 <string name="import_notes">Import Notes</string>
