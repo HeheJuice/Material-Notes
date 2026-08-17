@@ -77,6 +77,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var splitButton: MaterialSplitButton
     private lateinit var trailingButton: MaterialButton
     private var menuPopup: android.widget.PopupWindow? = null
+    private var isMenuOpen = false
 
     private var surfaceContainerLowColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
@@ -90,6 +91,11 @@ class NoteEditorActivity : AppCompatActivity() {
         btn.alpha = if (enabled) 1.0f else 0.5f
         val iconColor = if (enabled) onPrimaryContainerColor else Color.parseColor("#888888")
         btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
+    }
+
+    private fun getStatusBarHeight(): Int {
+        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else dpToPx(36f)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -140,10 +146,13 @@ class NoteEditorActivity : AppCompatActivity() {
         )
         surfaceContainerLowColor = surfaceLow
 
+        val statusBarHeight = getStatusBarHeight()
+        val rootTopPadding = statusBarHeight + dpToPx(8f) // matches main activity
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceContainerColor)
-            setPadding(dpToPx(20f), dpToPx(48f), dpToPx(20f), dpToPx(20f))
+            setPadding(dpToPx(20f), rootTopPadding, dpToPx(20f), dpToPx(20f))
         }
 
         // Top bar (with split button)
@@ -153,7 +162,7 @@ class NoteEditorActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(24f) }
+            ).apply { bottomMargin = dpToPx(16f) } // reduced from 24dp
         }
 
         // Back button (50dp)
@@ -234,7 +243,7 @@ class NoteEditorActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
         }
         trailingButton.setOnClickListener {
-            if (menuPopup?.isShowing == true) {
+            if (isMenuOpen) {
                 menuPopup?.dismiss()
             } else {
                 showMenu(it)
@@ -521,7 +530,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
             compoundDrawablePadding = dpToPx(12f)
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            setPadding(dpToPx(16f), dpToPx(10f), dpToPx(20f), dpToPx(10f)) // same as "Create Notes"
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(100f).toFloat()
                 setColor(Color.TRANSPARENT)
@@ -546,7 +555,11 @@ class NoteEditorActivity : AppCompatActivity() {
             isOutsideTouchable = true
             isFocusable = true
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            setOnDismissListener {
+                isMenuOpen = false
+            }
             showAsDropDown(anchor, 0, dpToPx(8f), Gravity.END)
+            isMenuOpen = true
         }
     }
 
