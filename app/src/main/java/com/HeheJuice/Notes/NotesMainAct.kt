@@ -364,14 +364,12 @@ class NotesMainAct : AppCompatActivity() {
 
             // ---- Custom thumb drawable with check/cross ----
             thumbDrawable = createThumbDrawable()
-            // Tint the thumb background (the circle) – we are using layer drawables with colors, so no tint needed.
-            // But we set the thumbTintList to null to avoid overriding our custom colors.
             thumbTintList = null
 
             setOnCheckedChangeListener { _, isChecked ->
                 followSystem = isChecked
                 prefs.edit().putBoolean("follow_system", followSystem).apply()
-                updateThemeModeRowState()
+                updateRowState()
                 applyThemeFromPrefs()
                 recreate()
             }
@@ -429,8 +427,9 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { marginEnd = dpToPx(8f) }
         }
+        // Use a right arrow drawable; if you don't have arrow_forward_24px, use any chevron.
         val chevronIcon = ImageView(this).apply {
-            setImageDrawable(ContextCompat.getDrawable(this@NotesMainAct, R.drawable.chevron_right_24px))
+            setImageDrawable(ContextCompat.getDrawable(this@NotesMainAct, R.drawable.arrow_forward_24px))
             setColorFilter(onSurfaceVariantColor)
             layoutParams = LinearLayout.LayoutParams(
                 dpToPx(24f),
@@ -442,10 +441,9 @@ class NotesMainAct : AppCompatActivity() {
         themeModeRow.addView(chevronIcon)
         themeCard.addView(themeModeRow)
 
-        // Store references for later state updates
+        // Row state updater
         val themeModeSubtitleRef = themeModeSubtitle
         val themeModeRowRef = themeModeRow
-        // Function to update row state
         val updateRowState = {
             val enabled = !followSystem
             themeModeRowRef.isEnabled = enabled
@@ -459,15 +457,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
         updateRowState()
-
-        // Override the switch listener to also update row state (already set above, but we'll re-set to include updateRowState)
-        followSwitch.setOnCheckedChangeListener { _, isChecked ->
-            followSystem = isChecked
-            prefs.edit().putBoolean("follow_system", followSystem).apply()
-            updateRowState()
-            applyThemeFromPrefs()
-            recreate()
-        }
 
         // Add card to settings
         settingsContentLayout.addView(themeCard)
@@ -875,6 +864,9 @@ class NotesMainAct : AppCompatActivity() {
             elevation = dpToPx(8f).toFloat()
         }
 
+        // Declare popupWindow as a var so it can be referenced inside item clicks
+        lateinit var popupWindow: android.widget.PopupWindow
+
         val lightItem = TextView(this).apply {
             text = getString(R.string.theme_light)
             textSize = 14f
@@ -893,7 +885,7 @@ class NotesMainAct : AppCompatActivity() {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
                 applyThemeFromPrefs()
                 recreate()
-                popupWindow?.dismiss()
+                if (::popupWindow.isInitialized) popupWindow.dismiss()
             }
         }
         popupView.addView(lightItem)
@@ -916,7 +908,7 @@ class NotesMainAct : AppCompatActivity() {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
                 applyThemeFromPrefs()
                 recreate()
-                popupWindow?.dismiss()
+                if (::popupWindow.isInitialized) popupWindow.dismiss()
             }
         }
         popupView.addView(darkItem)
@@ -926,7 +918,7 @@ class NotesMainAct : AppCompatActivity() {
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
 
-        val popupWindow = android.widget.PopupWindow(
+        popupWindow = android.widget.PopupWindow(
             popupView,
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -946,7 +938,6 @@ class NotesMainAct : AppCompatActivity() {
         val checkIcon = ContextCompat.getDrawable(this, R.drawable.check_24px)
         val closeIcon = ContextCompat.getDrawable(this, R.drawable.close_24px)
 
-        // If icons are missing, fallback to text drawables
         val checkDrawable = if (checkIcon != null) {
             createIconLayerDrawable(checkIcon, primaryContainerColor)
         } else {
@@ -966,17 +957,14 @@ class NotesMainAct : AppCompatActivity() {
 
     private fun createIconLayerDrawable(icon: Drawable, bgColor: Int): Drawable {
         val size = dpToPx(20f)
-        // Circle background
         val shape = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(bgColor)
             setSize(size, size)
         }
-        // Scale the icon to fit inside the circle
         val scaledIcon = icon.mutate()
         val padding = dpToPx(4f)
         scaledIcon.setBounds(padding, padding, size - padding, size - padding)
-        // Layer the background and icon
         val layers = arrayOf(shape, scaledIcon)
         val layerDrawable = LayerDrawable(layers)
         layerDrawable.setLayerSize(1, size, size)
