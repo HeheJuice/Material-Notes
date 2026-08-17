@@ -40,15 +40,13 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
 import java.io.File
 
-// ----- Data class -----
 data class Note(
     val id: String,
     val title: String,
-    val content: String,
+    val content: String,   // HTML if meta exists, else plain text (backward compatible)
     val lastModified: Long
 )
 
-// ----- Repository -----
 object NoteRepository {
     private const val NOTES_DIR = "notes"
     private lateinit var context: Context
@@ -60,6 +58,8 @@ object NoteRepository {
     }
 
     private fun getNotesDir(): File = context.filesDir.resolve(NOTES_DIR)
+
+    private fun getMetaFile(id: String): File = getNotesDir().resolve("$id.meta")
 
     private fun sanitizeTitle(title: String): String {
         return title.replace(Regex("[^a-zA-Z0-9\\-\\_ ]"), "")
@@ -82,12 +82,14 @@ object NoteRepository {
         val dir = getNotesDir()
         return dir.listFiles { file -> file.extension == "txt" }
             ?.mapNotNull { file ->
-                val content = file.readText()
+                // For the list we only need the title; content not used.
+                // We read plain text just to keep content, but it's not displayed.
+                val plainText = file.readText()
                 val title = getTitleFromFilename(file.nameWithoutExtension)
                 Note(
                     id = file.nameWithoutExtension,
                     title = title,
-                    content = content,
+                    content = plainText,  // not used in list, but keeps it non-null
                     lastModified = file.lastModified()
                 )
             }
@@ -97,32 +99,48 @@ object NoteRepository {
 
     fun getNote(id: String): Note? {
         val file = getNotesDir().resolve("$id.txt")
+        val metaFile = getMetaFile(id)
         return if (file.exists()) {
-            val content = file.readText()
+            val plainText = file.readText()
+            // If meta exists, use it (HTML); otherwise use plain text (backward compatible)
+            val content = if (metaFile.exists()) metaFile.readText() else plainText
             val title = getTitleFromFilename(id)
             Note(id, title, content, file.lastModified())
         } else null
     }
 
-    fun saveNote(title: String, content: String) {
+    fun saveNote(title: String, plainText: String, htmlContent: String) {
         val id = generateId(title)
         val file = getNotesDir().resolve("$id.txt")
-        file.writeText(content)   // content only; title is in filename
+        val metaFile = getMetaFile(id)
+
+        // Write plain text
+        file.writeText(plainText)
+
+        // Write HTML meta file (always, to preserve any formatting)
+        metaFile.writeText(htmlContent)
     }
 
     fun deleteNote(id: String) {
         getNotesDir().resolve("$id.txt").delete()
+        getMetaFile(id).delete()
     }
 
     fun renameNote(oldId: String, newTitle: String): Boolean {
         val oldFile = getNotesDir().resolve("$oldId.txt")
+        val oldMeta = getMetaFile(oldId)
         val newId = generateId(newTitle)
         val newFile = getNotesDir().resolve("$newId.txt")
-        return oldFile.renameTo(newFile)
+        val newMeta = getMetaFile(newId)
+        // Rename both files if they exist
+        val result = oldFile.renameTo(newFile)
+        if (oldMeta.exists()) {
+            oldMeta.renameTo(newMeta)
+        }
+        return result
     }
 }
 
-// ----- Main Activity -----
 class NotesMainAct : AppCompatActivity() {
 
     private lateinit var slidingPillView: View
@@ -132,7 +150,6 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var settingsContainer: FrameLayout
     private var isNotesActive = true
 
-    // Menu state & views
     private var isMenuExpanded = false
     private lateinit var menuOverlayContainer: LinearLayout
     private lateinit var bottomBarLayout: LinearLayout
@@ -140,16 +157,13 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var plusIconDrawable: PlusDrawable
     private lateinit var plusBtnRef: ImageView
 
-    // Top Bar views
     private lateinit var topBarLayout: FrameLayout
     private lateinit var contentHolder: FrameLayout
     private lateinit var appNamePill: TextView
 
-    // Notes list
     private lateinit var notesRecyclerView: RecyclerView
     private lateinit var notesAdapter: NotesListAdapter
 
-    // Colors (resolved from theme)
     private var primaryContainerColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
     private var surfaceContainerColor: Int = 0
@@ -158,10 +172,8 @@ class NotesMainAct : AppCompatActivity() {
     private var onSurfaceVariantColor: Int = 0
     private var redColor: Int = 0
 
-    // GoogleSansFlex typeface
     private var googleSansFlex: Typeface? = null
 
-    // Press-scale touch listener
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
         val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
 
@@ -191,7 +203,6 @@ class NotesMainAct : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // ----- Apply Saved Theme Preference before super.onCreate -----
         val prefs = getPreferences(Context.MODE_PRIVATE)
         val savedTheme = prefs.getInt("app_theme", 0)
         when (savedTheme) {
@@ -208,13 +219,9 @@ class NotesMainAct : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        // ----- Force Dynamic Colors Application -----
         DynamicColors.applyToActivityIfAvailable(this)
-
-        // Initialize repository
         NoteRepository.init(applicationContext)
 
-        // Load GoogleSansFlex
         googleSansFlex = try {
             Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
         } catch (e: Exception) {
@@ -224,13 +231,11 @@ class NotesMainAct : AppCompatActivity() {
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        // ----- Status Bar Visibility -----
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        // ----- Resolve all required container colors from the current theme -----
         val typedValue = TypedValue()
 
         theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
@@ -251,17 +256,14 @@ class NotesMainAct : AppCompatActivity() {
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
         onSurfaceVariantColor = typedValue.data
 
-        // Resolve red color (error) from theme
         if (theme.resolveAttribute(android.R.attr.colorError, typedValue, true)) {
             redColor = typedValue.data
         } else {
-            redColor = Color.parseColor("#FF3B30") // fallback
+            redColor = Color.parseColor("#FF3B30")
         }
 
-        // ----- Root background: Surface Container -----
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
 
-        // ----- Content containers -----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -286,7 +288,6 @@ class NotesMainAct : AppCompatActivity() {
             visibility = if (isNotesActive) View.GONE else View.VISIBLE
         }
 
-        // Populate Settings Page UI
         val settingsScrollView = ScrollView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -304,7 +305,6 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // ----- App Theme Card -----
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -323,7 +323,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.setting_app_theme)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)
+            setGoogleSansFlexDefault(this, true)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -332,7 +332,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // --- Expressive Toggle Group ---
         val toggleGroupContext = ContextThemeWrapper(
             this,
             com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
@@ -417,12 +416,11 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Apply Theme Button
         val applyThemeBtn = TextView(this).apply {
             text = getString(R.string.themerestart)
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
-            setTypeface(null, Typeface.BOLD)
+            setGoogleSansFlexDefault(this, true)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -468,7 +466,6 @@ class NotesMainAct : AppCompatActivity() {
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
-        // --- Continue with rest of UI ---
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -478,7 +475,6 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ----- Top Bar Layout -----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -488,12 +484,11 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
         }
 
-        // App Name Pill
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)
+            setGoogleSansFlexDefault(this, true)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -516,7 +511,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // More button
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -546,7 +540,6 @@ class NotesMainAct : AppCompatActivity() {
         topBarLayout.addView(topBarRefreshContainer)
         rootFrame.addView(topBarLayout)
 
-        // ----- Dim Overlay -----
         dimOverlay = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -561,7 +554,6 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ----- Menu -----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -601,7 +593,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.create_notes)
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
-            setTypeface(null, Typeface.BOLD)
+            setGoogleSansFlexDefault(this, true)
             background = createPillBackground()
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             compoundDrawablePadding = dpToPx(12f)
@@ -621,7 +613,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.import_notes)
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
-            setTypeface(null, Typeface.BOLD)
+            setGoogleSansFlexDefault(this, true)
             background = createPillBackground()
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             compoundDrawablePadding = dpToPx(12f)
@@ -640,7 +632,6 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
-        // ----- Bottom bar -----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -684,7 +675,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.nav_notes)
             textSize = 14f
             setTextColor(if (isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)
+            setGoogleSansFlexDefault(this, true)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
@@ -706,7 +697,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.nav_settings)
             textSize = 14f
             setTextColor(if (!isNotesActive) onPrimaryContainerColor else onSurfaceVariantColor)
-            applyGoogleSansBoldRound(this)
+            setGoogleSansFlexDefault(this, true)
             gravity = Gravity.CENTER
             setPadding(dpToPx(16f), 0, dpToPx(20f), 0)
             compoundDrawablePadding = dpToPx(8f)
@@ -730,7 +721,6 @@ class NotesMainAct : AppCompatActivity() {
         tabPillContainer.addView(slidingPillView)
         tabPillContainer.addView(tabButtonsLayout)
 
-        // + button
         plusIconDrawable = PlusDrawable(onSurfaceVariantColor, dpToPx(3f).toFloat())
         plusBtnRef = ImageView(this).apply {
             setImageDrawable(plusIconDrawable)
@@ -760,7 +750,6 @@ class NotesMainAct : AppCompatActivity() {
 
         setContentView(rootFrame)
 
-        // ----- Notes adapter -----
         notesAdapter = NotesListAdapter(emptyList()) { note ->
             val intent = Intent(this, NoteEditorActivity::class.java).apply {
                 putExtra("note_id", note.id)
@@ -770,7 +759,6 @@ class NotesMainAct : AppCompatActivity() {
         notesRecyclerView.adapter = notesAdapter
         loadNotesList()
 
-        // ----- Tab switching logic (unchanged) -----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -993,25 +981,27 @@ class NotesMainAct : AppCompatActivity() {
             }.start()
     }
 
-    // Helper to apply GoogleSansFlex Bold + Round
-    private fun applyGoogleSansBoldRound(textView: TextView) {
+    private fun setGoogleSansFlexDefault(textView: TextView, bold: Boolean = false) {
         googleSansFlex?.let { font ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                textView.typeface = Typeface.create(font, 700, false)
-                textView.fontVariationSettings = "'wght' 700, 'ROND' 100"
+            if (bold) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    textView.typeface = Typeface.create(font, 700, false)
+                    textView.fontVariationSettings = "'wght' 700, 'ROND' 100"
+                } else {
+                    textView.setTypeface(font, Typeface.BOLD)
+                }
             } else {
-                textView.setTypeface(font, Typeface.BOLD)
+                textView.typeface = font
             }
         }
     }
 
-    // ----- Inner adapter for notes list (with long-press action buttons) -----
+    // ----- Inner adapter for notes list (unchanged) -----
     inner class NotesListAdapter(
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
     ) : RecyclerView.Adapter<NotesListAdapter.ViewHolder>() {
 
-        // Track expanded positions
         private val expandedPositions = mutableSetOf<Int>()
 
         inner class ViewHolder(
@@ -1049,6 +1039,8 @@ class NotesMainAct : AppCompatActivity() {
                 )
                 isClickable = true
                 isFocusable = true
+                isLongClickable = true
+                setGoogleSansFlexDefault(this, false)
             }
 
             val actionContainer = LinearLayout(parent.context).apply {
@@ -1063,7 +1055,6 @@ class NotesMainAct : AppCompatActivity() {
                 }
             }
 
-            // Delete button
             val deleteBtn = ImageView(parent.context).apply {
                 setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.delete_24px))
                 background = GradientDrawable().apply {
@@ -1079,7 +1070,6 @@ class NotesMainAct : AppCompatActivity() {
                 setOnTouchListener(pressScaleTouchListener)
             }
 
-            // Cancel button
             val cancelBtn = ImageView(parent.context).apply {
                 setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.close_24px))
                 background = GradientDrawable().apply {
@@ -1106,16 +1096,13 @@ class NotesMainAct : AppCompatActivity() {
             val note = items[position]
             holder.noteText.text = note.title
 
-            // Click to open note
             holder.noteText.setOnClickListener { onItemClick(note) }
 
-            // Long press to toggle expansion
-            holder.root.setOnLongClickListener {
+            holder.noteText.setOnLongClickListener {
                 toggleExpansion(position)
                 true
             }
 
-            // Delete button
             val deleteBtn = holder.actionContainer.getChildAt(0) as ImageView
             deleteBtn.setOnClickListener {
                 NoteRepository.deleteNote(note.id)
@@ -1123,7 +1110,6 @@ class NotesMainAct : AppCompatActivity() {
                 loadNotesList()
             }
 
-            // Cancel button
             val cancelBtn = holder.actionContainer.getChildAt(1) as ImageView
             cancelBtn.setOnClickListener {
                 expandedPositions.remove(position)
@@ -1153,7 +1139,6 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
-    // ----- Plus drawable helper -----
     private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = colorInt
