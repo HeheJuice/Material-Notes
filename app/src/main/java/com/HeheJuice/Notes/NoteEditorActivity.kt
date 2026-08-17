@@ -23,6 +23,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.Window
 import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -72,7 +73,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var biggerBtn: ImageView
     private lateinit var toolbarContainer: LinearLayout
 
-    // Split button and menu
     private lateinit var splitButton: MaterialSplitButton
     private lateinit var trailingButton: MaterialButton
     private var menuPopup: android.widget.PopupWindow? = null
@@ -84,7 +84,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
 
-    // Update button state: only icon tint and alpha; background stays primary container
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
         btn.alpha = if (enabled) 1.0f else 0.5f
@@ -191,7 +190,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- SPLIT BUTTON (Save + menu) ----
+        // ---- SPLIT BUTTON ----
         splitButton = MaterialSplitButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -199,20 +198,20 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
-        // Leading button – main save action
         val leadingButton = MaterialButton(this).apply {
             text = getString(R.string.save)
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
             setBackgroundColor(primaryContainerColor)
+            // Use the split button leading style
             setStyle(com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – opens menu
         trailingButton = MaterialButton(this).apply {
             setStyle(com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
-            setIcon(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
+            // Use setIconResource instead of setIcon
+            setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
             contentDescription = getString(R.string.more_options)
         }
         trailingButton.setOnClickListener {
@@ -469,7 +468,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ========== CUSTOM POPUP MENU (pill style) ==========
+    // ========== CUSTOM POPUP MENU ==========
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
