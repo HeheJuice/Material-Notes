@@ -211,6 +211,7 @@ class NotesMainAct : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
+    private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
     private var redColor: Int = 0
     private var googleSansFlex: Typeface? = null
@@ -322,12 +323,13 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
+        // 主题卡片 – 使用 Surface bright
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(24f).toFloat()
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerHighestColor)
             }
             setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
             layoutParams = LinearLayout.LayoutParams(
@@ -472,6 +474,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
         }
 
+        // App Name Pill – 使用 Surface bright
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
@@ -481,7 +484,7 @@ class NotesMainAct : AppCompatActivity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerHighestColor)
             }
             setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
             layoutParams = FrameLayout.LayoutParams(
@@ -499,10 +502,11 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // 右上角更多按钮容器 – 使用 Surface bright
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerHighestColor)
             }
             layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
@@ -928,13 +932,14 @@ class NotesMainAct : AppCompatActivity() {
                     rightMargin = dpToPx(12f)
                 }
             }
+            // Notes Card – 使用 Surface bright
             val noteText = TextView(parent.context).apply {
                 textSize = 16f
                 setTextColor(onPrimaryContainerColor)
                 setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(16f))
                 background = GradientDrawable().apply {
                     cornerRadius = dpToPx(12f).toFloat()
-                    setColor(surfaceContainerLowColor)
+                    setColor(surfaceContainerHighestColor)
                 }
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 isClickable = true

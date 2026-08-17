@@ -88,6 +88,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private var isMenuOpen = false
 
     private var surfaceContainerLowColor: Int = 0
+    private var surfaceContainerHighestColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
     private var primaryContainerColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
@@ -144,6 +145,10 @@ class NoteEditorActivity : AppCompatActivity() {
             com.google.android.material.R.attr.colorSurfaceContainerLow,
             if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
         )
+        surfaceContainerHighestColor = resolveColor(
+            com.google.android.material.R.attr.colorSurfaceContainerHighest,
+            if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF")
+        )
         primaryContainerColor = resolveColor(
             com.google.android.material.R.attr.colorPrimaryContainer,
             if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
@@ -183,7 +188,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceLow)
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
@@ -336,7 +341,7 @@ class NoteEditorActivity : AppCompatActivity() {
             imeOptions = EditorInfo.IME_ACTION_NEXT
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceLow)
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             layoutParams = LinearLayout.LayoutParams(
@@ -382,7 +387,7 @@ class NoteEditorActivity : AppCompatActivity() {
             textSize = 16f
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceLow)
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             gravity = Gravity.TOP or Gravity.START
@@ -413,7 +418,7 @@ class NoteEditorActivity : AppCompatActivity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setCornerRadius(dpToPx(100f).toFloat())
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerLowColor)   // 保持原样，未要求改
             }
             setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
             layoutParams = LinearLayout.LayoutParams(
@@ -719,101 +724,97 @@ class NoteEditorActivity : AppCompatActivity() {
         startActivityForResult(intent, REQUEST_SAVE_IMAGE)
     }
 
-    // ================= 修复点：generateHighResNoteBitmap =================
+    // 生成截图 – 完全匹配编辑器样式，无时间戳，背景使用 Surface bright
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
-    val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
-    val scale = 2.0f
-    val maxWidth = (baseWidth * scale).toInt()
+        val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
+        val scale = 2.0f
+        val maxWidth = (baseWidth * scale).toInt()
 
-    // 缩放后的尺寸
-    val paddingPx = (dpToPx(20f) * scale).toInt()           // 根布局内边距 20dp
-    val labelBottomMargin = (dpToPx(4f) * scale).toInt()
-    val titleBottomMargin = (dpToPx(16f) * scale).toInt()
-    val cornerRadiusPx = (dpToPx(12f) * scale).toFloat()
-    val textPaddingHorizontal = (dpToPx(16f) * scale).toInt()
-    val textPaddingVertical = (dpToPx(14f) * scale).toInt()
+        val paddingPx = (dpToPx(20f) * scale).toInt()
+        val labelBottomMargin = (dpToPx(4f) * scale).toInt()
+        val titleBottomMargin = (dpToPx(16f) * scale).toInt()
+        val cornerRadiusPx = (dpToPx(12f) * scale).toFloat()
+        val textPaddingHorizontal = (dpToPx(16f) * scale).toInt()
+        val textPaddingVertical = (dpToPx(14f) * scale).toInt()
 
-    // 根布局 – 与编辑器根背景相同
-    val root = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(surfaceContainerColor)
-        setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
-    }
-
-    // 标题标签
-    val titleLabel = TextView(this).apply {
-        text = getString(R.string.title)
-        textSize = (14f * scale)
-        setTextColor(onSurfaceVariantColor)
-        setGoogleSansFlexDefault(this, false)
-        setPadding(0, 0, 0, 0)
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = labelBottomMargin }
-    }
-    root.addView(titleLabel)
-
-    // 标题内容 – 模拟 titleEdit 样式
-    val titleText = TextView(this).apply {
-        text = title
-        textSize = (18f * scale)
-        setTextColor(onPrimaryContainerColor)
-        setGoogleSansFlexDefault(this, false)
-        background = GradientDrawable().apply {
-            setCornerRadius(cornerRadiusPx)
-            setColor(surfaceLow)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(surfaceContainerColor)
+            setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
         }
-        setPadding(textPaddingHorizontal, textPaddingVertical, textPaddingHorizontal, textPaddingVertical)
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = titleBottomMargin }
-    }
-    root.addView(titleText)
 
-    // 内容标签
-    val contentLabel = TextView(this).apply {
-        text = getString(R.string.content)
-        textSize = (14f * scale)
-        setTextColor(onSurfaceVariantColor)
-        setGoogleSansFlexDefault(this, false)
-        setPadding(0, 0, 0, 0)
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = labelBottomMargin }
-    }
-    root.addView(contentLabel)
-
-    // 内容 – 模拟 contentEdit 样式，支持 Spannable
-    val contentText = TextView(this).apply {
-        setText(contentSpannable)   // 保留加粗、放大等样式
-        textSize = (16f * scale)
-        setTextColor(onPrimaryContainerColor)
-        setGoogleSansFlexDefault(this, false)
-        background = GradientDrawable().apply {
-            setCornerRadius(cornerRadiusPx)
-            setColor(surfaceLow)
+        // 标题标签
+        val titleLabel = TextView(this).apply {
+            text = getString(R.string.title)
+            textSize = (14f * scale)
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = labelBottomMargin }
         }
-        setPadding(textPaddingHorizontal, textPaddingVertical, textPaddingHorizontal, textPaddingVertical)
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-    }
-    root.addView(contentText)
+        root.addView(titleLabel)
 
-    // 测量和绘制
-    val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
-    val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-    root.measure(widthSpec, heightSpec)
-    root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+        // 标题内容 – 使用 Surface bright
+        val titleText = TextView(this).apply {
+            text = title
+            textSize = (18f * scale)
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, false)
+            background = GradientDrawable().apply {
+                setCornerRadius(cornerRadiusPx)
+                setColor(surfaceContainerHighestColor)
+            }
+            setPadding(textPaddingHorizontal, textPaddingVertical, textPaddingHorizontal, textPaddingVertical)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = titleBottomMargin }
+        }
+        root.addView(titleText)
 
-    return Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888).also { bitmap ->
-        Canvas(bitmap).apply { root.draw(this) }
+        // 内容标签
+        val contentLabel = TextView(this).apply {
+            text = getString(R.string.content)
+            textSize = (14f * scale)
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = labelBottomMargin }
+        }
+        root.addView(contentLabel)
+
+        // 内容 – 使用 Surface bright，支持 Spannable
+        val contentText = TextView(this).apply {
+            setText(contentSpannable)
+            textSize = (16f * scale)
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, false)
+            background = GradientDrawable().apply {
+                setCornerRadius(cornerRadiusPx)
+                setColor(surfaceContainerHighestColor)
+            }
+            setPadding(textPaddingHorizontal, textPaddingVertical, textPaddingHorizontal, textPaddingVertical)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        root.addView(contentText)
+
+        // 测量和绘制
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
+        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        root.measure(widthSpec, heightSpec)
+        root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+
+        return Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888).also { bitmap ->
+            Canvas(bitmap).apply { root.draw(this) }
+        }
     }
-}
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
