@@ -338,7 +338,7 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // Helper to create equal-height rows
+        // Helper to create equal-height rows (48dp)
         fun createRow(): LinearLayout {
             return LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -347,7 +347,7 @@ class NotesMainAct : AppCompatActivity() {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                setMinimumHeight(dpToPx(48f))  // compact height
+                setMinimumHeight(dpToPx(48f))
                 setPadding(0, 0, 0, 0)
             }
         }
@@ -450,12 +450,13 @@ class NotesMainAct : AppCompatActivity() {
         }
         themeModeRow.addView(themeModeLabel)
         themeModeRow.addView(themeModeSubtitle)
+
         themeModeRow.isClickable = true
         themeModeRow.isFocusable = true
         themeModeRow.setOnTouchListener(pressScaleTouchListener)
-        themeModeRow.setOnClickListener {
+        themeModeRow.setOnClickListener { view ->
             if (!followSystem) {
-                showThemeModePopup(this)
+                showThemeModePopup(view)  // use 'view' (the clicked View)
             }
         }
         themeCard.addView(themeModeRow)
