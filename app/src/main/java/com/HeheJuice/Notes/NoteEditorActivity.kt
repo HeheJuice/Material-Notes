@@ -94,11 +94,6 @@ class NoteEditorActivity : AppCompatActivity() {
         btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
     }
 
-    private fun getStatusBarHeight(): Int {
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else dpToPx(36f)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
@@ -153,13 +148,11 @@ class NoteEditorActivity : AppCompatActivity() {
         )
         surfaceContainerLowColor = surfaceLow
 
-        val statusBarHeight = getStatusBarHeight()
-        val rootTopPadding = statusBarHeight + dpToPx(8f)
-
+        // Root layout – top padding will be set dynamically by insets
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceContainerColor)
-            setPadding(dpToPx(20f), rootTopPadding, dpToPx(20f), dpToPx(20f))
+            setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
         // Top bar – no bottom margin (matches main activity)
@@ -213,23 +206,22 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            setSpacing(dpToPx(4f)) // small gap between buttons
+            setSpacing(dpToPx(4f))
         }
 
         val buttonHeight = dpToPx(50f)
 
-        // Leading button – "Save"
+        // Leading button – "Save" (using Tonal style + backgroundTintList)
         val leadingButton = MaterialButton(
-            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Tonal)
         ).apply {
             text = getString(R.string.save)
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
-            setBackgroundColor(primaryContainerColor)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
             setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
             gravity = Gravity.CENTER
             setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
-            // Zero out internal insets to fix vertical alignment
             insetTop = 0
             insetBottom = 0
             layoutParams = LinearLayout.LayoutParams(
@@ -239,17 +231,16 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – icon only, square
+        // Trailing button – icon only, square (Tonal style + backgroundTintList)
         trailingButton = MaterialButton(
-            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Tonal)
         ).apply {
             setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
-            setBackgroundColor(primaryContainerColor)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
             setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
             contentDescription = getString(R.string.more_options)
             setPadding(0, 0, 0, 0)
             gravity = Gravity.CENTER
-            // Zero out all insets and icon padding to center icon perfectly
             insetTop = 0
             insetBottom = 0
             insetLeft = 0
@@ -508,13 +499,24 @@ class NoteEditorActivity : AppCompatActivity() {
 
         updateToolbarButtons()
 
-        // Keyboard inset
+        // ---- Dynamic status bar and keyboard insets ----
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val keyboardHeight = imeInsets.bottom
+
+            // Set top padding dynamically to align back button Y-position with main activity
+            root.setPadding(
+                dpToPx(20f),
+                statusBarTop + dpToPx(8f),
+                dpToPx(20f),
+                dpToPx(20f)
+            )
+
             val lp = toolbarContainer.layoutParams as LinearLayout.LayoutParams
             lp.bottomMargin = keyboardHeight + dpToPx(8f)
             toolbarContainer.layoutParams = lp
+
             insets
         }
     }
@@ -528,7 +530,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val menuView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.END
-            // Remove extra container padding so the pill height is dictated only by the menu item padding
+            // Remove container padding so pill height is determined only by the menu item
             setPadding(0, 0, 0, 0)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE

@@ -11,8 +11,8 @@ android {
         applicationId = "com.HeheJuice.Notes"
         minSdk = 32
         targetSdk = 36
-        versionCode = 10
-        versionName = "V.1.0 Beta"
+        versionCode = 11
+        versionName = "V.1.1 Beta"
     }
 
     signingConfigs {
