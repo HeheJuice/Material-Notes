@@ -43,7 +43,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
-import com.google.android.material.shape.ShapeAppearanceModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -472,8 +471,10 @@ class NoteEditorActivity : AppCompatActivity() {
             val clip = clipboard.primaryClip
             if (clip != null && clip.itemCount > 0) {
                 val pasteText = clip.getItemAt(0).text.toString()
-                val start = contentEdit.selectionStart
-                val end = contentEdit.selectionEnd
+                val rawStart = contentEdit.selectionStart
+                val rawEnd = contentEdit.selectionEnd
+                val start = minOf(rawStart, rawEnd)
+                val end = maxOf(rawStart, rawEnd)
                 val text = contentEdit.text
                 if (start != end) text.replace(start, end, pasteText)
                 else text.insert(start, pasteText)
@@ -754,7 +755,6 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
         }
 
-        // Title label
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = (14f * scale)
@@ -764,7 +764,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         card.addView(titleLabel)
 
-        // Title text
         val titleTv = TextView(this).apply {
             text = title
             textSize = (18f * scale)
@@ -774,7 +773,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         card.addView(titleTv)
 
-        // Content label
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = (14f * scale)
@@ -784,12 +782,11 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         card.addView(contentLabel)
 
-        // Content text
         val contentTv = TextView(this).apply {
             setText(contentSpannable)
             textSize = (16f * scale)
             setTextColor(onPrimaryContainerColor)
-            googleSansFlex?.let { typeface = it }
+            setGoogleSansFlexDefault(this, false)
             setPadding(0, 0, 0, 0)
         }
         card.addView(contentTv)
@@ -864,9 +861,12 @@ class NoteEditorActivity : AppCompatActivity() {
     }
 
     private fun getSelectedText(): String {
-        val start = contentEdit.selectionStart
-        val end = contentEdit.selectionEnd
-        if (start != end && start >= 0 && end <= contentEdit.text.length) {
+        val rawStart = contentEdit.selectionStart
+        val rawEnd = contentEdit.selectionEnd
+        if (rawStart == rawEnd) return ""
+        val start = minOf(rawStart, rawEnd)
+        val end = maxOf(rawStart, rawEnd)
+        if (start >= 0 && end <= contentEdit.text.length) {
             return contentEdit.text.substring(start, end)
         }
         return ""
@@ -878,9 +878,12 @@ class NoteEditorActivity : AppCompatActivity() {
     }
 
     private fun applyBoldRoundToSelection() {
-        val start = contentEdit.selectionStart
-        val end = contentEdit.selectionEnd
-        if (start == end) return
+        val rawStart = contentEdit.selectionStart
+        val rawEnd = contentEdit.selectionEnd
+        if (rawStart == rawEnd) return
+        val start = minOf(rawStart, rawEnd)
+        val end = maxOf(rawStart, rawEnd)
+
         val spannable = contentEdit.text as Spannable
         val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
         val spans = spannable.getSpans(start, end, spanClass)
@@ -904,9 +907,12 @@ class NoteEditorActivity : AppCompatActivity() {
     }
 
     private fun applyBiggerRoundToSelection() {
-        val start = contentEdit.selectionStart
-        val end = contentEdit.selectionEnd
-        if (start == end) return
+        val rawStart = contentEdit.selectionStart
+        val rawEnd = contentEdit.selectionEnd
+        if (rawStart == rawEnd) return
+        val start = minOf(rawStart, rawEnd)
+        val end = maxOf(rawStart, rawEnd)
+
         val spannable = contentEdit.text as Spannable
 
         val sizeSpans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
