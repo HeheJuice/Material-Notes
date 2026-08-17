@@ -8,7 +8,6 @@
 
 <!-- Settings Page -->
 <string name="setting_app_theme">App Theme</string>
-<string name="theme_system">Follows System</string>
 <string name="theme_light">Light Mode</string>
 <string name="theme_dark">Dark Mode</string>
 <string name="themerestart">Apply Selected Theme</string>
