@@ -215,9 +215,9 @@ class NoteEditorActivity : AppCompatActivity() {
 
         val buttonHeight = dpToPx(50f)
 
-        // Leading button – "Save" (Tonal style + backgroundTintList)
+        // Leading button – "Save" (Filled style + backgroundTintList for tonal look)
         val leadingButton = MaterialButton(
-            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Tonal)
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
         ).apply {
             text = getString(R.string.save)
             setTextColor(onPrimaryContainerColor)
@@ -238,9 +238,9 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – icon only, square (Tonal style + backgroundTintList)
+        // Trailing button – icon only, square (Filled style + backgroundTintList)
         trailingButton = MaterialButton(
-            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Tonal)
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
         ).apply {
             setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
             backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
