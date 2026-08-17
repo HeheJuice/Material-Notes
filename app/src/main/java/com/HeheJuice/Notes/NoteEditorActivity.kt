@@ -335,7 +335,7 @@ class NoteEditorActivity : AppCompatActivity() {
             maxLines = 1
             imeOptions = EditorInfo.IME_ACTION_NEXT
             background = GradientDrawable().apply {
-                cornerRadius = dpToPx(12f).toFloat()
+                setCornerRadius(dpToPx(12f).toFloat())
                 setColor(surfaceLow)
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
@@ -381,7 +381,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setTextColor(onPrimaryContainerColor)
             textSize = 16f
             background = GradientDrawable().apply {
-                cornerRadius = dpToPx(12f).toFloat()
+                setCornerRadius(dpToPx(12f).toFloat())
                 setColor(surfaceLow)
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
@@ -412,7 +412,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val toolPill = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
+                setCornerRadius(dpToPx(100f).toFloat())
                 setColor(surfaceContainerLowColor)
             }
             setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
@@ -591,7 +591,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(0, 0, 0, 0)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
+                setCornerRadius(dpToPx(100f).toFloat())
                 setColor(primaryContainerColor)
             }
             elevation = dpToPx(8f).toFloat()
@@ -613,7 +613,7 @@ class NoteEditorActivity : AppCompatActivity() {
             compoundDrawablePadding = dpToPx(12f)
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
-                cornerRadius = dpToPx(100f).toFloat()
+                setCornerRadius(dpToPx(100f).toFloat())
                 setColor(Color.TRANSPARENT)
             }
             isClickable = true
@@ -719,6 +719,7 @@ class NoteEditorActivity : AppCompatActivity() {
         startActivityForResult(intent, REQUEST_SAVE_IMAGE)
     }
 
+    // ================= 修复点：generateHighResNoteBitmap =================
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
         val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
         val scale = 2.0f
@@ -726,7 +727,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         val padding = (dpToPx(16f) * scale).toInt()
         val cardPadding = (dpToPx(16f) * scale).toInt()
-        val cornerRadius = (dpToPx(12f) * scale).toFloat()
+        val cornerRadiusPx = (dpToPx(12f) * scale).toFloat()   // 重命名，避免作用域冲突
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -738,7 +739,7 @@ class NoteEditorActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = cornerRadius
+                setCornerRadius(cornerRadiusPx)          // 使用 setter，而非属性赋值
                 setColor(surfaceContainerColor)
                 setStroke((dpToPx(1f) * scale).toInt(), cardBorderColor)
             }
@@ -802,6 +803,7 @@ class NoteEditorActivity : AppCompatActivity() {
             Canvas(bitmap).apply { root.draw(this) }
         }
     }
+    // ================= 修复结束 =================
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -894,7 +896,7 @@ class NoteEditorActivity : AppCompatActivity() {
         updateToolbarButtons()
     }
 
-        private fun applyBiggerRoundToSelection() {
+    private fun applyBiggerRoundToSelection() {
         val rawStart = contentEdit.selectionStart
         val rawEnd = contentEdit.selectionEnd
         if (rawStart == rawEnd) return
