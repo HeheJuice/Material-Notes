@@ -87,7 +87,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
 
-    private var surfaceColor: Int = 0                     // 根背景色（使用 colorSurface）
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
@@ -138,11 +137,6 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        // 解析所需颜色
-        surfaceColor = resolveColor(
-            com.google.android.material.R.attr.colorSurface,
-            if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FFFBFE")
-        )
         surfaceContainerColor = resolveColor(
             com.google.android.material.R.attr.colorSurfaceContainer,
             if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
@@ -173,15 +167,11 @@ class NoteEditorActivity : AppCompatActivity() {
             if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
         )
 
-        // 根布局使用 surfaceColor（更亮）
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceColor)   // 改为 colorSurface
+            setBackgroundColor(surfaceContainerColor)
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
-
-        // ... 以下所有代码与之前完全相同，无需修改，保留所有 `surfaceContainerHighestColor` 的使用。
-        // 为确保完整性，这里粘贴剩余的布局代码（从 topBar 开始）。
 
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -198,7 +188,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceContainerHighestColor)   // 使用 Surface bright
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
@@ -351,7 +341,7 @@ class NoteEditorActivity : AppCompatActivity() {
             imeOptions = EditorInfo.IME_ACTION_NEXT
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceContainerHighestColor)   // 使用 Surface bright
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             layoutParams = LinearLayout.LayoutParams(
@@ -397,7 +387,7 @@ class NoteEditorActivity : AppCompatActivity() {
             textSize = 16f
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceContainerHighestColor)   // 使用 Surface bright
+                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             gravity = Gravity.TOP or Gravity.START
@@ -428,7 +418,7 @@ class NoteEditorActivity : AppCompatActivity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setCornerRadius(dpToPx(100f).toFloat())
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerLowColor)   // 保持原样，未要求改
             }
             setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
             layoutParams = LinearLayout.LayoutParams(
@@ -575,12 +565,6 @@ class NoteEditorActivity : AppCompatActivity() {
             insets
         }
     }
-
-    // 以下函数与之前完全相同（animateTrailingButtonShape, showMenu, saveNoteData, captureNoteToImage, generateHighResNoteBitmap, onActivityResult, saveNote, disableToolbar, updateToolbarButtons, getSelectedText, copyToClipboard, applyBoldRoundToSelection, applyBiggerRoundToSelection, setGoogleSansFlexDefault, pressScaleTouchListener, dpToPx）
-    // 此处省略重复粘贴以节约篇幅，实际使用时请将原文件中的这些函数完整保留。
-    // （这些函数在之前的完整版本中已提供，且未做修改。）
-    // 为了确保完整性，下面我们会包含所有必要的函数，但为节省响应长度，我将继续贴出剩余函数（从 animateTrailingButtonShape 到末尾）。
-    // 注意：在最终的复制中，请确保所有函数都在。
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
@@ -740,6 +724,7 @@ class NoteEditorActivity : AppCompatActivity() {
         startActivityForResult(intent, REQUEST_SAVE_IMAGE)
     }
 
+    // 生成截图 – 完全匹配编辑器样式，无时间戳，背景使用 Surface bright
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
         val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
         val scale = 2.0f
@@ -754,10 +739,11 @@ class NoteEditorActivity : AppCompatActivity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceColor)   // 根背景也改为 surfaceColor（与编辑器一致）
+            setBackgroundColor(surfaceContainerColor)
             setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
         }
 
+        // 标题标签
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = (14f * scale)
@@ -770,6 +756,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleLabel)
 
+        // 标题内容 – 使用 Surface bright
         val titleText = TextView(this).apply {
             text = title
             textSize = (18f * scale)
@@ -787,6 +774,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleText)
 
+        // 内容标签
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = (14f * scale)
@@ -799,6 +787,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentLabel)
 
+        // 内容 – 使用 Surface bright，支持 Spannable
         val contentText = TextView(this).apply {
             setText(contentSpannable)
             textSize = (16f * scale)
@@ -816,6 +805,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentText)
 
+        // 测量和绘制
         val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
         val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         root.measure(widthSpec, heightSpec)
