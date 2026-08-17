@@ -46,7 +46,6 @@ import com.google.android.material.color.DynamicColors
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Custom TypefaceSpan for GoogleSansFlex Bold Round
 class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("sans-serif") {
     override fun updateDrawState(ds: android.text.TextPaint) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -169,7 +168,6 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
-        // ---- Top bar ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -214,7 +212,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- Split button ----
         val buttonHeight = dpToPx(52f)
         innerCornerPx = dpToPx(4f).toFloat()
         outerCornerPx = buttonHeight / 2f
@@ -316,7 +313,6 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(splitButton)
         root.addView(topBar)
 
-        // ---- Title ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -354,7 +350,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
-        // ---- Content ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -403,7 +398,6 @@ class NoteEditorActivity : AppCompatActivity() {
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
-        // ---- Toolbar ----
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -473,11 +467,11 @@ class NoteEditorActivity : AppCompatActivity() {
                 val pasteText = clip.getItemAt(0).text.toString()
                 val rawStart = contentEdit.selectionStart
                 val rawEnd = contentEdit.selectionEnd
-                val start = minOf(rawStart, rawEnd)
-                val end = maxOf(rawStart, rawEnd)
+                val selStart = minOf(rawStart, rawEnd)
+                val selEnd = maxOf(rawStart, rawEnd)
                 val text = contentEdit.text
-                if (start != end) text.replace(start, end, pasteText)
-                else text.insert(start, pasteText)
+                if (selStart != selEnd) text.replace(selStart, selEnd, pasteText)
+                else text.insert(selStart, pasteText)
             } else {
                 Toast.makeText(this@NoteEditorActivity, getString(R.string.nothing_to_paste), Toast.LENGTH_SHORT).show()
             }
@@ -501,7 +495,6 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
-        // ---- Load existing note ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -567,7 +560,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Corner morph ----
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
         val endCorner = if (expand) outerCornerPx else innerCornerPx
@@ -586,7 +578,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Popup menu ----
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
@@ -661,7 +652,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Save note data ----
     private fun saveNoteData(): Boolean {
         val title = titleEdit.text.toString().trim()
         val plainText = contentEdit.text.toString()
@@ -670,18 +660,18 @@ class NoteEditorActivity : AppCompatActivity() {
         if (spannable != null) {
             val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
-                val start = spannable.getSpanStart(span)
-                val end = spannable.getSpanEnd(span)
-                if (start >= 0 && end >= 0) {
-                    spans.add(SpanData(start = start, end = end, type = "bold"))
+                val spanStart = spannable.getSpanStart(span)
+                val spanEnd = spannable.getSpanEnd(span)
+                if (spanStart >= 0 && spanEnd >= 0) {
+                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bold"))
                 }
             }
             val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
             for (span in sizeSpans) {
-                val start = spannable.getSpanStart(span)
-                val end = spannable.getSpanEnd(span)
-                if (start >= 0 && end >= 0) {
-                    spans.add(SpanData(start = start, end = end, type = "bigger", size = 2.0f))
+                val spanStart = spannable.getSpanStart(span)
+                val spanEnd = spannable.getSpanEnd(span)
+                if (spanStart >= 0 && spanEnd >= 0) {
+                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 2.0f))
                 }
             }
         }
@@ -700,7 +690,6 @@ class NoteEditorActivity : AppCompatActivity() {
         return true
     }
 
-    // ---- Capture to image ----
     private fun captureNoteToImage() {
         if (!saveNoteData()) return
 
@@ -813,7 +802,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Activity result ----
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_SAVE_IMAGE && resultCode == RESULT_OK) {
@@ -834,7 +822,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Save and finish ----
     private fun saveNote() {
         if (saveNoteData()) {
             setResult(Activity.RESULT_OK)
@@ -842,7 +829,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Toolbar methods ----
     private fun disableToolbar() {
         updateButtonState(copyBtn, false)
         updateButtonState(pasteBtn, false)
@@ -864,10 +850,10 @@ class NoteEditorActivity : AppCompatActivity() {
         val rawStart = contentEdit.selectionStart
         val rawEnd = contentEdit.selectionEnd
         if (rawStart == rawEnd) return ""
-        val start = minOf(rawStart, rawEnd)
-        val end = maxOf(rawStart, rawEnd)
-        if (start >= 0 && end <= contentEdit.text.length) {
-            return contentEdit.text.substring(start, end)
+        val selStart = minOf(rawStart, rawEnd)
+        val selEnd = maxOf(rawStart, rawEnd)
+        if (selStart >= 0 && selEnd <= contentEdit.text.length) {
+            return contentEdit.text.substring(selStart, selEnd)
         }
         return ""
     }
@@ -881,12 +867,12 @@ class NoteEditorActivity : AppCompatActivity() {
         val rawStart = contentEdit.selectionStart
         val rawEnd = contentEdit.selectionEnd
         if (rawStart == rawEnd) return
-        val start = minOf(rawStart, rawEnd)
-        val end = maxOf(rawStart, rawEnd)
+        val selStart = minOf(rawStart, rawEnd)
+        val selEnd = maxOf(rawStart, rawEnd)
 
         val spannable = contentEdit.text as Spannable
         val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
-        val spans = spannable.getSpans(start, end, spanClass)
+        val spans = spannable.getSpans(selStart, selEnd, spanClass)
         if (spans.isNotEmpty()) {
             for (span in spans) {
                 spannable.removeSpan(span)
@@ -895,14 +881,14 @@ class NoteEditorActivity : AppCompatActivity() {
             if (googleSansFlex != null) {
                 spannable.setSpan(
                     GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
-                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
         contentEdit.setText(spannable)
-        Selection.setSelection(contentEdit.text, start, end)
+        Selection.setSelection(contentEdit.text, selStart, selEnd)
         updateToolbarButtons()
     }
 
@@ -910,17 +896,17 @@ class NoteEditorActivity : AppCompatActivity() {
         val rawStart = contentEdit.selectionStart
         val rawEnd = contentEdit.selectionEnd
         if (rawStart == rawEnd) return
-        val start = minOf(rawStart, rawEnd)
-        val end = maxOf(rawStart, rawEnd)
+        val selStart = minOf(rawStart, rawEnd)
+        val selEnd = maxOf(rawStart, rawEnd)
 
         val spannable = contentEdit.text as Spannable
 
-        val sizeSpans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
+        val sizeSpans = spannable.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
         if (sizeSpans.isNotEmpty()) {
             for (span in sizeSpans) {
                 spannable.removeSpan(span)
             }
-            val boldSpans = spannable.getSpans(start, end, GoogleSansFlexBoldRoundSpan::class.java)
+            val boldSpans = spannable.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
                 spannable.removeSpan(span)
             }
@@ -928,15 +914,15 @@ class NoteEditorActivity : AppCompatActivity() {
             if (googleSansFlex != null) {
                 spannable.setSpan(
                     GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
-                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            spannable.setSpan(RelativeSizeSpan(2.0f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(RelativeSizeSpan(2.0f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         contentEdit.setText(spannable)
-        Selection.setSelection(contentEdit.text, start, end)
+        Selection.setSelection(contentEdit.text, selStart, selEnd)
         updateToolbarButtons()
     }
 
