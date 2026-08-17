@@ -3,9 +3,12 @@ package com.HeheJuice.Notes
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
+import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -37,7 +40,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.Hct
+import com.google.android.material.color.SchemeFidelity
+import com.google.android.material.color.QuantizerCelebi
+import com.google.android.material.color.Score
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -247,41 +253,36 @@ class NotesMainAct : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        DynamicColors.applyToActivityIfAvailable(this)
-        NoteRepository.init(applicationContext)
-
-        googleSansFlex = try {
-            Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
-        } catch (_: Exception) { null }
-
+        // ========== 使用 SchemeFidelity 替代 DynamicColors ==========
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val seedColor = getWallpaperSeedColor(this)
+        val scheme = SchemeFidelity(Hct.fromInt(seedColor), isDark, 0.0)
+
+        primaryContainerColor = scheme.primaryContainer
+        onPrimaryContainerColor = scheme.onPrimaryContainer
+        surfaceContainerColor = scheme.surfaceContainer
+        surfaceContainerLowColor = scheme.surfaceContainerLow
+        surfaceContainerHighestColor = scheme.surfaceContainerHighest
+        onSurfaceVariantColor = scheme.onSurfaceVariant
+        // 红色保留为系统错误色（或直接用 scheme.error）
+        redColor = scheme.error
+        // ===========================================================
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        val typedValue = TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
-        primaryContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
-        onPrimaryContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-        surfaceContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
-        surfaceContainerLowColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, typedValue, true)
-        surfaceContainerHighestColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-        onSurfaceVariantColor = typedValue.data
-        if (theme.resolveAttribute(android.R.attr.colorError, typedValue, true)) {
-            redColor = typedValue.data
-        } else {
-            redColor = Color.parseColor("#FF3B30")
-        }
+        NoteRepository.init(applicationContext)
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
+        googleSansFlex = try {
+            Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
+        } catch (_: Exception) { null }
+
+        val rootFrame = FrameLayout(this).apply {
+            setBackgroundColor(surfaceContainerColor)
+        }
 
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -322,12 +323,13 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
+        // 主题卡片 – 使用 Surface bright
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(24f).toFloat()
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerHighestColor)
             }
             setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
             layoutParams = LinearLayout.LayoutParams(
@@ -472,6 +474,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
         }
 
+        // App Name Pill – 使用 Surface bright
         appNamePill = TextView(this).apply {
             text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             textSize = 16f
@@ -481,7 +484,7 @@ class NotesMainAct : AppCompatActivity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerHighestColor)
             }
             setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
             layoutParams = FrameLayout.LayoutParams(
@@ -499,10 +502,11 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // 右上角更多按钮容器 – 使用 Surface bright
         val topBarRefreshContainer = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceContainerLowColor)
+                setColor(surfaceContainerHighestColor)
             }
             layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
             isClickable = true
@@ -829,6 +833,38 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
+    // ========== 辅助函数：提取壁纸种子色 ==========
+    private fun getWallpaperSeedColor(context: Context): Int {
+        return try {
+            val wallpaperManager = WallpaperManager.getInstance(context)
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                wallpaperManager.drawable?.let { drawable ->
+                    val w = drawable.intrinsicWidth.coerceAtLeast(100)
+                    val h = drawable.intrinsicHeight.coerceAtLeast(100)
+                    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bmp)
+                    drawable.setBounds(0, 0, w, h)
+                    drawable.draw(canvas)
+                    bmp
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                wallpaperManager.getBitmap()
+            }
+            bitmap?.let { bmp ->
+                val pixels = IntArray(bmp.width * bmp.height)
+                bmp.getPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+                bmp.recycle()
+                val quantized = QuantizerCelebi.quantize(pixels, 128)
+                val colors = Score.score(quantized)
+                if (colors.isNotEmpty()) colors.first() else Color.parseColor("#6750A4")
+            } ?: Color.parseColor("#6750A4")
+        } catch (e: Exception) {
+            Color.parseColor("#6750A4")
+        }
+    }
+    // =============================================
+
     override fun onResume() {
         super.onResume()
         if (::notesAdapter.isInitialized) loadNotesList()
@@ -928,13 +964,14 @@ class NotesMainAct : AppCompatActivity() {
                     rightMargin = dpToPx(12f)
                 }
             }
+            // Notes Card – 使用 Surface bright
             val noteText = TextView(parent.context).apply {
                 textSize = 16f
                 setTextColor(onPrimaryContainerColor)
                 setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(16f))
                 background = GradientDrawable().apply {
                     cornerRadius = dpToPx(12f).toFloat()
-                    setColor(surfaceContainerLowColor)
+                    setColor(surfaceContainerHighestColor)
                 }
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 isClickable = true
