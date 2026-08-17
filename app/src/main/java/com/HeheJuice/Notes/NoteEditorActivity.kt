@@ -155,10 +155,12 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar – no bottom margin (matches main activity)
+        // ---- Top bar (with clip disabled to prevent rounded corners clipping) ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            clipChildren = false
+            clipToPadding = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -200,8 +202,10 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- SPLIT BUTTON ----
+        // ---- SPLIT BUTTON (with clipping disabled and minHeight cleared) ----
         splitButton = MaterialSplitButton(this).apply {
+            clipChildren = false
+            clipToPadding = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -211,7 +215,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         val buttonHeight = dpToPx(50f)
 
-        // Leading button – "Save" (using Tonal style + backgroundTintList)
+        // Leading button – "Save" (Tonal style + backgroundTintList)
         val leadingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Tonal)
         ).apply {
@@ -222,6 +226,9 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
             gravity = Gravity.CENTER
             setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
+            // Clear theme minHeight to prevent bottom clipping
+            minHeight = 0
+            minimumHeight = 0
             insetTop = 0
             insetBottom = 0
             layoutParams = LinearLayout.LayoutParams(
@@ -239,13 +246,18 @@ class NoteEditorActivity : AppCompatActivity() {
             backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
             setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
             contentDescription = getString(R.string.more_options)
-            setPadding(0, 0, 0, 0)
+            // Center icon in the button
+            iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
             gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 0)
+            iconPadding = 0
+            // Clear theme minHeight & insets
+            minHeight = 0
+            minimumHeight = 0
             insetTop = 0
             insetBottom = 0
             insetLeft = 0
             insetRight = 0
-            iconPadding = 0
             layoutParams = LinearLayout.LayoutParams(
                 buttonHeight, // width = height
                 buttonHeight
