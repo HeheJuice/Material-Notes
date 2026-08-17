@@ -57,6 +57,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
 
+    // Class‑level helper
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
         val bgColor = if (enabled) primaryContainerColor else Color.parseColor("#888888")
@@ -419,7 +420,6 @@ class NoteEditorActivity : AppCompatActivity() {
         clipboard.setPrimaryClip(ClipData.newPlainText("note_text", text))
     }
 
-    // ----- Bold toggle (using StyleSpan) -----
     private fun applyBoldToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
@@ -443,7 +443,6 @@ class NoteEditorActivity : AppCompatActivity() {
         Selection.setSelection(contentEdit.text, start, end)
     }
 
-    // ----- Bigger toggle (RelativeSizeSpan, 2.0f) -----
     private fun applyBiggerToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
@@ -510,9 +509,7 @@ class NoteEditorActivity : AppCompatActivity() {
             // Collect RelativeSizeSpan (bigger)
             val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
             for (span in sizeSpans) {
-                val size = spannable.getSpanSize(span) // This gives size change? Actually we need the size value.
-                // We don't have direct access to the value, but we can store the size we used (2.0f)
-                // Since we only apply 2.0f, we'll store that.
+                // We can't easily get the size, but we always apply 2.0f, so store that
                 spans.add(SpanData(
                     start = spannable.getSpanStart(span),
                     end = spannable.getSpanEnd(span),

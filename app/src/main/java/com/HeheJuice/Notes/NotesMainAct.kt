@@ -11,11 +11,6 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.RelativeSizeSpan
-import android.text.style.StyleSpan
-import android.text.style.TypefaceSpan
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -47,23 +42,21 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-// ----- Data class (content is plain text, spans are stored separately) -----
 data class Note(
     val id: String,
     val title: String,
-    val content: String,        // plain text
-    val spans: List<SpanData>,  // formatting spans
+    val content: String,
+    val spans: List<SpanData>,
     val lastModified: Long
 )
 
 data class SpanData(
     val start: Int,
     val end: Int,
-    val type: String,           // "bold" or "bigger"
-    val size: Float? = null     // for "bigger" (e.g., 2.0f)
+    val type: String,
+    val size: Float? = null
 )
 
-// ----- Repository with JSON span storage -----
 object NoteRepository {
     private const val NOTES_DIR = "notes"
     private lateinit var context: Context
@@ -190,7 +183,6 @@ object NoteRepository {
     }
 }
 
-// ----- Main Activity -----
 class NotesMainAct : AppCompatActivity() {
 
     private lateinit var slidingPillView: View
@@ -852,8 +844,54 @@ class NotesMainAct : AppCompatActivity() {
         notesAdapter.updateItems(notes)
     }
 
-    private fun openMenu() { /* same as before */ }
-    private fun closeMenu() { /* same as before */ }
+    private fun openMenu() {
+        isMenuExpanded = true
+        plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        val rootFrame = menuOverlayContainer.parent as? FrameLayout
+        if (rootFrame != null) {
+            menuOverlayContainer.measure(
+                View.MeasureSpec.makeMeasureSpec(rootFrame.width, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            val menuWidth = menuOverlayContainer.measuredWidth
+            val menuHeight = menuOverlayContainer.measuredHeight
+            menuOverlayContainer.pivotX = menuWidth.toFloat()
+            menuOverlayContainer.pivotY = menuHeight.toFloat()
+            val plusCenterX = bottomBarLayout.x + plusBtnRef.x + (plusBtnRef.width / 2f)
+            val rightMargin = rootFrame.width - plusCenterX - (menuWidth / 2f)
+            val lp = menuOverlayContainer.layoutParams as FrameLayout.LayoutParams
+            lp.rightMargin = rightMargin.toInt().coerceAtLeast(dpToPx(16f))
+            menuOverlayContainer.layoutParams = lp
+        }
+        plusBtnRef.animate().rotation(45f).setDuration(250)
+            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+        dimOverlay.visibility = View.VISIBLE
+        dimOverlay.animate().alpha(1f).setDuration(200).start()
+        menuOverlayContainer.visibility = View.VISIBLE
+        menuOverlayContainer.alpha = 0f
+        menuOverlayContainer.scaleX = 0.8f
+        menuOverlayContainer.scaleY = 0.8f
+        menuOverlayContainer.translationY = dpToPx(16f).toFloat()
+        menuOverlayContainer.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+            .setDuration(250)
+            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+    }
+
+    private fun closeMenu() {
+        isMenuExpanded = false
+        plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        plusBtnRef.animate().rotation(0f).setDuration(250)
+            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+        dimOverlay.animate().alpha(0f).setDuration(200).withEndAction {
+            dimOverlay.visibility = View.GONE
+        }.start()
+        menuOverlayContainer.pivotX = menuOverlayContainer.width.toFloat()
+        menuOverlayContainer.pivotY = menuOverlayContainer.height.toFloat()
+        menuOverlayContainer.animate().alpha(0f).scaleX(0.8f).scaleY(0.8f).translationY(dpToPx(16f).toFloat())
+            .setDuration(200).withEndAction {
+                menuOverlayContainer.visibility = View.GONE
+            }.start()
+    }
 
     private fun setGoogleSansFlexDefault(textView: TextView, bold: Boolean = false) {
         googleSansFlex?.let { font ->
