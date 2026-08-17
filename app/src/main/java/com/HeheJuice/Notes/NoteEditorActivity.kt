@@ -38,7 +38,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialSplitButton
 import com.google.android.material.color.DynamicColors
 
 // Custom TypefaceSpan for GoogleSansFlex Bold Round (wght 800, ROND 100)
@@ -75,7 +74,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var biggerBtn: ImageView
     private lateinit var toolbarContainer: LinearLayout
 
-    private lateinit var splitButton: MaterialSplitButton
     private lateinit var trailingButton: MaterialButton
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
@@ -202,45 +200,45 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- SPLIT BUTTON (container height fixed, children MATCH_PARENT) ----
-        val buttonHeight = dpToPx(50f)
+        // ---- Custom Split Pill Container (replaces MaterialSplitButton) ----
+        val buttonHeight = dpToPx(52f) // 52dp for balanced height
 
-        splitButton = MaterialSplitButton(this).apply {
+        val splitButton = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             clipChildren = false
             clipToPadding = false
-            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 buttonHeight
             )
-            setSpacing(dpToPx(4f))
         }
 
         // Leading button – "Save"
         val leadingButton = MaterialButton(
-            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
             text = getString(R.string.save)
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
             backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
-            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            setPadding(dpToPx(18f), 0, dpToPx(14f), 0)
             gravity = Gravity.CENTER
-            setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
             minHeight = 0
             minimumHeight = 0
             insetTop = 0
             insetBottom = 0
+            cornerRadius = dpToPx(100f)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
-            )
+            ).apply { marginEnd = dpToPx(2f) }
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – Chevron Icon (no checkable, will use animation)
+        // Trailing button – Chevron Icon
         trailingButton = MaterialButton(
-            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
             setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
             backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
@@ -256,8 +254,11 @@ class NoteEditorActivity : AppCompatActivity() {
             insetBottom = 0
             insetLeft = 0
             insetRight = 0
+            cornerRadius = dpToPx(100f)
+            pivotX = buttonHeight / 2f
+            pivotY = buttonHeight / 2f
             layoutParams = LinearLayout.LayoutParams(
-                buttonHeight, // width = height
+                buttonHeight,
                 LinearLayout.LayoutParams.MATCH_PARENT
             )
         }
@@ -509,16 +510,15 @@ class NoteEditorActivity : AppCompatActivity() {
         updateToolbarButtons()
 
         // ---- Dynamic status bar and keyboard insets ----
-        // ✅ FIX: removed + dpToPx(8f) to match main activity's exact Y position
+        // ✅ Final offset: statusBarTop + dpToPx(12f) aligns perfectly with main menu
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val keyboardHeight = imeInsets.bottom
 
-            // Exactly matches main activity: statusBarTop only (no extra offset)
             root.setPadding(
                 dpToPx(20f),
-                statusBarTop,
+                statusBarTop + dpToPx(12f),   // exact match to main activity
                 dpToPx(20f),
                 dpToPx(20f)
             )
@@ -564,7 +564,6 @@ class NoteEditorActivity : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
             compoundDrawablePadding = dpToPx(12f)
-            // Exactly the same padding as "Create Notes"
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(100f).toFloat()
@@ -591,7 +590,6 @@ class NoteEditorActivity : AppCompatActivity() {
             isFocusable = true
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener {
-                // Rotate chevron back to normal
                 trailingButton.animate().rotation(0f).setDuration(200).start()
                 isMenuOpen = false
             }
