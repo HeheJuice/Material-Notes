@@ -211,7 +211,6 @@ class NotesMainAct : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
-    private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
     private var redColor: Int = 0
     private var googleSansFlex: Typeface? = null
