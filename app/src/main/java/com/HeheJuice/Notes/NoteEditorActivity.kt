@@ -47,7 +47,7 @@ import com.google.android.material.shape.ShapeAppearanceModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ----- Custom TypefaceSpan for GoogleSansFlex Bold Round -----
+// Custom TypefaceSpan for GoogleSansFlex Bold Round
 class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("sans-serif") {
     override fun updateDrawState(ds: android.text.TextPaint) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -67,24 +67,20 @@ class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text
     }
 }
 
-// ----- Main Editor Activity -----
 class NoteEditorActivity : AppCompatActivity() {
 
-    // UI Components
     private lateinit var titleEdit: EditText
     private lateinit var contentEdit: EditText
     private var noteId: String = ""
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
 
-    // Toolbar buttons
     private lateinit var copyBtn: ImageView
     private lateinit var pasteBtn: ImageView
     private lateinit var boldBtn: ImageView
     private lateinit var biggerBtn: ImageView
     private lateinit var toolbarContainer: LinearLayout
 
-    // Split button
     private lateinit var splitButton: LinearLayout
     private lateinit var trailingBg: MaterialButton
     private lateinit var trailingChevronIcon: ImageView
@@ -93,7 +89,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
 
-    // Colors
     private var surfaceContainerLowColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
     private var primaryContainerColor: Int = 0
@@ -102,13 +97,9 @@ class NoteEditorActivity : AppCompatActivity() {
     private var surfaceLow: Int = 0
     private var cardBorderColor: Int = 0
 
-    // Image capture
     private val REQUEST_SAVE_IMAGE = 1002
     private var lastGeneratedBitmap: Bitmap? = null
 
-    // ----------------------------------------------------------------------
-    // Button state update
-    // ----------------------------------------------------------------------
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
         btn.alpha = if (enabled) 1.0f else 0.5f
@@ -116,15 +107,11 @@ class NoteEditorActivity : AppCompatActivity() {
         btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
     }
 
-    // ----------------------------------------------------------------------
-    // onCreate
-    // ----------------------------------------------------------------------
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        // ---- Edge-to-edge (matches main activity) ----
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -177,7 +164,6 @@ class NoteEditorActivity : AppCompatActivity() {
             if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
         )
 
-        // ---- Root layout ----
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceContainerColor)
@@ -196,7 +182,6 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
-        // Back button (50dp)
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
@@ -213,7 +198,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(backBtn)
 
-        // Title
         val topTitle = TextView(this).apply {
             text = if (isNewNote) getString(R.string.new_note) else getString(R.string.edit_note)
             textSize = 22f
@@ -231,7 +215,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- Custom Split Pill Container ----
+        // ---- Split button ----
         val buttonHeight = dpToPx(52f)
         innerCornerPx = dpToPx(4f).toFloat()
         outerCornerPx = buttonHeight / 2f
@@ -247,7 +231,6 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
-        // Leading button – "Save" (round left, flat right)
         val leadingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
@@ -261,14 +244,12 @@ class NoteEditorActivity : AppCompatActivity() {
             minimumHeight = 0
             insetTop = 0
             insetBottom = 0
-
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
                 .setTopLeftCornerSize(outerCornerPx)
                 .setBottomLeftCornerSize(outerCornerPx)
                 .setTopRightCornerSize(innerCornerPx)
                 .setBottomRightCornerSize(innerCornerPx)
                 .build()
-
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
@@ -276,7 +257,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // ---- Trailing button container (fixed background + rotating chevron + corner morph) ----
         val trailingButtonContainer = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 buttonHeight,
@@ -286,7 +266,6 @@ class NoteEditorActivity : AppCompatActivity() {
             isFocusable = true
         }
 
-        // Background pill (flat left, round right)
         trailingBg = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
@@ -299,21 +278,18 @@ class NoteEditorActivity : AppCompatActivity() {
             insetRight = 0
             isClickable = false
             isFocusable = false
-
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
                 .setTopLeftCornerSize(innerCornerPx)
                 .setBottomLeftCornerSize(innerCornerPx)
                 .setTopRightCornerSize(outerCornerPx)
                 .setBottomRightCornerSize(outerCornerPx)
                 .build()
-
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
         }
 
-        // Rotating chevron icon
         val chevronDrawable = ContextCompat.getDrawable(this, R.drawable.expand_more_24px)?.apply {
             DrawableCompat.setTint(this, onPrimaryContainerColor)
         }
@@ -339,10 +315,9 @@ class NoteEditorActivity : AppCompatActivity() {
         splitButton.addView(leadingButton)
         splitButton.addView(trailingButtonContainer)
         topBar.addView(splitButton)
-
         root.addView(topBar)
 
-        // ---- Title label and input ----
+        // ---- Title ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -380,7 +355,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
-        // ---- Content label and input ----
+        // ---- Content ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -555,7 +530,6 @@ class NoteEditorActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        // ---- Selection listeners ----
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -572,7 +546,6 @@ class NoteEditorActivity : AppCompatActivity() {
 
         updateToolbarButtons()
 
-        // ---- Dynamic status bar and keyboard insets ----
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -593,9 +566,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Corner morph animation
-    // ----------------------------------------------------------------------
+    // ---- Corner morph ----
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
         val endCorner = if (expand) outerCornerPx else innerCornerPx
@@ -614,9 +585,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Popup menu
-    // ----------------------------------------------------------------------
+    // ---- Popup menu ----
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
@@ -691,9 +660,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Save note data (without finishing)
-    // ----------------------------------------------------------------------
+    // ---- Save note data ----
     private fun saveNoteData(): Boolean {
         val title = titleEdit.text.toString().trim()
         val plainText = contentEdit.text.toString()
@@ -732,9 +699,7 @@ class NoteEditorActivity : AppCompatActivity() {
         return true
     }
 
-    // ----------------------------------------------------------------------
-    // Capture Notes to Image (high-res, fixed width, auto height)
-    // ----------------------------------------------------------------------
+    // ---- Capture to image ----
     private fun captureNoteToImage() {
         if (!saveNoteData()) return
 
@@ -764,7 +729,6 @@ class NoteEditorActivity : AppCompatActivity() {
     }
 
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
-        // Fixed width: use screen width (or 720px minimum), scaled 2x for clarity
         val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
         val scale = 2.0f
         val maxWidth = (baseWidth * scale).toInt()
@@ -832,7 +796,6 @@ class NoteEditorActivity : AppCompatActivity() {
 
         root.addView(card)
 
-        // Timestamp
         val timeStamp = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date())
         val footerTv = TextView(this).apply {
             text = "Captured: $timeStamp"
@@ -843,21 +806,17 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(footerTv)
 
-        // Measure with fixed width, auto height
         val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
         val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         root.measure(widthSpec, heightSpec)
         root.layout(0, 0, root.measuredWidth, root.measuredHeight)
 
-        val bitmap = Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        root.draw(canvas)
-        return bitmap
+        return Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888).also { bitmap ->
+            Canvas(bitmap).apply { root.draw(this) }
+        }
     }
 
-    // ----------------------------------------------------------------------
-    // Activity result (save image)
-    // ----------------------------------------------------------------------
+    // ---- Activity result ----
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_SAVE_IMAGE && resultCode == RESULT_OK) {
@@ -878,9 +837,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Save note and finish
-    // ----------------------------------------------------------------------
+    // ---- Save and finish ----
     private fun saveNote() {
         if (saveNoteData()) {
             setResult(Activity.RESULT_OK)
@@ -888,9 +845,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Toolbar and formatting methods
-    // ----------------------------------------------------------------------
+    // ---- Toolbar methods ----
     private fun disableToolbar() {
         updateButtonState(copyBtn, false)
         updateButtonState(pasteBtn, false)
