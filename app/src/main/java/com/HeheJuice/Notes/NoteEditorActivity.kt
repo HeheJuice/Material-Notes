@@ -3,7 +3,6 @@ package com.HeheJuice.Notes
 import android.app.Activity
 import android.os.Bundle
 import android.view.Gravity
-import android.view.View
 import android.view.Window
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -222,7 +221,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Updated save logic: for edits, delete old note and create a new one with updated title
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
         val content = contentEdit.text.toString().trim()
@@ -235,7 +233,7 @@ class NoteEditorActivity : AppCompatActivity() {
         if (isNewNote) {
             NoteRepository.saveNote(title, content)
         } else {
-            // Delete old note and create a new one with the updated title (filename will change)
+            // Delete old note and create a new one with the updated title
             NoteRepository.deleteNote(noteId)
             NoteRepository.saveNote(title, content)
         }
