@@ -502,9 +502,10 @@ class NoteEditorActivity : AppCompatActivity() {
                 for (spanData in note.spans) {
                     when (spanData.type) {
                         "bold" -> {
-                            if (googleSansFlex != null) {
+                            val font = googleSansFlex
+                            if (font != null) {
                                 spannable.setSpan(
-                                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                                    GoogleSansFlexBoldRoundSpan(font),
                                     spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                                 )
                             } else {
@@ -878,9 +879,10 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.removeSpan(span)
             }
         } else {
-            if (googleSansFlex != null) {
+            val font = googleSansFlex
+            if (font != null) {
                 spannable.setSpan(
-                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                    GoogleSansFlexBoldRoundSpan(font),
                     selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
@@ -911,9 +913,10 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.removeSpan(span)
             }
         } else {
-            if (googleSansFlex != null) {
+            val font = googleSansFlex
+            if (font != null) {
                 spannable.setSpan(
-                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                    GoogleSansFlexBoldRoundSpan(font),
                     selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
