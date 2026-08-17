@@ -26,6 +26,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -359,10 +360,15 @@ class NotesMainAct : AppCompatActivity() {
                 1f
             )
         }
+
+        // Define updateRowState BEFORE the switch so it's in scope
+        val themeModeRowRef = LinearLayout(this) // placeholder, will be assigned later
+        val themeModeSubtitleRef = TextView(this) // placeholder, will be assigned later
+        var updateRowState: () -> Unit = {}
+
         val followSwitch = MaterialSwitch(this).apply {
             isChecked = followSystem
 
-            // ---- Custom thumb drawable with check/cross ----
             thumbDrawable = createThumbDrawable()
             thumbTintList = null
 
@@ -427,9 +433,10 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { marginEnd = dpToPx(8f) }
         }
-        // Use a right arrow drawable; if you don't have arrow_forward_24px, use any chevron.
+        // Use expand_more_24px rotated to point right
         val chevronIcon = ImageView(this).apply {
-            setImageDrawable(ContextCompat.getDrawable(this@NotesMainAct, R.drawable.arrow_forward_24px))
+            setImageDrawable(ContextCompat.getDrawable(this@NotesMainAct, R.drawable.expand_more_24px))
+            rotation = 90f  // rotate to point right
             setColorFilter(onSurfaceVariantColor)
             layoutParams = LinearLayout.LayoutParams(
                 dpToPx(24f),
@@ -441,19 +448,17 @@ class NotesMainAct : AppCompatActivity() {
         themeModeRow.addView(chevronIcon)
         themeCard.addView(themeModeRow)
 
-        // Row state updater
-        val themeModeSubtitleRef = themeModeSubtitle
-        val themeModeRowRef = themeModeRow
-        val updateRowState = {
+        // Now define updateRowState fully
+        updateRowState = {
             val enabled = !followSystem
-            themeModeRowRef.isEnabled = enabled
-            themeModeRowRef.alpha = if (enabled) 1.0f else 0.5f
+            themeModeRow.isEnabled = enabled
+            themeModeRow.alpha = if (enabled) 1.0f else 0.5f
             if (enabled) {
-                themeModeSubtitleRef.text = if (themeMode == 0) getString(R.string.theme_light) else getString(R.string.theme_dark)
-                themeModeSubtitleRef.setTextColor(onSurfaceVariantColor)
+                themeModeSubtitle.text = if (themeMode == 0) getString(R.string.theme_light) else getString(R.string.theme_dark)
+                themeModeSubtitle.setTextColor(onSurfaceVariantColor)
             } else {
-                themeModeSubtitleRef.text = getString(R.string.theme_system)
-                themeModeSubtitleRef.setTextColor(onSurfaceVariantColor)
+                themeModeSubtitle.text = getString(R.string.theme_system)
+                themeModeSubtitle.setTextColor(onSurfaceVariantColor)
             }
         }
         updateRowState()
@@ -864,8 +869,8 @@ class NotesMainAct : AppCompatActivity() {
             elevation = dpToPx(8f).toFloat()
         }
 
-        // Declare popupWindow as a var so it can be referenced inside item clicks
-        lateinit var popupWindow: android.widget.PopupWindow
+        // Use a nullable var for PopupWindow
+        var popupWindow: PopupWindow? = null
 
         val lightItem = TextView(this).apply {
             text = getString(R.string.theme_light)
@@ -885,7 +890,7 @@ class NotesMainAct : AppCompatActivity() {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
                 applyThemeFromPrefs()
                 recreate()
-                if (::popupWindow.isInitialized) popupWindow.dismiss()
+                popupWindow?.dismiss()
             }
         }
         popupView.addView(lightItem)
@@ -908,7 +913,7 @@ class NotesMainAct : AppCompatActivity() {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
                 applyThemeFromPrefs()
                 recreate()
-                if (::popupWindow.isInitialized) popupWindow.dismiss()
+                popupWindow?.dismiss()
             }
         }
         popupView.addView(darkItem)
@@ -918,7 +923,7 @@ class NotesMainAct : AppCompatActivity() {
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
 
-        popupWindow = android.widget.PopupWindow(
+        popupWindow = PopupWindow(
             popupView,
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
