@@ -35,6 +35,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialSplitButton
@@ -103,6 +104,14 @@ class NoteEditorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        // ---- Match main activity's window insets behaviour ----
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.isAppearanceLightStatusBars = !isDark
+        windowInsetsController.isAppearanceLightNavigationBars = !isDark
+
         DynamicColors.applyToActivityIfAvailable(this)
         NoteRepository.init(applicationContext)
 
@@ -121,8 +130,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 fallback
             }
         }
-        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
 
         surfaceContainerColor = resolveColor(
             com.google.android.material.R.attr.colorSurfaceContainer,
@@ -222,6 +229,9 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
             gravity = Gravity.CENTER
             setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
+            // Zero out internal insets to fix vertical alignment
+            insetTop = 0
+            insetBottom = 0
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 buttonHeight
@@ -239,6 +249,12 @@ class NoteEditorActivity : AppCompatActivity() {
             contentDescription = getString(R.string.more_options)
             setPadding(0, 0, 0, 0)
             gravity = Gravity.CENTER
+            // Zero out all insets and icon padding to center icon perfectly
+            insetTop = 0
+            insetBottom = 0
+            insetLeft = 0
+            insetRight = 0
+            iconPadding = 0
             layoutParams = LinearLayout.LayoutParams(
                 buttonHeight, // width = height
                 buttonHeight
@@ -512,7 +528,8 @@ class NoteEditorActivity : AppCompatActivity() {
         val menuView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.END
-            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
+            // Remove extra container padding so the pill height is dictated only by the menu item padding
+            setPadding(0, 0, 0, 0)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
