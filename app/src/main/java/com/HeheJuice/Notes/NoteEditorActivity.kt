@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.view.ContextThemeWrapper
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -198,19 +199,20 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
-        val leadingButton = MaterialButton(this).apply {
+        // Leading button – using ContextThemeWrapper to apply the split-button style
+        val leadingButton = MaterialButton(
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
+        ).apply {
             text = getString(R.string.save)
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
-            setBackgroundColor(primaryContainerColor)
-            // Use the split button leading style
-            setStyle(com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        trailingButton = MaterialButton(this).apply {
-            setStyle(com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
-            // Use setIconResource instead of setIcon
+        // Trailing button – using ContextThemeWrapper
+        trailingButton = MaterialButton(
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
+        ).apply {
             setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
             contentDescription = getString(R.string.more_options)
         }
