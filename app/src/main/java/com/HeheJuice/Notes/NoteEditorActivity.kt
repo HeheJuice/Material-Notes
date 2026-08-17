@@ -38,19 +38,15 @@ class NoteEditorActivity : AppCompatActivity() {
         DynamicColors.applyToActivityIfAvailable(this)
         NoteRepository.init(applicationContext)
 
-        // Load GoogleSansFlex
         googleSansFlex = try {
             Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
 
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // ----- Resolve colors with fallbacks -----
+        // Resolve colours with fallbacks
         val typedValue = TypedValue()
-
         fun resolveColor(attrRes: Int, fallback: Int): Int {
             return if (theme.resolveAttribute(attrRes, typedValue, true)) {
                 typedValue.data
@@ -66,35 +62,30 @@ class NoteEditorActivity : AppCompatActivity() {
             com.google.android.material.R.attr.colorSurfaceContainer,
             if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
         )
-
         val surfaceLow = resolveColor(
             com.google.android.material.R.attr.colorSurfaceContainerLow,
             if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
         )
-
         val primaryContainer = resolveColor(
             com.google.android.material.R.attr.colorPrimaryContainer,
             if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
         )
-
         val onPrimaryContainer = resolveColor(
             com.google.android.material.R.attr.colorOnPrimaryContainer,
             if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
         )
-
         val onSurfaceVariant = resolveColor(
             com.google.android.material.R.attr.colorOnSurfaceVariant,
             if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
         )
 
-        // ----- Build UI -----
+        // Build UI
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceContainer)
             setPadding(dpToPx(20f), dpToPx(48f), dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -104,7 +95,6 @@ class NoteEditorActivity : AppCompatActivity() {
             ).apply { bottomMargin = dpToPx(24f) }
         }
 
-        // Back button
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
@@ -126,11 +116,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setTextColor(onPrimaryContainer)
             applyGoogleSansBoldRound(this)
             gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
         val saveBtn = TextView(this).apply {
@@ -153,7 +139,6 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(saveBtn)
         root.addView(topBar)
 
-        // Title label
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -165,15 +150,12 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleLabel)
 
-        // ----- Title EditText with constraints -----
         titleEdit = EditText(this).apply {
             hint = getString(R.string.enter_title_hint)
             setHintTextColor(onSurfaceVariant)
             setTextColor(onPrimaryContainer)
             textSize = 18f
-            // ★ Limit to 50 characters
             filters = arrayOf(InputFilter.LengthFilter(50))
-            // ★ Disable newline / Enter key
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             maxLines = 1
             imeOptions = EditorInfo.IME_ACTION_NEXT
@@ -189,7 +171,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
-        // Content label
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -220,7 +201,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentEdit)
 
-        // Load existing note
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -231,7 +211,6 @@ class NoteEditorActivity : AppCompatActivity() {
         setContentView(root)
     }
 
-    // Helper to apply GoogleSansFlex Bold + Round
     private fun applyGoogleSansBoldRound(textView: TextView) {
         googleSansFlex?.let { font ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -243,6 +222,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // Updated save logic: for edits, delete old note and create a new one with updated title
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
         val content = contentEdit.text.toString().trim()
@@ -252,14 +232,13 @@ class NoteEditorActivity : AppCompatActivity() {
             return
         }
 
-        val id = if (isNewNote) {
-            val base = if (title.isNotEmpty()) title else "note"
-            val sanitized = base.replace(Regex("[^a-zA-Z0-9\\-_]"), "_")
-            "$sanitized-${System.currentTimeMillis()}"
+        if (isNewNote) {
+            NoteRepository.saveNote(title, content)
         } else {
-            noteId
+            // Delete old note and create a new one with the updated title (filename will change)
+            NoteRepository.deleteNote(noteId)
+            NoteRepository.saveNote(title, content)
         }
-        NoteRepository.saveNote(id, title, content)
         setResult(Activity.RESULT_OK)
         finish()
     }

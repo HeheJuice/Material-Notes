@@ -141,6 +141,7 @@ class NotesMainAct : AppCompatActivity() {
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
+    private var redColor: Int = 0   // ← added
 
     // GoogleSansFlex typeface
     private var googleSansFlex: Typeface? = null
@@ -234,6 +235,13 @@ class NotesMainAct : AppCompatActivity() {
 
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
         onSurfaceVariantColor = typedValue.data
+
+        // Resolve red color (error) from theme
+        if (theme.resolveAttribute(android.R.attr.colorError, typedValue, true)) {
+            redColor = typedValue.data
+        } else {
+            redColor = Color.parseColor("#FF3B30") // fallback
+        }
 
         // ----- Root background: Surface Container -----
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
@@ -992,13 +1000,12 @@ class NotesMainAct : AppCompatActivity() {
         private val expandedPositions = mutableSetOf<Int>()
 
         inner class ViewHolder(
-            val root: LinearLayout,          // horizontal container
-            val noteText: TextView,           // left part (title)
-            val actionContainer: LinearLayout // right part (buttons)
+            val root: LinearLayout,
+            val noteText: TextView,
+            val actionContainer: LinearLayout
         ) : RecyclerView.ViewHolder(root)
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            // Horizontal root
             val root = LinearLayout(parent.context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -1012,7 +1019,6 @@ class NotesMainAct : AppCompatActivity() {
                 }
             }
 
-            // Left: note title (click to open)
             val noteText = TextView(parent.context).apply {
                 textSize = 16f
                 setTextColor(onPrimaryContainerColor)
@@ -1030,7 +1036,6 @@ class NotesMainAct : AppCompatActivity() {
                 isFocusable = true
             }
 
-            // Right: action buttons container (initially invisible)
             val actionContainer = LinearLayout(parent.context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -1048,7 +1053,7 @@ class NotesMainAct : AppCompatActivity() {
                 setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.delete_24px))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(redBtnColor ?: Color.parseColor("#FF3B30"))
+                    setColor(redColor)  // ← now using resolved redColor
                 }
                 setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
                 layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply {
@@ -1110,13 +1115,8 @@ class NotesMainAct : AppCompatActivity() {
                 notifyItemChanged(position)
             }
 
-            // Show/hide action container based on expanded state
             val isExpanded = expandedPositions.contains(position)
             holder.actionContainer.visibility = if (isExpanded) View.VISIBLE else View.GONE
-
-            // Tint icons (optional: use the same accent colour)
-            val tintColor = if (isExpanded) onPrimaryContainerColor else Color.TRANSPARENT
-            // We'll just keep them as is; they use the drawable's tint.
         }
 
         private fun toggleExpansion(position: Int) {
