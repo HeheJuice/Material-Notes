@@ -38,6 +38,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.MaterialColors
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -210,7 +211,7 @@ class NotesMainAct : AppCompatActivity() {
     private var onPrimaryContainerColor: Int = 0
     private var surfaceContainerColor: Int = 0
     private var surfaceContainerLowColor: Int = 0
-    private var surfaceContainerHighestColor: Int = 0   // 仅声明一次
+    private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
     private var redColor: Int = 0
     private var googleSansFlex: Typeface? = null
@@ -262,26 +263,22 @@ class NotesMainAct : AppCompatActivity() {
         windowInsetsController.isAppearanceLightStatusBars = !isDark
         windowInsetsController.isAppearanceLightNavigationBars = !isDark
 
-        val typedValue = TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
-        primaryContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
-        onPrimaryContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-        surfaceContainerColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerLow, typedValue, true)
-        surfaceContainerLowColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, typedValue, true)
-        surfaceContainerHighestColor = typedValue.data
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-        onSurfaceVariantColor = typedValue.data
-        if (theme.resolveAttribute(android.R.attr.colorError, typedValue, true)) {
-            redColor = typedValue.data
-        } else {
-            redColor = Color.parseColor("#FF3B30")
-        }
+        // ---- COLOR RESOLUTION using MaterialColors ----
+        primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.parseColor("#E8DEF8"))
+        onPrimaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, Color.parseColor("#4F378B"))
+        surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, Color.parseColor("#FEF7FF"))
+        surfaceContainerLowColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, Color.parseColor("#F2F2F7"))
+        surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, Color.parseColor("#FFFFFF"))
+        onSurfaceVariantColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.parseColor("#49454F"))
 
-        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceContainerColor) }
+        // Get the main error color
+        redColor = MaterialColors.getColor(this, android.R.attr.colorError, Color.parseColor("#FF3B30"))
+
+        // Get the bright Surface color for the background
+        val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
+        // -------------------------------------------------
+
+        val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) } // fixed
 
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -348,9 +345,10 @@ class NotesMainAct : AppCompatActivity() {
             ).apply { bottomMargin = dpToPx(14f) }
         }
 
+        // Fixed: use non-Expressive widget style
         val toggleGroupContext = ContextThemeWrapper(
             this,
-            com.google.android.material.R.style.Widget_Material3Expressive_MaterialButtonToggleGroup
+            com.google.android.material.R.style.Widget_Material3_MaterialButtonToggleGroup
         )
         val themeSelectorContainer = MaterialButtonToggleGroup(toggleGroupContext).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -365,9 +363,10 @@ class NotesMainAct : AppCompatActivity() {
             getString(R.string.theme_light),
             getString(R.string.theme_dark)
         )
+        // Fixed: use non-Expressive button style
         val buttonContext = ContextThemeWrapper(
             this,
-            com.google.android.material.R.style.Widget_Material3Expressive_Button_OutlinedButton
+            com.google.android.material.R.style.Widget_Material3_Button_OutlinedButton
         )
         val buttonBgTint = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),

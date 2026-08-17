@@ -43,6 +43,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.MaterialColors
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -128,48 +129,23 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        val typedValue = TypedValue()
-        fun resolveColor(attrRes: Int, fallback: Int): Int {
-            return if (theme.resolveAttribute(attrRes, typedValue, true)) {
-                typedValue.data
-            } else {
-                fallback
-            }
-        }
-
-        surfaceContainerColor = resolveColor(
-            com.google.android.material.R.attr.colorSurfaceContainer,
-            if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
-        )
-        surfaceLow = resolveColor(
-            com.google.android.material.R.attr.colorSurfaceContainerLow,
-            if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
-        )
-        surfaceContainerHighestColor = resolveColor(
-            com.google.android.material.R.attr.colorSurfaceContainerHighest,
-            if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF")
-        )
-        primaryContainerColor = resolveColor(
-            com.google.android.material.R.attr.colorPrimaryContainer,
-            if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
-        )
-        onPrimaryContainerColor = resolveColor(
-            com.google.android.material.R.attr.colorOnPrimaryContainer,
-            if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
-        )
-        onSurfaceVariantColor = resolveColor(
-            com.google.android.material.R.attr.colorOnSurfaceVariant,
-            if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
-        )
+        // ---- COLOR RESOLUTION using MaterialColors ----
+        surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF"))
+        surfaceLow = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7"))
+        surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
+        primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8"))
+        onPrimaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B"))
+        onSurfaceVariantColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F"))
         surfaceContainerLowColor = surfaceLow
-        cardBorderColor = resolveColor(
-            com.google.android.material.R.attr.colorOutline,
-            if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
-        )
+        cardBorderColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA"))
+
+        // Get the bright Surface color for the background
+        val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, if (isDark) Color.parseColor("#141218") else Color.parseColor("#FEF7FF"))
+        // -------------------------------------------------
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceContainerColor)
+            setBackgroundColor(surfaceColor)  // fixed: use colorSurface
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
@@ -737,9 +713,12 @@ class NoteEditorActivity : AppCompatActivity() {
         val textPaddingHorizontal = (dpToPx(16f) * scale).toInt()
         val textPaddingVertical = (dpToPx(14f) * scale).toInt()
 
+        // Use the same surfaceColor for the image background (bright Surface)
+        val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceContainerColor)
+            setBackgroundColor(surfaceColor)
             setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
         }
 
