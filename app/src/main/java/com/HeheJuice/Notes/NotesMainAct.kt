@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -333,7 +334,7 @@ class NotesMainAct : AppCompatActivity() {
                 cornerRadius = dpToPx(24f).toFloat()
                 setColor(surfaceContainerHighestColor)
             }
-            setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
+            setPadding(dpToPx(20f), dpToPx(12f), dpToPx(20f), dpToPx(12f))  // reduced vertical padding
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -348,6 +349,8 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            // Consistent height with theme mode row
+            setPadding(0, dpToPx(12f), 0, dpToPx(12f))
         }
         val followLabel = TextView(this).apply {
             text = getString(R.string.setting_follow_system)
@@ -361,27 +364,49 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // Define updateRowState BEFORE the switch so it's in scope
-        val themeModeRowRef = LinearLayout(this) // placeholder, will be assigned later
-        val themeModeSubtitleRef = TextView(this) // placeholder, will be assigned later
-        var updateRowState: () -> Unit = {}
+        // Inflate the switch from the layout (ensures proper thumb icon from XML)
+        val followSwitch = LayoutInflater.from(this)
+            .inflate(R.layout.switch_material, null) as MaterialSwitch
 
-        val followSwitch = MaterialSwitch(this).apply {
-            isChecked = followSystem
+        // Apply same color logic as DeveloperOptionsActivity
+        val accentColor = primaryContainerColor // use primary container as accent
+        val trackOnColor = accentColor
+        val trackOffColor = onSurfaceVariantColor // lighter track when off
+        val thumbOnColor = onPrimaryContainerColor
+        val thumbOffColor = onSurfaceVariantColor
 
-            thumbDrawable = createThumbDrawable()
-            thumbTintList = null
+        val trackStates = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf()
+        )
+        val trackColors = intArrayOf(trackOnColor, trackOffColor)
+        followSwitch.trackTintList = ColorStateList(trackStates, trackColors)
 
-            setOnCheckedChangeListener { _, isChecked ->
-                followSystem = isChecked
-                prefs.edit().putBoolean("follow_system", followSystem).apply()
-                updateRowState()
-                applyThemeFromPrefs()
-                recreate()
-            }
-        }
+        val thumbStates = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf()
+        )
+        val thumbColors = intArrayOf(thumbOnColor, thumbOffColor)
+        followSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
+
+        // Thumb icon tint (check/cross)
+        val iconStates = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf()
+        )
+        val iconColors = intArrayOf(
+            thumbOnColor,
+            thumbOffColor
+        )
+        followSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
+
+        followSwitch.isChecked = followSystem
+
         followSystemRow.addView(followLabel)
-        followSystemRow.addView(followSwitch)
+        followSystemRow.addView(followSwitch, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
         themeCard.addView(followSystemRow)
 
         // Divider
@@ -389,7 +414,7 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dpToPx(1f)
-            ).apply { topMargin = dpToPx(16f); bottomMargin = dpToPx(16f) }
+            ).apply { topMargin = dpToPx(8f); bottomMargin = dpToPx(8f) }
             setBackgroundColor(onSurfaceVariantColor)
             alpha = 0.3f
         }
@@ -403,6 +428,7 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            setPadding(0, dpToPx(12f), 0, dpToPx(12f)) // same vertical padding as follow row
             isClickable = true
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
@@ -433,10 +459,10 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { marginEnd = dpToPx(8f) }
         }
-        // Use expand_more_24px rotated to point right
+        // Chevron icon (expand_more rotated)
         val chevronIcon = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NotesMainAct, R.drawable.expand_more_24px))
-            rotation = 90f  // rotate to point right
+            rotation = 90f
             setColorFilter(onSurfaceVariantColor)
             layoutParams = LinearLayout.LayoutParams(
                 dpToPx(24f),
@@ -448,8 +474,8 @@ class NotesMainAct : AppCompatActivity() {
         themeModeRow.addView(chevronIcon)
         themeCard.addView(themeModeRow)
 
-        // Now define updateRowState fully
-        updateRowState = {
+        // Row state updater function
+        fun updateRowState() {
             val enabled = !followSystem
             themeModeRow.isEnabled = enabled
             themeModeRow.alpha = if (enabled) 1.0f else 0.5f
@@ -463,6 +489,15 @@ class NotesMainAct : AppCompatActivity() {
         }
         updateRowState()
 
+        // Switch listener
+        followSwitch.setOnCheckedChangeListener { _, isChecked ->
+            followSystem = isChecked
+            prefs.edit().putBoolean("follow_system", followSystem).apply()
+            updateRowState()
+            applyThemeFromPrefs()
+            recreate()
+        }
+
         // Add card to settings
         settingsContentLayout.addView(themeCard)
         // -----------------------------------------
@@ -470,6 +505,7 @@ class NotesMainAct : AppCompatActivity() {
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
+        // ... rest of the layout (unchanged) ...
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -855,7 +891,7 @@ class NotesMainAct : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
-    // ---- Popup for Theme Mode selection ----
+    // ---- Popup for Theme Mode selection (less round, right-aligned, no icons) ----
     private fun showThemeModePopup(anchor: View) {
         val popupView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -863,13 +899,12 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(0, 0, 0, 0)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setCornerRadius(dpToPx(100f).toFloat())
+                setCornerRadius(dpToPx(16f).toFloat())  // less round
                 setColor(primaryContainerColor)
             }
             elevation = dpToPx(8f).toFloat()
         }
 
-        // Use a nullable var for PopupWindow
         var popupWindow: PopupWindow? = null
 
         val lightItem = TextView(this).apply {
@@ -879,7 +914,7 @@ class NotesMainAct : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
-                setCornerRadius(dpToPx(100f).toFloat())
+                setCornerRadius(dpToPx(16f).toFloat())
                 setColor(Color.TRANSPARENT)
             }
             isClickable = true
@@ -902,7 +937,7 @@ class NotesMainAct : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
-                setCornerRadius(dpToPx(100f).toFloat())
+                setCornerRadius(dpToPx(16f).toFloat())
                 setColor(Color.TRANSPARENT)
             }
             isClickable = true
@@ -934,61 +969,14 @@ class NotesMainAct : AppCompatActivity() {
             isFocusable = true
             animationStyle = android.R.style.Animation_Dialog
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
-            showAsDropDown(anchor, 0, dpToPx(8f))
+            // Align to the right of the anchor
+            showAsDropDown(anchor, anchor.width - popupView.measuredWidth, dpToPx(8f))
         }
     }
 
-    // ---- Custom thumb drawable for switch ----
-    private fun createThumbDrawable(): Drawable {
-        val checkIcon = ContextCompat.getDrawable(this, R.drawable.check_24px)
-        val closeIcon = ContextCompat.getDrawable(this, R.drawable.close_24px)
-
-        val checkDrawable = if (checkIcon != null) {
-            createIconLayerDrawable(checkIcon, primaryContainerColor)
-        } else {
-            createTextDrawable("✓", primaryContainerColor)
-        }
-        val closeDrawable = if (closeIcon != null) {
-            createIconLayerDrawable(closeIcon, onSurfaceVariantColor)
-        } else {
-            createTextDrawable("✕", onSurfaceVariantColor)
-        }
-
-        val stateList = StateListDrawable()
-        stateList.addState(intArrayOf(android.R.attr.state_checked), checkDrawable)
-        stateList.addState(intArrayOf(-android.R.attr.state_checked), closeDrawable)
-        return stateList
-    }
-
-    private fun createIconLayerDrawable(icon: Drawable, bgColor: Int): Drawable {
-        val size = dpToPx(20f)
-        val shape = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(bgColor)
-            setSize(size, size)
-        }
-        val scaledIcon = icon.mutate()
-        val padding = dpToPx(4f)
-        scaledIcon.setBounds(padding, padding, size - padding, size - padding)
-        val layers = arrayOf(shape, scaledIcon)
-        val layerDrawable = LayerDrawable(layers)
-        layerDrawable.setLayerSize(1, size, size)
-        return layerDrawable
-    }
-
-    private fun createTextDrawable(text: String, color: Int): Drawable {
-        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color
-            textSize = dpToPx(14f).toFloat()
-            textAlign = android.graphics.Paint.Align.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        val size = dpToPx(20f)
-        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.drawText(text, size / 2f, size / 2f + (paint.textSize / 3f), paint)
-        return android.graphics.drawable.BitmapDrawable(resources, bitmap)
-    }
+    // ---- Custom thumb drawable (not used, but kept for reference) ----
+    // (We now use the inflated switch with thumbIcon from XML, so these functions are not used)
+    // But we keep them to avoid breaking anything else.
 
     // ---- Existing methods ----
     override fun onResume() {
