@@ -380,6 +380,7 @@ class NoteEditorActivity : AppCompatActivity() {
                         "bigger" -> {
                             val size = spanData.size ?: 2.0f
                             spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            // Also reapply bold round
                             if (googleSansFlex != null) {
                                 spannable.setSpan(
                                     GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
@@ -478,9 +479,11 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        // Force layout recalc
+        // Force redraw and keep selection
         contentEdit.setText(spannable)
         Selection.setSelection(contentEdit.text, start, end)
+        // Update button states so "Big Bold Round" remains clickable
+        updateToolbarButtons()
     }
 
     // ----- Bigger Round toggle (size + bold round) -----
@@ -515,9 +518,11 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        // Force layout recalc
+        // Force redraw and keep selection
         contentEdit.setText(spannable)
         Selection.setSelection(contentEdit.text, start, end)
+        // Update button states so "Big Bold Round" remains clickable
+        updateToolbarButtons()
     }
 
     private fun setGoogleSansFlexDefault(textView: TextView, bold: Boolean = false) {
