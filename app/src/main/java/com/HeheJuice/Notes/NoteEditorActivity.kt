@@ -1,5 +1,6 @@
 package com.HeheJuice.Notes
 
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -76,7 +77,10 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var toolbarContainer: LinearLayout
 
     private lateinit var splitButton: LinearLayout
-    private lateinit var trailingChevronIcon: ImageView  // rotating chevron
+    private lateinit var trailingBg: MaterialButton
+    private lateinit var trailingChevronIcon: ImageView
+    private var innerCornerPx: Float = 0f
+    private var outerCornerPx: Float = 0f
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
 
@@ -204,8 +208,8 @@ class NoteEditorActivity : AppCompatActivity() {
 
         // ---- Custom Split Pill Container ----
         val buttonHeight = dpToPx(52f)
-        val innerCorner = dpToPx(4f).toFloat()
-        val outerCorner = buttonHeight / 2f
+        innerCornerPx = dpToPx(4f).toFloat()
+        outerCornerPx = buttonHeight / 2f
 
         splitButton = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -234,10 +238,10 @@ class NoteEditorActivity : AppCompatActivity() {
             insetBottom = 0
 
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setTopLeftCornerSize(outerCorner)
-                .setBottomLeftCornerSize(outerCorner)
-                .setTopRightCornerSize(innerCorner)
-                .setBottomRightCornerSize(innerCorner)
+                .setTopLeftCornerSize(outerCornerPx)
+                .setBottomLeftCornerSize(outerCornerPx)
+                .setTopRightCornerSize(innerCornerPx)
+                .setBottomRightCornerSize(innerCornerPx)
                 .build()
 
             layoutParams = LinearLayout.LayoutParams(
@@ -247,7 +251,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // ---- Trailing button container (fixed background + rotating chevron) ----
+        // ---- Trailing button container (fixed background + rotating chevron + corner morph) ----
         val trailingButtonContainer = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 buttonHeight,
@@ -258,7 +262,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
 
         // Background pill (flat left, round right)
-        val trailingBg = MaterialButton(
+        trailingBg = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
             backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
@@ -272,10 +276,10 @@ class NoteEditorActivity : AppCompatActivity() {
             isFocusable = false
 
             shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setTopLeftCornerSize(innerCorner)
-                .setBottomLeftCornerSize(innerCorner)
-                .setTopRightCornerSize(outerCorner)
-                .setBottomRightCornerSize(outerCorner)
+                .setTopLeftCornerSize(innerCornerPx)
+                .setBottomLeftCornerSize(innerCornerPx)
+                .setTopRightCornerSize(outerCornerPx)
+                .setBottomRightCornerSize(outerCornerPx)
                 .build()
 
             layoutParams = FrameLayout.LayoutParams(
@@ -567,12 +571,32 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ========== CUSTOM POPUP MENU (right-aligned, pre-measured) ==========
+    // ---- Morph the inner corner of the trailing button ----
+    private fun animateTrailingButtonShape(expand: Boolean) {
+        val startCorner = if (expand) innerCornerPx else outerCornerPx
+        val endCorner = if (expand) outerCornerPx else innerCornerPx
+
+        ValueAnimator.ofFloat(startCorner, endCorner).apply {
+            duration = 200
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { animator ->
+                val animatedCorner = animator.animatedValue as Float
+                trailingBg.shapeAppearanceModel = trailingBg.shapeAppearanceModel.toBuilder()
+                    .setTopLeftCornerSize(animatedCorner)
+                    .setBottomLeftCornerSize(animatedCorner)
+                    .build()
+            }
+            start()
+        }
+    }
+
+    // ========== CUSTOM POPUP MENU (right-aligned, pre-measured, with corner morph) ==========
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
-        // Rotate only the inner chevron icon
+        // Smoothly rotate icon and morph corner shape to fully rounded
         trailingChevronIcon.animate().rotation(180f).setDuration(200).start()
+        animateTrailingButtonShape(expand = true)
 
         val menuView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -633,7 +657,9 @@ class NoteEditorActivity : AppCompatActivity() {
             animationStyle = android.R.style.Animation_Dialog
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener {
+                // Restore icon rotation and morph corner back to flat inner corner
                 trailingChevronIcon.animate().rotation(0f).setDuration(200).start()
+                animateTrailingButtonShape(expand = false)
                 isMenuOpen = false
             }
             // Calculate offset so right edge of menu aligns with right edge of split button
