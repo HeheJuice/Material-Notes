@@ -13,7 +13,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -219,7 +218,7 @@ class NotesMainAct : AppCompatActivity() {
     private var redColor: Int = 0
     private var googleSansFlex: Typeface? = null
 
-    // New theme preferences
+    // Theme preferences
     private lateinit var prefs: android.content.SharedPreferences
     private var followSystem: Boolean = true
     private var themeMode: Int = 0  // 0 = Light, 1 = Dark
@@ -331,14 +330,14 @@ class NotesMainAct : AppCompatActivity() {
                 cornerRadius = dpToPx(24f).toFloat()
                 setColor(surfaceContainerHighestColor)
             }
-            setPadding(dpToPx(20f), dpToPx(12f), dpToPx(20f), dpToPx(12f))
+            setPadding(dpToPx(20f), dpToPx(10f), dpToPx(20f), dpToPx(10f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
-        // Helper to create equal-height rows (48dp)
+        // Helper to create equal-height rows (44dp)
         fun createRow(): LinearLayout {
             return LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -347,7 +346,7 @@ class NotesMainAct : AppCompatActivity() {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                setMinimumHeight(dpToPx(48f))
+                setMinimumHeight(dpToPx(44f))
                 setPadding(0, 0, 0, 0)
             }
         }
@@ -366,17 +365,30 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // Inflate the switch from layout (ensures proper thumb icon)
+        // ------- PORTED SWITCH LOGIC FROM DeveloperOptionsActivity -------
+        // Resolve colors matching DeveloperOptionsActivity.kt
+        val accentColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.parseColor("#E8DEF8"))
+        val trackOnColor = accentColor
+
+        val trackOffColor = if (isDark) {
+            MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, Color.parseColor("#1C1B1F"))
+        } else {
+            MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#E6E0E9"))
+        }
+
+        val thumbOnColor = if (isDark) {
+            MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimary, Color.WHITE)
+        } else {
+            Color.WHITE
+        }
+
+        val thumbOffColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.parseColor("#79747E"))
+
+        // Inflate switch
         val followSwitch = LayoutInflater.from(this)
             .inflate(R.layout.switch_material, null) as MaterialSwitch
 
-        // Apply same color logic as DeveloperOptionsActivity
-        val accentColor = primaryContainerColor
-        val trackOnColor = accentColor
-        val trackOffColor = onSurfaceVariantColor
-        val thumbOnColor = onPrimaryContainerColor
-        val thumbOffColor = onSurfaceVariantColor
-
+        // 1. Track Tint State List
         val trackStates = arrayOf(
             intArrayOf(android.R.attr.state_checked),
             intArrayOf()
@@ -384,6 +396,7 @@ class NotesMainAct : AppCompatActivity() {
         val trackColors = intArrayOf(trackOnColor, trackOffColor)
         followSwitch.trackTintList = ColorStateList(trackStates, trackColors)
 
+        // 2. Thumb Tint State List
         val thumbStates = arrayOf(
             intArrayOf(android.R.attr.state_checked),
             intArrayOf()
@@ -391,18 +404,19 @@ class NotesMainAct : AppCompatActivity() {
         val thumbColors = intArrayOf(thumbOnColor, thumbOffColor)
         followSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
 
-        // Thumb icon tint (check/cross)
+        // 3. Thumb Icon Tint State List (Check / Cross contrast)
         val iconStates = arrayOf(
             intArrayOf(android.R.attr.state_checked),
             intArrayOf()
         )
         val iconColors = intArrayOf(
-            thumbOnColor,
-            thumbOffColor
+            accentColor,   // Accent checkmark on white thumb when ON
+            trackOffColor  // Dark crossmark on outline thumb when OFF
         )
         followSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
 
         followSwitch.isChecked = followSystem
+        // ---------------------------------------------------------
 
         followSystemRow.addView(followLabel)
         followSystemRow.addView(followSwitch, LinearLayout.LayoutParams(
@@ -456,7 +470,7 @@ class NotesMainAct : AppCompatActivity() {
         themeModeRow.setOnTouchListener(pressScaleTouchListener)
         themeModeRow.setOnClickListener { view ->
             if (!followSystem) {
-                showThemeModePopup(view)  // use 'view' (the clicked View)
+                showThemeModePopup(view)
             }
         }
         themeCard.addView(themeModeRow)
@@ -492,7 +506,7 @@ class NotesMainAct : AppCompatActivity() {
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
-        // ... rest of the layout (unchanged from your original) ...
+        // ... rest of the layout (unchanged) ...
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -878,7 +892,7 @@ class NotesMainAct : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
-    // ---- Popup for Theme Mode selection (less round, right-aligned, no icons) ----
+    // ---- Popup for Theme Mode (right-aligned, 16dp corners, no icons) ----
     private fun showThemeModePopup(anchor: View) {
         val popupView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -886,7 +900,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(0, 0, 0, 0)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setCornerRadius(dpToPx(16f).toFloat())  // less round
+                setCornerRadius(dpToPx(16f).toFloat())
                 setColor(primaryContainerColor)
             }
             elevation = dpToPx(8f).toFloat()
@@ -956,7 +970,7 @@ class NotesMainAct : AppCompatActivity() {
             isFocusable = true
             animationStyle = android.R.style.Animation_Dialog
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
-            // Align to the right of the anchor
+            // Right-aligned under anchor
             showAsDropDown(anchor, anchor.width - popupView.measuredWidth, dpToPx(8f))
         }
     }
