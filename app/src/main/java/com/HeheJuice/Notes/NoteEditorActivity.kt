@@ -44,6 +44,8 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.shape.ShapeAppearanceModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 // Custom TypefaceSpan for GoogleSansFlex Bold Round (wght 800, ROND 100)
 class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("sans-serif") {
@@ -93,6 +95,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private var onSurfaceVariantColor: Int = 0
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
+    private var cardBorderColor: Int = 0
 
     // For image capture
     private val REQUEST_SAVE_IMAGE = 1002
@@ -158,6 +161,10 @@ class NoteEditorActivity : AppCompatActivity() {
             if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
         )
         surfaceContainerLowColor = surfaceLow
+        cardBorderColor = resolveColor(
+            com.google.android.material.R.attr.colorOutline,
+            if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA")
+        )
 
         // Root layout – top padding will be set dynamically by insets
         val root = LinearLayout(this).apply {
@@ -639,7 +646,6 @@ class NoteEditorActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                // Capture the note to image
                 captureNoteToImage()
                 menuPopup?.dismiss()
             }
@@ -665,7 +671,6 @@ class NoteEditorActivity : AppCompatActivity() {
             animationStyle = android.R.style.Animation_Dialog
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener {
-                // Restore icon rotation and morph corner back to flat inner corner
                 trailingChevronIcon.animate().rotation(0f).setDuration(200).start()
                 animateTrailingButtonShape(expand = false)
                 isMenuOpen = false
@@ -715,7 +720,7 @@ class NoteEditorActivity : AppCompatActivity() {
         return true
     }
 
-    // ========== CAPTURE NOTES TO IMAGE ==========
+    // ========== HIGH-RES IMAGE CAPTURE ==========
     private fun captureNoteToImage() {
         // Save the note first
         if (!saveNoteData()) {
@@ -730,8 +735,8 @@ class NoteEditorActivity : AppCompatActivity() {
             return
         }
 
-        // Generate bitmap
-        val bitmap = generateNoteBitmap(title, contentSpannable)
+        // Generate high-resolution bitmap
+        val bitmap = generateHighResNoteBitmap(title, contentSpannable)
         if (bitmap == null) {
             Toast.makeText(this, "Failed to generate image", Toast.LENGTH_SHORT).show()
             return
@@ -749,44 +754,92 @@ class NoteEditorActivity : AppCompatActivity() {
         startActivityForResult(intent, REQUEST_SAVE_IMAGE)
     }
 
-    private fun generateNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
-        val maxWidth = resources.displayMetrics.widthPixels - dpToPx(40f)
-        val padding = dpToPx(20f)
+    private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
+        // Scale factor for high resolution (2.5x = 360+ DPI on most devices)
+        val scale = 2.5f
+        val maxWidth = (resources.displayMetrics.widthPixels * scale).toInt()
+        val padding = (dpToPx(16f) * scale).toInt()
+        val cardPadding = (dpToPx(16f) * scale).toInt()
+        val cornerRadius = (dpToPx(12f) * scale).toFloat()
 
-        // Create a temporary layout
+        // Root container
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceContainerLowColor)
             setPadding(padding, padding, padding, padding)
         }
 
-        // Title TextView
+        // Inner card
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = cornerRadius
+                setColor(surfaceContainerColor)
+                setStroke((dpToPx(1f) * scale).toInt(), cardBorderColor)
+            }
+            setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
+        }
+
+        // Title label (scaled)
+        val titleLabel = TextView(this).apply {
+            text = getString(R.string.title)
+            textSize = (14f * scale)
+            setTextColor(onSurfaceVariantColor)
+            setTypeface(googleSansFlex, Typeface.BOLD)
+            setPadding(0, 0, 0, (dpToPx(4f) * scale).toInt())
+        }
+        card.addView(titleLabel)
+
+        // Title text (scaled)
         val titleTv = TextView(this).apply {
             text = title
-            textSize = 24f
+            textSize = (18f * scale)
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
-            setPadding(0, 0, 0, dpToPx(8f))
+            setPadding(0, 0, 0, (dpToPx(12f) * scale).toInt())
         }
-        root.addView(titleTv)
+        card.addView(titleTv)
 
-        // Content TextView
+        // Content label (scaled)
+        val contentLabel = TextView(this).apply {
+            text = getString(R.string.content)
+            textSize = (14f * scale)
+            setTextColor(onSurfaceVariantColor)
+            setTypeface(googleSansFlex, Typeface.BOLD)
+            setPadding(0, 0, 0, (dpToPx(4f) * scale).toInt())
+        }
+        card.addView(contentLabel)
+
+        // Content text (scaled, preserves spans)
         val contentTv = TextView(this).apply {
             setText(contentSpannable)
-            textSize = 16f
+            textSize = (16f * scale)
             setTextColor(onPrimaryContainerColor)
             googleSansFlex?.let { typeface = it }
             setPadding(0, 0, 0, 0)
         }
-        root.addView(contentTv)
+        card.addView(contentTv)
 
-        // Measure the layout
+        root.addView(card)
+
+        // Timestamp footer (scaled)
+        val timeStamp = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date())
+        val footerTv = TextView(this).apply {
+            text = "Captured: $timeStamp"
+            textSize = (12f * scale)
+            setTextColor(onSurfaceVariantColor)
+            gravity = Gravity.END
+            setPadding(0, (dpToPx(8f) * scale).toInt(), 0, 0)
+        }
+        root.addView(footerTv)
+
+        // Measure and draw
         val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
         val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         root.measure(widthSpec, heightSpec)
         root.layout(0, 0, root.measuredWidth, root.measuredHeight)
 
-        // Draw to bitmap
         val bitmap = Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         root.draw(canvas)
@@ -812,7 +865,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 }
             }
         } else {
-            // User cancelled – clean up
             lastGeneratedBitmap?.recycle()
             lastGeneratedBitmap = null
         }
