@@ -10,8 +10,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.LayerDrawable
-import android.graphics.drawable.StateListDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -40,7 +38,6 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -326,7 +323,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // -------- NEW THEME SETTINGS CARD ----------
+        // -------- THEME SETTINGS CARD ----------
         val themeCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -334,7 +331,7 @@ class NotesMainAct : AppCompatActivity() {
                 cornerRadius = dpToPx(24f).toFloat()
                 setColor(surfaceContainerHighestColor)
             }
-            setPadding(dpToPx(20f), dpToPx(12f), dpToPx(20f), dpToPx(12f))  // reduced vertical padding
+            setPadding(dpToPx(20f), dpToPx(8f), dpToPx(20f), dpToPx(8f))  // reduced vertical padding for tighter layout
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -349,8 +346,8 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            // Consistent height with theme mode row
-            setPadding(0, dpToPx(12f), 0, dpToPx(12f))
+            minHeight = dpToPx(56f)  // fixed height to match theme mode row
+            setPadding(0, 0, 0, 0)
         }
         val followLabel = TextView(this).apply {
             text = getString(R.string.setting_follow_system)
@@ -364,14 +361,14 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // Inflate the switch from the layout (ensures proper thumb icon from XML)
+        // Inflate the switch from layout (ensures proper thumb icon)
         val followSwitch = LayoutInflater.from(this)
             .inflate(R.layout.switch_material, null) as MaterialSwitch
 
         // Apply same color logic as DeveloperOptionsActivity
-        val accentColor = primaryContainerColor // use primary container as accent
+        val accentColor = primaryContainerColor
         val trackOnColor = accentColor
-        val trackOffColor = onSurfaceVariantColor // lighter track when off
+        val trackOffColor = onSurfaceVariantColor
         val thumbOnColor = onPrimaryContainerColor
         val thumbOffColor = onSurfaceVariantColor
 
@@ -414,13 +411,16 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dpToPx(1f)
-            ).apply { topMargin = dpToPx(8f); bottomMargin = dpToPx(8f) }
+            ).apply { 
+                topMargin = dpToPx(4f)
+                bottomMargin = dpToPx(4f)
+            }
             setBackgroundColor(onSurfaceVariantColor)
             alpha = 0.3f
         }
         themeCard.addView(divider)
 
-        // 2. Theme Mode row (clickable)
+        // 2. Theme Mode row (clickable) – no chevron icon
         val themeModeRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -428,7 +428,8 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            setPadding(0, dpToPx(12f), 0, dpToPx(12f)) // same vertical padding as follow row
+            minHeight = dpToPx(56f)  // same height as follow row
+            setPadding(0, 0, 0, 0)
             isClickable = true
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
@@ -457,24 +458,13 @@ class NotesMainAct : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { marginEnd = dpToPx(8f) }
-        }
-        // Chevron icon (expand_more rotated)
-        val chevronIcon = ImageView(this).apply {
-            setImageDrawable(ContextCompat.getDrawable(this@NotesMainAct, R.drawable.expand_more_24px))
-            rotation = 90f
-            setColorFilter(onSurfaceVariantColor)
-            layoutParams = LinearLayout.LayoutParams(
-                dpToPx(24f),
-                dpToPx(24f)
             )
         }
         themeModeRow.addView(themeModeLabel)
         themeModeRow.addView(themeModeSubtitle)
-        themeModeRow.addView(chevronIcon)
         themeCard.addView(themeModeRow)
 
-        // Row state updater function
+        // Row state updater
         fun updateRowState() {
             val enabled = !followSystem
             themeModeRow.isEnabled = enabled
@@ -505,7 +495,7 @@ class NotesMainAct : AppCompatActivity() {
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
-        // ... rest of the layout (unchanged) ...
+        // ... rest of the layout (unchanged from your original) ...
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -973,10 +963,6 @@ class NotesMainAct : AppCompatActivity() {
             showAsDropDown(anchor, anchor.width - popupView.measuredWidth, dpToPx(8f))
         }
     }
-
-    // ---- Custom thumb drawable (not used, but kept for reference) ----
-    // (We now use the inflated switch with thumbIcon from XML, so these functions are not used)
-    // But we keep them to avoid breaking anything else.
 
     // ---- Existing methods ----
     override fun onResume() {
