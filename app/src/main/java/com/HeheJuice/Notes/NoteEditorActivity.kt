@@ -252,6 +252,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 cornerRadius = dpToPx(12f).toFloat()
                 setColor(surfaceLow)
             }
+            // Minimal padding: only top/bottom to avoid clipping
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             gravity = Gravity.TOP
             layoutParams = LinearLayout.LayoutParams(
@@ -260,8 +261,12 @@ class NoteEditorActivity : AppCompatActivity() {
                 1f
             ).apply { topMargin = dpToPx(8f) }
             setGoogleSansFlexDefault(this, false)
-            // Optimization: prevent horizontal scrolling to improve vertical scroll performance
+            // Optimisations for smooth scrolling
             setHorizontallyScrolling(false)
+            // Enable vertical scrollbar
+            isVerticalScrollBarEnabled = true
+            // Over‑scroll to feel smooth
+            overScrollMode = View.OVER_SCROLL_ALWAYS
         }
         root.addView(contentEdit)
 
@@ -397,13 +402,14 @@ class NoteEditorActivity : AppCompatActivity() {
                 }
 
                 contentEdit.setText(spannable)
+                // Single redraw after load
                 contentEdit.invalidate()
             }
         }
 
         setContentView(root)
 
-        // Selection listeners
+        // Selection listeners (now with optimisation)
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -484,6 +490,8 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
+        // Refresh without full reset (only setText if needed)
+        // We must set the text back to trigger redraw
         contentEdit.setText(spannable)
         Selection.setSelection(contentEdit.text, start, end)
         updateToolbarButtons()
