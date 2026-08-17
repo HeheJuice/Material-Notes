@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.text.Html
+import android.text.Spannable
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
@@ -15,6 +16,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.Window
+import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -31,6 +33,8 @@ import android.graphics.Typeface
 import android.text.InputFilter
 import android.text.InputType
 import android.text.Selection
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.color.DynamicColors
 
 class NoteEditorActivity : AppCompatActivity() {
@@ -46,6 +50,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var pasteBtn: ImageView
     private lateinit var boldBtn: ImageView
     private lateinit var biggerBtn: ImageView
+    private lateinit var toolbarContainer: LinearLayout
 
     private var surfaceContainerLowColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
@@ -54,7 +59,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
 
-    // Helper to update button state (now a class-level function)
+    // Class-level helper for button state
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
         val bgColor = if (enabled) primaryContainerColor else Color.parseColor("#888888")
@@ -209,6 +214,14 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dpToPx(16f) }
             setGoogleSansFlexDefault(this, false)
+            // When title gets focus, disable toolbar
+            setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) {
+                    disableToolbar()
+                } else {
+                    updateToolbarButtons() // re-enable based on selection
+                }
+            }
         }
         root.addView(titleEdit)
 
@@ -246,7 +259,7 @@ class NoteEditorActivity : AppCompatActivity() {
         root.addView(contentEdit)
 
         // ---- Bottom toolbar (left-aligned pill) ----
-        val toolbarContainer = LinearLayout(this).apply {
+        toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -279,11 +292,10 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
-        // Helper to create a tool button (uses the class-level updateButtonState)
         fun createToolButton(drawableRes: Int, onClick: (ImageView) -> Unit): ImageView {
             return ImageView(this).apply {
                 setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, drawableRes))
-                updateButtonState(this, false)  // initially disabled
+                updateButtonState(this, false)
                 setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
                 layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                     marginEnd = dpToPx(6f)
@@ -342,7 +354,7 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
-        // Load existing note – convert HTML to Spannable
+        // Load existing note
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -358,8 +370,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        // ---- Listen to selection and text changes to update toolbar buttons ----
-        // TextWatcher for text changes
+        // ---- Detect selection changes ----
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -367,8 +378,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 updateToolbarButtons()
             }
         })
-
-        // OnTouchListener to detect selection changes (cursor movement without text change)
         contentEdit.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_UP) {
                 updateToolbarButtons()
@@ -378,14 +387,37 @@ class NoteEditorActivity : AppCompatActivity() {
 
         // Initial update
         updateToolbarButtons()
+
+        // ---- Move toolbar up/down with keyboard ----
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val keyboardHeight = imeInsets.bottom
+            val lp = toolbarContainer.layoutParams as LinearLayout.LayoutParams
+            // If keyboard is visible, add its height to bottom margin to push toolbar up
+            lp.bottomMargin = keyboardHeight + dpToPx(8f)
+            toolbarContainer.layoutParams = lp
+            insets
+        }
+    }
+
+    private fun disableToolbar() {
+        // Disable all buttons when title is focused
+        updateButtonState(copyBtn, false)
+        updateButtonState(pasteBtn, false)
+        updateButtonState(boldBtn, false)
+        updateButtonState(biggerBtn, false)
     }
 
     private fun updateToolbarButtons() {
+        // Only enable if content has focus and there is selection
+        val hasFocus = contentEdit.hasFocus()
         val hasSelection = contentEdit.selectionStart != contentEdit.selectionEnd
-        updateButtonState(copyBtn, hasSelection)
-        updateButtonState(boldBtn, hasSelection)
-        updateButtonState(biggerBtn, hasSelection)
-        updateButtonState(pasteBtn, true)
+        val enabled = hasFocus && hasSelection
+        updateButtonState(copyBtn, enabled)
+        updateButtonState(boldBtn, enabled)
+        updateButtonState(biggerBtn, enabled)
+        // Paste is always enabled (but we might want to disable when title focused)
+        updateButtonState(pasteBtn, hasFocus)
     }
 
     private fun getSelectedText(): String {
@@ -406,11 +438,13 @@ class NoteEditorActivity : AppCompatActivity() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
         if (start == end) return
-        val text = contentEdit.text as SpannableString
-        // Remove existing TypefaceSpan in the range
-        val spans = text.getSpans(start, end, TypefaceSpan::class.java)
+        val text = contentEdit.text
+        // Work with Spannable interface
+        val spannable = text as Spannable
+        // Remove existing TypefaceSpan
+        val spans = spannable.getSpans(start, end, TypefaceSpan::class.java)
         for (span in spans) {
-            text.removeSpan(span)
+            spannable.removeSpan(span)
         }
         val typeface = googleSansFlex ?: Typeface.DEFAULT
         val typefaceSpan = object : TypefaceSpan("sans-serif") {
@@ -421,8 +455,8 @@ class NoteEditorActivity : AppCompatActivity() {
                 ds.typeface = Typeface.create(typeface, style)
             }
         }
-        text.setSpan(typefaceSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        contentEdit.setText(text)   // Use setText instead of assignment
+        spannable.setSpan(typefaceSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        // No need to set text again; spans are applied directly
         Selection.setSelection(contentEdit.text, start, end)
     }
 
@@ -430,14 +464,16 @@ class NoteEditorActivity : AppCompatActivity() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
         if (start == end) return
-        val text = contentEdit.text as SpannableString
+        val text = contentEdit.text
+        val spannable = text as Spannable
         // Remove existing RelativeSizeSpan
-        val spans = text.getSpans(start, end, RelativeSizeSpan::class.java)
+        val spans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
         for (span in spans) {
-            text.removeSpan(span)
+            spannable.removeSpan(span)
         }
-        // Apply 1.5x size and GoogleSansFlex Bold+Round
-        text.setSpan(RelativeSizeSpan(1.5f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        // Apply 1.5x size
+        spannable.setSpan(RelativeSizeSpan(1.5f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        // Apply GoogleSansFlex Bold+Round
         val typeface = googleSansFlex ?: Typeface.DEFAULT
         val typefaceSpan = object : TypefaceSpan("sans-serif") {
             override fun updateMeasureState(paint: android.text.TextPaint) {
@@ -457,8 +493,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 }
             }
         }
-        text.setSpan(typefaceSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        contentEdit.setText(text)   // Use setText instead of assignment
+        spannable.setSpan(typefaceSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         Selection.setSelection(contentEdit.text, start, end)
     }
 
