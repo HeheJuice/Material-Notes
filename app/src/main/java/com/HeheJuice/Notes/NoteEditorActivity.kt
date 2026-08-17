@@ -1,23 +1,64 @@
 package com.HeheJuice.Notes
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.view.ContextThemeWrapper
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
+import android.text.InputFilter
+import android.text.InputType
+import android.text.Selection
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.Window
+import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import android.graphics.drawable.GradientDrawable
-import android.graphics.Color
-import android.util.TypedValue
-import android.graphics.Typeface
-import android.os.Build  // ← ADDED to fix the Build reference
+import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialSplitButton
 import com.google.android.material.color.DynamicColors
+
+// Custom TypefaceSpan for GoogleSansFlex Bold Round (wght 800, ROND 100)
+class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("sans-serif") {
+    override fun updateDrawState(ds: android.text.TextPaint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ds.typeface = Typeface.create(typeface, 800, false)
+            ds.fontVariationSettings = "'wght' 800, 'ROND' 100"
+        } else {
+            ds.typeface = Typeface.create(typeface, Typeface.BOLD)
+        }
+    }
+    override fun updateMeasureState(paint: android.text.TextPaint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            paint.typeface = Typeface.create(typeface, 800, false)
+            paint.fontVariationSettings = "'wght' 800, 'ROND' 100"
+        } else {
+            paint.typeface = Typeface.create(typeface, Typeface.BOLD)
+        }
+    }
+}
 
 class NoteEditorActivity : AppCompatActivity() {
 
@@ -27,6 +68,36 @@ class NoteEditorActivity : AppCompatActivity() {
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
 
+    private lateinit var copyBtn: ImageView
+    private lateinit var pasteBtn: ImageView
+    private lateinit var boldBtn: ImageView
+    private lateinit var biggerBtn: ImageView
+    private lateinit var toolbarContainer: LinearLayout
+
+    private lateinit var splitButton: MaterialSplitButton
+    private lateinit var trailingButton: MaterialButton
+    private var menuPopup: android.widget.PopupWindow? = null
+    private var isMenuOpen = false
+
+    private var surfaceContainerLowColor: Int = 0
+    private var onPrimaryContainerColor: Int = 0
+    private var primaryContainerColor: Int = 0
+    private var onSurfaceVariantColor: Int = 0
+    private var surfaceContainerColor: Int = 0
+    private var surfaceLow: Int = 0
+
+    private fun updateButtonState(btn: ImageView, enabled: Boolean) {
+        btn.isEnabled = enabled
+        btn.alpha = if (enabled) 1.0f else 0.5f
+        val iconColor = if (enabled) onPrimaryContainerColor else Color.parseColor("#888888")
+        btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
+    }
+
+    private fun getStatusBarHeight(): Int {
+        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else dpToPx(36f)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
@@ -35,19 +106,14 @@ class NoteEditorActivity : AppCompatActivity() {
         DynamicColors.applyToActivityIfAvailable(this)
         NoteRepository.init(applicationContext)
 
-        // Load GoogleSansFlex
         googleSansFlex = try {
             Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
-        } catch (e: Exception) {
-            null
-        }
+        } catch (_: Exception) { null }
 
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // ----- Resolve colors with fallbacks -----
         val typedValue = TypedValue()
-
         fun resolveColor(attrRes: Int, fallback: Int): Int {
             return if (theme.resolveAttribute(attrRes, typedValue, true)) {
                 typedValue.data
@@ -55,53 +121,51 @@ class NoteEditorActivity : AppCompatActivity() {
                 fallback
             }
         }
-
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-        val surfaceContainer = resolveColor(
+        surfaceContainerColor = resolveColor(
             com.google.android.material.R.attr.colorSurfaceContainer,
             if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
         )
-
-        val surfaceLow = resolveColor(
+        surfaceLow = resolveColor(
             com.google.android.material.R.attr.colorSurfaceContainerLow,
             if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
         )
-
-        val primaryContainer = resolveColor(
+        primaryContainerColor = resolveColor(
             com.google.android.material.R.attr.colorPrimaryContainer,
             if (isDark) Color.parseColor("#4F378B") else Color.parseColor("#E8DEF8")
         )
-
-        val onPrimaryContainer = resolveColor(
+        onPrimaryContainerColor = resolveColor(
             com.google.android.material.R.attr.colorOnPrimaryContainer,
             if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B")
         )
-
-        val onSurfaceVariant = resolveColor(
+        onSurfaceVariantColor = resolveColor(
             com.google.android.material.R.attr.colorOnSurfaceVariant,
             if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
         )
+        surfaceContainerLowColor = surfaceLow
 
-        // ----- Build UI -----
+        val statusBarHeight = getStatusBarHeight()
+        val rootTopPadding = statusBarHeight + dpToPx(8f)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceContainer)
-            setPadding(dpToPx(20f), dpToPx(48f), dpToPx(20f), dpToPx(20f))
+            setBackgroundColor(surfaceContainerColor)
+            setPadding(dpToPx(20f), rootTopPadding, dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar using LinearLayout with weight for proper alignment
+        // Top bar (with split button)
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(24f) }
+            ).apply { bottomMargin = dpToPx(16f) }
         }
 
-        // Back button – positioned on the left (START)
+        // Back button
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
@@ -116,47 +180,93 @@ class NoteEditorActivity : AppCompatActivity() {
             contentDescription = getString(R.string.back_content_desc)
             setOnClickListener { finish() }
         }
+        topBar.addView(backBtn)
 
-        // Title – centered (weight=1)
+        // Title
         val topTitle = TextView(this).apply {
             text = if (isNewNote) getString(R.string.new_note) else getString(R.string.edit_note)
             textSize = 22f
-            setTextColor(onPrimaryContainer)
-            applyGoogleSansBoldRound(this)
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 1f
+            ).apply {
+                marginStart = dpToPx(8f)
+                marginEnd = dpToPx(8f)
+            }
+        }
+        topBar.addView(topTitle)
+
+        // ---- SPLIT BUTTON ----
+        splitButton = MaterialSplitButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setSpacing(0)
+        }
+
+        val buttonHeight = dpToPx(50f)
+
+        // Leading button – "Save" text, centered
+        val leadingButton = MaterialButton(
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
+        ).apply {
+            text = getString(R.string.save)
+            setTextColor(onPrimaryContainerColor)
+            setTypeface(googleSansFlex, Typeface.BOLD)
+            setBackgroundColor(primaryContainerColor)
+            setPadding(0, 0, 0, 0)
+            gravity = Gravity.CENTER
+            setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                buttonHeight
             )
         }
+        leadingButton.setOnClickListener { saveNote() }
 
-        // Save button – positioned on the right
-        val saveBtn = TextView(this).apply {
-            text = getString(R.string.save)
-            textSize = 16f
-            setTextColor(onPrimaryContainer)
-            setTypeface(null, Typeface.BOLD)
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(primaryContainer)
+        // Trailing button – icon only, square, icon centered, checkable
+        trailingButton = MaterialButton(
+            ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
+        ).apply {
+            setIconResource(com.google.android.material.R.drawable.m3_split_button_chevron_avd)
+            setBackgroundColor(primaryContainerColor)
+            setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
+            contentDescription = getString(R.string.more_options)
+            iconGravity = MaterialButton.ICON_GRAVITY_CENTER
+            setPadding(0, 0, 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                buttonHeight, // width = height
+                buttonHeight
+            )
+            gravity = Gravity.CENTER
+            // Make it checkable – the AVD will animate rotation based on checked state
+            isCheckable = true
+        }
+        trailingButton.setOnClickListener {
+            if (isMenuOpen) {
+                menuPopup?.dismiss()
+            } else {
+                showMenu(it)
             }
-            setPadding(dpToPx(20f), dpToPx(10f), dpToPx(20f), dpToPx(10f))
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { saveNote() }
         }
 
-        topBar.addView(backBtn)
-        topBar.addView(topTitle)
-        topBar.addView(saveBtn)
+        splitButton.addView(leadingButton)
+        splitButton.addView(trailingButton)
+        topBar.addView(splitButton)
+
         root.addView(topBar)
 
         // Title label
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
-            setTextColor(onSurfaceVariant)
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, false)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -166,9 +276,13 @@ class NoteEditorActivity : AppCompatActivity() {
 
         titleEdit = EditText(this).apply {
             hint = getString(R.string.enter_title_hint)
-            setHintTextColor(onSurfaceVariant)
-            setTextColor(onPrimaryContainer)
+            setHintTextColor(onSurfaceVariantColor)
+            setTextColor(onPrimaryContainerColor)
             textSize = 18f
+            filters = arrayOf(InputFilter.LengthFilter(50))
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            maxLines = 1
+            imeOptions = EditorInfo.IME_ACTION_NEXT
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(12f).toFloat()
                 setColor(surfaceLow)
@@ -178,6 +292,10 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dpToPx(16f) }
+            setGoogleSansFlexDefault(this, false)
+            setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) disableToolbar() else updateToolbarButtons()
+            }
         }
         root.addView(titleEdit)
 
@@ -185,7 +303,8 @@ class NoteEditorActivity : AppCompatActivity() {
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
-            setTextColor(onSurfaceVariant)
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, false)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -193,66 +312,424 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentLabel)
 
+        // ---- SCROLLVIEW + CONTENT EDIT ----
+        val scrollContainer = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ).apply {
+                topMargin = dpToPx(8f)
+            }
+            isFillViewport = true
+            isVerticalScrollBarEnabled = true
+            overScrollMode = View.OVER_SCROLL_ALWAYS
+        }
+
         contentEdit = EditText(this).apply {
             hint = getString(R.string.write_content_hint)
-            setHintTextColor(onSurfaceVariant)
-            setTextColor(onPrimaryContainer)
+            setHintTextColor(onSurfaceVariantColor)
+            setTextColor(onPrimaryContainerColor)
             textSize = 16f
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(12f).toFloat()
                 setColor(surfaceLow)
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
-            gravity = Gravity.TOP
+            gravity = Gravity.TOP or Gravity.START
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            setGoogleSansFlexDefault(this, false)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
+        scrollContainer.addView(contentEdit)
+        root.addView(scrollContainer)
+
+        // ---- Toolbar ----
+        toolbarContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            ).apply { topMargin = dpToPx(8f) }
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(16f)
+            }
         }
-        root.addView(contentEdit)
 
-        // Load existing note
+        val toolPill = FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(surfaceContainerLowColor)
+            }
+            setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val buttonRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        fun createToolButton(drawableRes: Int, onClick: (ImageView) -> Unit): ImageView {
+            return ImageView(this).apply {
+                setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, drawableRes))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(primaryContainerColor)
+                }
+                setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
+                layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
+                    marginEnd = dpToPx(6f)
+                    marginStart = dpToPx(6f)
+                }
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+                setOnClickListener { onClick(this) }
+            }
+        }
+
+        copyBtn = createToolButton(R.drawable.content_copy_24px) {
+            val selectedText = getSelectedText()
+            if (selectedText.isNotEmpty()) {
+                copyToClipboard(selectedText)
+                Toast.makeText(this@NoteEditorActivity, getString(R.string.copied), Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this@NoteEditorActivity, getString(R.string.select_text_first), Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        pasteBtn = createToolButton(R.drawable.content_paste_24px) {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                val pasteText = clip.getItemAt(0).text.toString()
+                val start = contentEdit.selectionStart
+                val end = contentEdit.selectionEnd
+                val text = contentEdit.text
+                if (start != end) text.replace(start, end, pasteText)
+                else text.insert(start, pasteText)
+            } else {
+                Toast.makeText(this@NoteEditorActivity, getString(R.string.nothing_to_paste), Toast.LENGTH_SHORT).show()
+            }
+        }
+        updateButtonState(pasteBtn, true)
+
+        boldBtn = createToolButton(R.drawable.format_bold_24px) {
+            applyBoldRoundToSelection()
+        }
+
+        biggerBtn = createToolButton(R.drawable.title_24px) {
+            applyBiggerRoundToSelection()
+        }
+
+        buttonRow.addView(copyBtn)
+        buttonRow.addView(pasteBtn)
+        buttonRow.addView(boldBtn)
+        buttonRow.addView(biggerBtn)
+
+        toolPill.addView(buttonRow)
+        toolbarContainer.addView(toolPill)
+        root.addView(toolbarContainer)
+
+        // ---- Load existing note ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
-                contentEdit.setText(note.content)
+                val spannable = SpannableStringBuilder(note.content)
+
+                for (spanData in note.spans) {
+                    when (spanData.type) {
+                        "bold" -> {
+                            if (googleSansFlex != null) {
+                                spannable.setSpan(
+                                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                                    spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            } else {
+                                spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            }
+                        }
+                        "bigger" -> {
+                            val size = spanData.size ?: 2.0f
+                            spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    }
+                }
+
+                contentEdit.setText(spannable)
+                contentEdit.invalidate()
             }
         }
 
         setContentView(root)
+
+        // Selection listeners
+        contentEdit.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                updateToolbarButtons()
+            }
+        })
+        contentEdit.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP) {
+                updateToolbarButtons()
+            }
+            false
+        }
+
+        updateToolbarButtons()
+
+        // Keyboard inset
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val keyboardHeight = imeInsets.bottom
+            val lp = toolbarContainer.layoutParams as LinearLayout.LayoutParams
+            lp.bottomMargin = keyboardHeight + dpToPx(8f)
+            toolbarContainer.layoutParams = lp
+            insets
+        }
     }
 
-    // Helper to apply GoogleSansFlex Bold + Round
-    private fun applyGoogleSansBoldRound(textView: TextView) {
-        googleSansFlex?.let { font ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                textView.typeface = Typeface.create(font, 700, false)
-                textView.fontVariationSettings = "'wght' 700, 'ROND' 100"
+    // ========== CUSTOM POPUP MENU (matching "Create Notes") ==========
+    private fun showMenu(anchor: View) {
+        menuPopup?.dismiss()
+
+        // Set trailing button checked state to show chevron rotated
+        trailingButton.isChecked = true
+
+        val menuView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.END
+            setPadding(dpToPx(8f), dpToPx(8f), dpToPx(8f), dpToPx(8f))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(primaryContainerColor)
+            }
+            elevation = dpToPx(8f).toFloat()
+        }
+
+        val iconDrawable = ContextCompat.getDrawable(this, R.drawable.photo_24px)
+        val tintedIcon = iconDrawable?.let {
+            DrawableCompat.wrap(it).mutate()
+            DrawableCompat.setTint(it, onPrimaryContainerColor)
+            it
+        }
+
+        val menuItem = TextView(this).apply {
+            text = getString(R.string.capture_notes_to_image)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setTypeface(null, Typeface.BOLD)
+            setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
+            compoundDrawablePadding = dpToPx(12f)
+            // Match "Create Notes" pill padding
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            background = GradientDrawable().apply {
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(Color.TRANSPARENT)
+            }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                Toast.makeText(this@NoteEditorActivity, getString(R.string.capture_notes_to_image), Toast.LENGTH_SHORT).show()
+                menuPopup?.dismiss()
+            }
+            setOnTouchListener(pressScaleTouchListener)
+        }
+        menuView.addView(menuItem)
+
+        menuPopup = android.widget.PopupWindow(
+            menuView,
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = dpToPx(8f).toFloat()
+            isOutsideTouchable = true
+            isFocusable = true
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            setOnDismissListener {
+                // Reset trailing button state when menu is dismissed
+                trailingButton.isChecked = false
+                isMenuOpen = false
+            }
+            showAsDropDown(anchor, 0, dpToPx(8f), Gravity.END)
+            isMenuOpen = true
+        }
+    }
+
+    // ========== Existing methods ==========
+    private fun disableToolbar() {
+        updateButtonState(copyBtn, false)
+        updateButtonState(pasteBtn, false)
+        updateButtonState(boldBtn, false)
+        updateButtonState(biggerBtn, false)
+    }
+
+    private fun updateToolbarButtons() {
+        val hasFocus = contentEdit.hasFocus()
+        val hasSelection = contentEdit.selectionStart != contentEdit.selectionEnd
+        val enabled = hasFocus && hasSelection
+        updateButtonState(copyBtn, enabled)
+        updateButtonState(boldBtn, enabled)
+        updateButtonState(biggerBtn, enabled)
+        updateButtonState(pasteBtn, hasFocus)
+    }
+
+    private fun getSelectedText(): String {
+        val start = contentEdit.selectionStart
+        val end = contentEdit.selectionEnd
+        if (start != end && start >= 0 && end <= contentEdit.text.length) {
+            return contentEdit.text.substring(start, end)
+        }
+        return ""
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("note_text", text))
+    }
+
+    private fun applyBoldRoundToSelection() {
+        val start = contentEdit.selectionStart
+        val end = contentEdit.selectionEnd
+        if (start == end) return
+        val spannable = contentEdit.text as Spannable
+        val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
+        val spans = spannable.getSpans(start, end, spanClass)
+        if (spans.isNotEmpty()) {
+            for (span in spans) {
+                spannable.removeSpan(span)
+            }
+        } else {
+            if (googleSansFlex != null) {
+                spannable.setSpan(
+                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
             } else {
-                textView.setTypeface(font, Typeface.BOLD)
+                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        contentEdit.setText(spannable)
+        Selection.setSelection(contentEdit.text, start, end)
+        updateToolbarButtons()
+    }
+
+    private fun applyBiggerRoundToSelection() {
+        val start = contentEdit.selectionStart
+        val end = contentEdit.selectionEnd
+        if (start == end) return
+        val spannable = contentEdit.text as Spannable
+
+        val sizeSpans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
+        if (sizeSpans.isNotEmpty()) {
+            for (span in sizeSpans) {
+                spannable.removeSpan(span)
+            }
+            val boldSpans = spannable.getSpans(start, end, GoogleSansFlexBoldRoundSpan::class.java)
+            for (span in boldSpans) {
+                spannable.removeSpan(span)
+            }
+        } else {
+            if (googleSansFlex != null) {
+                spannable.setSpan(
+                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            } else {
+                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            spannable.setSpan(RelativeSizeSpan(2.0f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        contentEdit.setText(spannable)
+        Selection.setSelection(contentEdit.text, start, end)
+        updateToolbarButtons()
+    }
+
+    private fun setGoogleSansFlexDefault(textView: TextView, bold: Boolean = false) {
+        googleSansFlex?.let { font ->
+            if (bold) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    textView.typeface = Typeface.create(font, 700, false)
+                    textView.fontVariationSettings = "'wght' 700, 'ROND' 100"
+                } else {
+                    textView.setTypeface(font, Typeface.BOLD)
+                }
+            } else {
+                textView.typeface = font
             }
         }
     }
 
-    // ✅ Force title to be non‑empty
+    private val pressScaleTouchListener = View.OnTouchListener { v, event ->
+        val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                v.animate().cancel()
+                v.animate().scaleX(0.95f).scaleY(0.95f).alpha(0.88f)
+                    .setDuration(120).setInterpolator(android.view.animation.DecelerateInterpolator(1.5f)).start()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                v.animate().cancel()
+                v.animate().scaleX(1.0f).scaleY(1.0f).alpha(1.0f)
+                    .setDuration(350).setInterpolator(springBackInterpolator).start()
+            }
+        }
+        false
+    }
+
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
-        val content = contentEdit.text.toString().trim()
+        val plainText = contentEdit.text.toString()
+        val spans = mutableListOf<SpanData>()
+        val spannable = contentEdit.text as? Spannable
+        if (spannable != null) {
+            val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
+            for (span in boldSpans) {
+                val start = spannable.getSpanStart(span)
+                val end = spannable.getSpanEnd(span)
+                if (start >= 0 && end >= 0) {
+                    spans.add(SpanData(start = start, end = end, type = "bold"))
+                }
+            }
+            val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
+            for (span in sizeSpans) {
+                val start = spannable.getSpanStart(span)
+                val end = spannable.getSpanEnd(span)
+                if (start >= 0 && end >= 0) {
+                    spans.add(SpanData(start = start, end = end, type = "bigger", size = 2.0f))
+                }
+            }
+        }
 
         if (title.isEmpty()) {
             Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
             return
         }
 
-        val id = if (isNewNote) {
-            val base = if (title.isNotEmpty()) title else "note"
-            val sanitized = base.replace(Regex("[^a-zA-Z0-9\\-_]"), "_")
-            "$sanitized-${System.currentTimeMillis()}"
+        if (isNewNote) {
+            NoteRepository.saveNote(title, plainText, spans)
         } else {
-            noteId
+            NoteRepository.deleteNote(noteId)
+            NoteRepository.saveNote(title, plainText, spans)
         }
-        NoteRepository.saveNote(id, title, content)
         setResult(Activity.RESULT_OK)
         finish()
     }
