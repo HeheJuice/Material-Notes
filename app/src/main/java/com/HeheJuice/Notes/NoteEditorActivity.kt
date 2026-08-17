@@ -4,18 +4,24 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
+import android.text.InputFilter
+import android.text.InputType
+import android.text.Selection
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.Window
-import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -25,16 +31,29 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import android.graphics.drawable.GradientDrawable
-import android.graphics.Color
-import android.util.TypedValue
-import android.graphics.Typeface
-import android.text.InputFilter
-import android.text.InputType
-import android.text.Selection
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.color.DynamicColors
+
+// Custom TypefaceSpan for GoogleSansFlex Bold Round (wght 800, ROND 100)
+class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("sans-serif") {
+    override fun updateDrawState(ds: android.text.TextPaint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ds.typeface = Typeface.create(typeface, 800, false)
+            ds.fontVariationSettings = "'wght' 800, 'ROND' 100"
+        } else {
+            ds.typeface = Typeface.create(typeface, Typeface.BOLD)
+        }
+    }
+    override fun updateMeasureState(paint: android.text.TextPaint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            paint.typeface = Typeface.create(typeface, 800, false)
+            paint.fontVariationSettings = "'wght' 800, 'ROND' 100"
+        } else {
+            paint.typeface = Typeface.create(typeface, Typeface.BOLD)
+        }
+    }
+}
 
 class NoteEditorActivity : AppCompatActivity() {
 
@@ -57,15 +76,11 @@ class NoteEditorActivity : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
 
-    // Class‑level helper
+    // Update button state: only icon tint and alpha; background stays primary container
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
-        val bgColor = if (enabled) primaryContainerColor else Color.parseColor("#888888")
-        val iconColor = if (enabled) onPrimaryContainerColor else Color.parseColor("#CCCCCC")
-        btn.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(bgColor)
-        }
+        btn.alpha = if (enabled) 1.0f else 0.5f
+        val iconColor = if (enabled) onPrimaryContainerColor else Color.parseColor("#888888")
         btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
     }
 
@@ -123,7 +138,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), dpToPx(48f), dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar
+        // Top bar (unchanged)
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -285,7 +300,11 @@ class NoteEditorActivity : AppCompatActivity() {
         fun createToolButton(drawableRes: Int, onClick: (ImageView) -> Unit): ImageView {
             return ImageView(this).apply {
                 setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, drawableRes))
-                updateButtonState(this, false)
+                // Background stays primary container; we'll only change tint/alpha in updateButtonState
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(primaryContainerColor)
+                }
                 setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
                 layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                     marginEnd = dpToPx(6f)
@@ -325,11 +344,11 @@ class NoteEditorActivity : AppCompatActivity() {
         updateButtonState(pasteBtn, true)
 
         boldBtn = createToolButton(R.drawable.format_bold_24px) {
-            applyBoldToSelection()
+            applyBoldRoundToSelection()
         }
 
         biggerBtn = createToolButton(R.drawable.title_24px) {
-            applyBiggerToSelection()
+            applyBiggerRoundToSelection()
         }
 
         buttonRow.addView(copyBtn)
@@ -348,10 +367,27 @@ class NoteEditorActivity : AppCompatActivity() {
                 val spannable = SpannableStringBuilder(note.content)
                 for (spanData in note.spans) {
                     when (spanData.type) {
-                        "bold" -> spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        "bold" -> {
+                            // Apply GoogleSansFlex Bold Round
+                            if (googleSansFlex != null) {
+                                spannable.setSpan(
+                                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                                    spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            } else {
+                                spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            }
+                        }
                         "bigger" -> {
                             val size = spanData.size ?: 2.0f
                             spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            // Also apply bold round if not already present (but we store both)
+                            if (googleSansFlex != null) {
+                                spannable.setSpan(
+                                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                                    spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            }
                         }
                     }
                 }
@@ -420,39 +456,64 @@ class NoteEditorActivity : AppCompatActivity() {
         clipboard.setPrimaryClip(ClipData.newPlainText("note_text", text))
     }
 
-    private fun applyBoldToSelection() {
+    // ----- Bold Round toggle (GoogleSansFlex wght 800, ROND 100) -----
+    private fun applyBoldRoundToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
         if (start == end) return
         val spannable = contentEdit.text as Spannable
-        val spans = spannable.getSpans(start, end, StyleSpan::class.java)
-        var hasBold = false
-        for (span in spans) {
-            if (span.style == Typeface.BOLD) {
-                hasBold = true
-                break
-            }
-        }
-        if (hasBold) {
+        val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
+        val spans = spannable.getSpans(start, end, spanClass)
+        if (spans.isNotEmpty()) {
+            // Remove all spans of this type in the selection
             for (span in spans) {
-                if (span.style == Typeface.BOLD) spannable.removeSpan(span)
+                spannable.removeSpan(span)
             }
         } else {
-            spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            // Apply the span
+            if (googleSansFlex != null) {
+                spannable.setSpan(
+                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            } else {
+                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
         Selection.setSelection(contentEdit.text, start, end)
     }
 
-    private fun applyBiggerToSelection() {
+    // ----- Bigger Round toggle (2.0x size + GoogleSansFlex wght 800, ROND 100) -----
+    private fun applyBiggerRoundToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
         if (start == end) return
         val spannable = contentEdit.text as Spannable
-        val spans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
-        if (spans.isNotEmpty()) {
-            for (span in spans) spannable.removeSpan(span)
+        // Check for existing size span
+        val sizeSpans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
+        if (sizeSpans.isNotEmpty()) {
+            // Remove size spans
+            for (span in sizeSpans) {
+                spannable.removeSpan(span)
+            }
+            // Also remove the bold round span if it was added by bigger
+            // (we'll remove all GoogleSansFlexBoldRoundSpan in the selection)
+            val boldSpans = spannable.getSpans(start, end, GoogleSansFlexBoldRoundSpan::class.java)
+            for (span in boldSpans) {
+                spannable.removeSpan(span)
+            }
         } else {
+            // Add size span
             spannable.setSpan(RelativeSizeSpan(2.0f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            // Add bold round span
+            if (googleSansFlex != null) {
+                spannable.setSpan(
+                    GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
+                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            } else {
+                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
         Selection.setSelection(contentEdit.text, start, end)
     }
@@ -495,27 +556,23 @@ class NoteEditorActivity : AppCompatActivity() {
         val spans = mutableListOf<SpanData>()
         val spannable = contentEdit.text as? Spannable
         if (spannable != null) {
-            // Collect StyleSpan (bold)
-            val boldSpans = spannable.getSpans(0, spannable.length, StyleSpan::class.java)
+            // Collect GoogleSansFlexBoldRoundSpan (bold) - we use type "bold"
+            val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
-                if (span.style == Typeface.BOLD) {
-                    spans.add(SpanData(
-                        start = spannable.getSpanStart(span),
-                        end = spannable.getSpanEnd(span),
-                        type = "bold"
-                    ))
+                val start = spannable.getSpanStart(span)
+                val end = spannable.getSpanEnd(span)
+                if (start >= 0 && end >= 0) {
+                    spans.add(SpanData(start = start, end = end, type = "bold"))
                 }
             }
             // Collect RelativeSizeSpan (bigger)
             val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
             for (span in sizeSpans) {
-                // We can't easily get the size, but we always apply 2.0f, so store that
-                spans.add(SpanData(
-                    start = spannable.getSpanStart(span),
-                    end = spannable.getSpanEnd(span),
-                    type = "bigger",
-                    size = 2.0f
-                ))
+                val start = spannable.getSpanStart(span)
+                val end = spannable.getSpanEnd(span)
+                if (start >= 0 && end >= 0) {
+                    spans.add(SpanData(start = start, end = end, type = "bigger", size = 2.0f))
+                }
             }
         }
 
