@@ -39,6 +39,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.shape.ShapeAppearanceModel
 
 // Custom TypefaceSpan for GoogleSansFlex Bold Round (wght 800, ROND 100)
 class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("sans-serif") {
@@ -74,6 +75,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var biggerBtn: ImageView
     private lateinit var toolbarContainer: LinearLayout
 
+    private lateinit var splitButton: LinearLayout
     private lateinit var trailingButton: MaterialButton
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
@@ -200,10 +202,12 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         topBar.addView(topTitle)
 
-        // ---- Custom Split Pill Container (replaces MaterialSplitButton) ----
-        val buttonHeight = dpToPx(52f) // 52dp for balanced height
+        // ---- Custom Split Pill Container (with proper corner rounding) ----
+        val buttonHeight = dpToPx(52f)
+        val innerCorner = dpToPx(4f).toFloat()
+        val outerCorner = buttonHeight / 2f
 
-        val splitButton = LinearLayout(this).apply {
+        splitButton = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             clipChildren = false
@@ -214,7 +218,7 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
-        // Leading button – "Save"
+        // Leading button – "Save" (round left, flat right)
         val leadingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
@@ -228,7 +232,14 @@ class NoteEditorActivity : AppCompatActivity() {
             minimumHeight = 0
             insetTop = 0
             insetBottom = 0
-            cornerRadius = dpToPx(100f)
+
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                .setTopLeftCornerSize(outerCorner)
+                .setBottomLeftCornerSize(outerCorner)
+                .setTopRightCornerSize(innerCorner)
+                .setBottomRightCornerSize(innerCorner)
+                .build()
+
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
@@ -236,7 +247,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – Chevron Icon
+        // Trailing button – Chevron Icon (flat left, round right)
         trailingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
         ).apply {
@@ -254,7 +265,14 @@ class NoteEditorActivity : AppCompatActivity() {
             insetBottom = 0
             insetLeft = 0
             insetRight = 0
-            cornerRadius = dpToPx(100f)
+
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                .setTopLeftCornerSize(innerCorner)
+                .setBottomLeftCornerSize(innerCorner)
+                .setTopRightCornerSize(outerCorner)
+                .setBottomRightCornerSize(outerCorner)
+                .build()
+
             pivotX = buttonHeight / 2f
             pivotY = buttonHeight / 2f
             layoutParams = LinearLayout.LayoutParams(
@@ -266,7 +284,7 @@ class NoteEditorActivity : AppCompatActivity() {
             if (isMenuOpen) {
                 menuPopup?.dismiss()
             } else {
-                showMenu(it)
+                showMenu(splitButton) // Anchor to splitButton, not trailingButton
             }
         }
 
@@ -531,11 +549,10 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ========== CUSTOM POPUP MENU with chevron rotation ==========
+    // ========== CUSTOM POPUP MENU (anchored to splitButton, right-aligned) ==========
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
-        // Smoothly rotate chevron up 180°
         trailingButton.animate().rotation(180f).setDuration(200).start()
 
         val menuView = LinearLayout(this).apply {
@@ -593,6 +610,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 trailingButton.animate().rotation(0f).setDuration(200).start()
                 isMenuOpen = false
             }
+            // Align the right edge of the popup with the right edge of the split button
             showAsDropDown(anchor, 0, dpToPx(8f), Gravity.END)
             isMenuOpen = true
         }
