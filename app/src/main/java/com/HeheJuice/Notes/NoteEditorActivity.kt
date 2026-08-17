@@ -54,6 +54,18 @@ class NoteEditorActivity : AppCompatActivity() {
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
 
+    // Helper to update button state (now a class-level function)
+    private fun updateButtonState(btn: ImageView, enabled: Boolean) {
+        btn.isEnabled = enabled
+        val bgColor = if (enabled) primaryContainerColor else Color.parseColor("#888888")
+        val iconColor = if (enabled) onPrimaryContainerColor else Color.parseColor("#CCCCCC")
+        btn.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(bgColor)
+        }
+        btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
@@ -267,10 +279,11 @@ class NoteEditorActivity : AppCompatActivity() {
             )
         }
 
+        // Helper to create a tool button (uses the class-level updateButtonState)
         fun createToolButton(drawableRes: Int, onClick: (ImageView) -> Unit): ImageView {
             return ImageView(this).apply {
                 setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, drawableRes))
-                updateButtonState(this, false)
+                updateButtonState(this, false)  // initially disabled
                 setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
                 layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                     marginEnd = dpToPx(6f)
@@ -281,17 +294,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 setOnTouchListener(pressScaleTouchListener)
                 setOnClickListener { onClick(this) }
             }
-        }
-
-        fun updateButtonState(btn: ImageView, enabled: Boolean) {
-            btn.isEnabled = enabled
-            val bgColor = if (enabled) primaryContainerColor else Color.parseColor("#888888")
-            val iconColor = if (enabled) onPrimaryContainerColor else Color.parseColor("#CCCCCC")
-            btn.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(bgColor)
-            }
-            btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
         }
 
         copyBtn = createToolButton(R.drawable.content_copy_24px) {
@@ -344,7 +346,6 @@ class NoteEditorActivity : AppCompatActivity() {
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
-                // note.content is HTML (if meta exists) or plain text (backward compatible)
                 val spannable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
                 } else {
@@ -357,8 +358,8 @@ class NoteEditorActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        // Listen to selection changes
-        contentEdit.addOnSelectionChangedListener { updateToolbarButtons() }
+        // ---- Listen to selection and text changes to update toolbar buttons ----
+        // TextWatcher for text changes
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -366,6 +367,16 @@ class NoteEditorActivity : AppCompatActivity() {
                 updateToolbarButtons()
             }
         })
+
+        // OnTouchListener to detect selection changes (cursor movement without text change)
+        contentEdit.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP) {
+                updateToolbarButtons()
+            }
+            false
+        }
+
+        // Initial update
         updateToolbarButtons()
     }
 
@@ -396,6 +407,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val end = contentEdit.selectionEnd
         if (start == end) return
         val text = contentEdit.text as SpannableString
+        // Remove existing TypefaceSpan in the range
         val spans = text.getSpans(start, end, TypefaceSpan::class.java)
         for (span in spans) {
             text.removeSpan(span)
@@ -410,7 +422,7 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
         text.setSpan(typefaceSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        contentEdit.text = text
+        contentEdit.setText(text)   // Use setText instead of assignment
         Selection.setSelection(contentEdit.text, start, end)
     }
 
@@ -419,10 +431,12 @@ class NoteEditorActivity : AppCompatActivity() {
         val end = contentEdit.selectionEnd
         if (start == end) return
         val text = contentEdit.text as SpannableString
+        // Remove existing RelativeSizeSpan
         val spans = text.getSpans(start, end, RelativeSizeSpan::class.java)
         for (span in spans) {
             text.removeSpan(span)
         }
+        // Apply 1.5x size and GoogleSansFlex Bold+Round
         text.setSpan(RelativeSizeSpan(1.5f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         val typeface = googleSansFlex ?: Typeface.DEFAULT
         val typefaceSpan = object : TypefaceSpan("sans-serif") {
@@ -444,7 +458,7 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
         text.setSpan(typefaceSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        contentEdit.text = text
+        contentEdit.setText(text)   // Use setText instead of assignment
         Selection.setSelection(contentEdit.text, start, end)
     }
 
@@ -493,7 +507,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
-        val plainText = contentEdit.text.toString()  // plain text without spans
+        val plainText = contentEdit.text.toString()
         val htmlContent = Html.toHtml(contentEdit.text, Html.TO_HTML_PARAGRAPH_LINES_INDIVIDUAL)
 
         if (title.isEmpty()) {
