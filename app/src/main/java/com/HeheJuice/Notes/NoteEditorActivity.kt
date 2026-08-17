@@ -300,7 +300,6 @@ class NoteEditorActivity : AppCompatActivity() {
         fun createToolButton(drawableRes: Int, onClick: (ImageView) -> Unit): ImageView {
             return ImageView(this).apply {
                 setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, drawableRes))
-                // Background stays primary container; we'll only change tint/alpha in updateButtonState
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(primaryContainerColor)
@@ -360,15 +359,15 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
-        // Load existing note (spans from JSON)
+        // ---- Load existing note ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
                 val spannable = SpannableStringBuilder(note.content)
+
                 for (spanData in note.spans) {
                     when (spanData.type) {
                         "bold" -> {
-                            // Apply GoogleSansFlex Bold Round
                             if (googleSansFlex != null) {
                                 spannable.setSpan(
                                     GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
@@ -381,12 +380,13 @@ class NoteEditorActivity : AppCompatActivity() {
                         "bigger" -> {
                             val size = spanData.size ?: 2.0f
                             spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                            // Also apply bold round if not already present (but we store both)
                             if (googleSansFlex != null) {
                                 spannable.setSpan(
                                     GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
                                     spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                                 )
+                            } else {
+                                spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                             }
                         }
                     }
@@ -456,7 +456,7 @@ class NoteEditorActivity : AppCompatActivity() {
         clipboard.setPrimaryClip(ClipData.newPlainText("note_text", text))
     }
 
-    // ----- Bold Round toggle (GoogleSansFlex wght 800, ROND 100) -----
+    // ----- Bold Round toggle -----
     private fun applyBoldRoundToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
@@ -465,12 +465,10 @@ class NoteEditorActivity : AppCompatActivity() {
         val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
         val spans = spannable.getSpans(start, end, spanClass)
         if (spans.isNotEmpty()) {
-            // Remove all spans of this type in the selection
             for (span in spans) {
                 spannable.removeSpan(span)
             }
         } else {
-            // Apply the span
             if (googleSansFlex != null) {
                 spannable.setSpan(
                     GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
@@ -480,15 +478,18 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
+        // Force layout recalc
+        contentEdit.setText(spannable)
         Selection.setSelection(contentEdit.text, start, end)
     }
 
-    // ----- Bigger Round toggle (2.0x size + GoogleSansFlex wght 800, ROND 100) -----
+    // ----- Bigger Round toggle (size + bold round) -----
     private fun applyBiggerRoundToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
         if (start == end) return
         val spannable = contentEdit.text as Spannable
+
         // Check for existing size span
         val sizeSpans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
         if (sizeSpans.isNotEmpty()) {
@@ -496,16 +497,15 @@ class NoteEditorActivity : AppCompatActivity() {
             for (span in sizeSpans) {
                 spannable.removeSpan(span)
             }
-            // Also remove the bold round span if it was added by bigger
-            // (we'll remove all GoogleSansFlexBoldRoundSpan in the selection)
+            // Also remove bold round spans
             val boldSpans = spannable.getSpans(start, end, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
                 spannable.removeSpan(span)
             }
         } else {
-            // Add size span
+            // Apply size
             spannable.setSpan(RelativeSizeSpan(2.0f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            // Add bold round span
+            // Apply bold round
             if (googleSansFlex != null) {
                 spannable.setSpan(
                     GoogleSansFlexBoldRoundSpan(googleSansFlex!!),
@@ -515,6 +515,8 @@ class NoteEditorActivity : AppCompatActivity() {
                 spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
+        // Force layout recalc
+        contentEdit.setText(spannable)
         Selection.setSelection(contentEdit.text, start, end)
     }
 
@@ -556,7 +558,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val spans = mutableListOf<SpanData>()
         val spannable = contentEdit.text as? Spannable
         if (spannable != null) {
-            // Collect GoogleSansFlexBoldRoundSpan (bold) - we use type "bold"
+            // Collect GoogleSansFlexBoldRoundSpan (bold)
             val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
                 val start = spannable.getSpanStart(span)
