@@ -147,7 +147,7 @@ class NoteEditorActivity : AppCompatActivity() {
         surfaceContainerLowColor = surfaceLow
 
         val statusBarHeight = getStatusBarHeight()
-        val rootTopPadding = statusBarHeight + dpToPx(8f) // matches main activity
+        val rootTopPadding = statusBarHeight + dpToPx(8f)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -162,10 +162,10 @@ class NoteEditorActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(16f) } // reduced from 24dp
+            ).apply { bottomMargin = dpToPx(16f) }
         }
 
-        // Back button (50dp)
+        // Back button
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
@@ -209,9 +209,9 @@ class NoteEditorActivity : AppCompatActivity() {
             setSpacing(0)
         }
 
-        val buttonHeight = dpToPx(50f) // matches back button
+        val buttonHeight = dpToPx(50f)
 
-        // Leading button – "Save" text
+        // Leading button – "Save" text, centered
         val leadingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
         ).apply {
@@ -219,7 +219,9 @@ class NoteEditorActivity : AppCompatActivity() {
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
             setBackgroundColor(primaryContainerColor)
-            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
+            setPadding(0, 0, 0, 0)
+            gravity = Gravity.CENTER
+            setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 buttonHeight
@@ -227,7 +229,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – icon only, square
+        // Trailing button – icon only, square, icon centered via gravity
         trailingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
         ).apply {
@@ -235,12 +237,14 @@ class NoteEditorActivity : AppCompatActivity() {
             setBackgroundColor(primaryContainerColor)
             setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
             contentDescription = getString(R.string.more_options)
+            // Center the icon using gravity (no need for iconGravity constant)
+            gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(
                 buttonHeight, // width = height
                 buttonHeight
             )
-            gravity = Gravity.CENTER
+            isCheckable = true
         }
         trailingButton.setOnClickListener {
             if (isMenuOpen) {
@@ -504,6 +508,8 @@ class NoteEditorActivity : AppCompatActivity() {
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
+        trailingButton.isChecked = true
+
         val menuView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.END
@@ -530,7 +536,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
             compoundDrawablePadding = dpToPx(12f)
-            setPadding(dpToPx(16f), dpToPx(10f), dpToPx(20f), dpToPx(10f)) // same as "Create Notes"
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(100f).toFloat()
                 setColor(Color.TRANSPARENT)
@@ -556,6 +562,7 @@ class NoteEditorActivity : AppCompatActivity() {
             isFocusable = true
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener {
+                trailingButton.isChecked = false
                 isMenuOpen = false
             }
             showAsDropDown(anchor, 0, dpToPx(8f), Gravity.END)
