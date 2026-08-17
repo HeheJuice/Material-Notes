@@ -155,17 +155,17 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), rootTopPadding, dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar (with split button)
+        // Top bar – no bottom margin (matches main activity)
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(16f) }
+            )
         }
 
-        // Back button
+        // Back button (50dp)
         val backBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
@@ -206,12 +206,12 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            setSpacing(0)
+            setSpacing(dpToPx(4f)) // small gap between buttons
         }
 
         val buttonHeight = dpToPx(50f)
 
-        // Leading button – "Save" text, centered
+        // Leading button – "Save"
         val leadingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_LeadingButton_Filled)
         ).apply {
@@ -219,7 +219,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setTextColor(onPrimaryContainerColor)
             setTypeface(googleSansFlex, Typeface.BOLD)
             setBackgroundColor(primaryContainerColor)
-            setPadding(0, 0, 0, 0)
+            setPadding(dpToPx(16f), 0, dpToPx(16f), 0)
             gravity = Gravity.CENTER
             setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
             layoutParams = LinearLayout.LayoutParams(
@@ -229,7 +229,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         leadingButton.setOnClickListener { saveNote() }
 
-        // Trailing button – icon only, square, icon centered via gravity
+        // Trailing button – icon only, square
         trailingButton = MaterialButton(
             ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_SplitButton_IconButton_Filled)
         ).apply {
@@ -237,9 +237,8 @@ class NoteEditorActivity : AppCompatActivity() {
             setBackgroundColor(primaryContainerColor)
             setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
             contentDescription = getString(R.string.more_options)
-            // Center the icon using gravity (no need for iconGravity constant)
-            gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
+            gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 buttonHeight, // width = height
                 buttonHeight
@@ -504,7 +503,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ========== CUSTOM POPUP MENU ==========
+    // ========== CUSTOM POPUP MENU (exact match to "Create Notes") ==========
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
@@ -513,7 +512,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val menuView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.END
-            setPadding(dpToPx(8f), dpToPx(8f), dpToPx(8f), dpToPx(8f))
+            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(100f).toFloat()
@@ -536,6 +535,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
             compoundDrawablePadding = dpToPx(12f)
+            // Exactly the same padding as "Create Notes"
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(100f).toFloat()
