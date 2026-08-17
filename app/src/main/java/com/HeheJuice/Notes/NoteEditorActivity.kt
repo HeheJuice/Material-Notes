@@ -237,6 +237,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setBackgroundColor(primaryContainerColor)
             setIconTint(android.content.res.ColorStateList.valueOf(onPrimaryContainerColor))
             contentDescription = getString(R.string.more_options)
+            // Use the correct constant for centering the icon
             iconGravity = MaterialButton.ICON_GRAVITY_CENTER
             setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(
@@ -244,7 +245,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 buttonHeight
             )
             gravity = Gravity.CENTER
-            // Make it checkable – the AVD will animate rotation based on checked state
             isCheckable = true
         }
         trailingButton.setOnClickListener {
@@ -505,11 +505,10 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ========== CUSTOM POPUP MENU (matching "Create Notes") ==========
+    // ========== CUSTOM POPUP MENU ==========
     private fun showMenu(anchor: View) {
         menuPopup?.dismiss()
 
-        // Set trailing button checked state to show chevron rotated
         trailingButton.isChecked = true
 
         val menuView = LinearLayout(this).apply {
@@ -538,7 +537,6 @@ class NoteEditorActivity : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
             compoundDrawablePadding = dpToPx(12f)
-            // Match "Create Notes" pill padding
             setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(100f).toFloat()
@@ -565,7 +563,6 @@ class NoteEditorActivity : AppCompatActivity() {
             isFocusable = true
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener {
-                // Reset trailing button state when menu is dismissed
                 trailingButton.isChecked = false
                 isMenuOpen = false
             }
