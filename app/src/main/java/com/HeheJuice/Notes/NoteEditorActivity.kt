@@ -721,89 +721,99 @@ class NoteEditorActivity : AppCompatActivity() {
 
     // ================= 修复点：generateHighResNoteBitmap =================
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
-        val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
-        val scale = 2.0f
-        val maxWidth = (baseWidth * scale).toInt()
+    val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
+    val scale = 2.0f
+    val maxWidth = (baseWidth * scale).toInt()
 
-        val padding = (dpToPx(16f) * scale).toInt()
-        val cardPadding = (dpToPx(16f) * scale).toInt()
-        val cornerRadiusPx = (dpToPx(12f) * scale).toFloat()   // 重命名，避免作用域冲突
+    // 缩放后的尺寸
+    val paddingPx = (dpToPx(20f) * scale).toInt()           // 根布局内边距 20dp
+    val labelBottomMargin = (dpToPx(4f) * scale).toInt()
+    val titleBottomMargin = (dpToPx(16f) * scale).toInt()
+    val cornerRadiusPx = (dpToPx(12f) * scale).toFloat()
+    val textPaddingHorizontal = (dpToPx(16f) * scale).toInt()
+    val textPaddingVertical = (dpToPx(14f) * scale).toInt()
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceContainerLowColor)
-            setPadding(padding, padding, padding, padding)
-        }
-
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                setCornerRadius(cornerRadiusPx)          // 使用 setter，而非属性赋值
-                setColor(surfaceContainerColor)
-                setStroke((dpToPx(1f) * scale).toInt(), cardBorderColor)
-            }
-            setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
-        }
-
-        val titleLabel = TextView(this).apply {
-            text = getString(R.string.title)
-            textSize = (14f * scale)
-            setTextColor(onSurfaceVariantColor)
-            setTypeface(googleSansFlex, Typeface.BOLD)
-            setPadding(0, 0, 0, (dpToPx(4f) * scale).toInt())
-        }
-        card.addView(titleLabel)
-
-        val titleTv = TextView(this).apply {
-            text = title
-            textSize = (18f * scale)
-            setTextColor(onPrimaryContainerColor)
-            setTypeface(googleSansFlex, Typeface.BOLD)
-            setPadding(0, 0, 0, (dpToPx(12f) * scale).toInt())
-        }
-        card.addView(titleTv)
-
-        val contentLabel = TextView(this).apply {
-            text = getString(R.string.content)
-            textSize = (14f * scale)
-            setTextColor(onSurfaceVariantColor)
-            setTypeface(googleSansFlex, Typeface.BOLD)
-            setPadding(0, 0, 0, (dpToPx(4f) * scale).toInt())
-        }
-        card.addView(contentLabel)
-
-        val contentTv = TextView(this).apply {
-            setText(contentSpannable)
-            textSize = (16f * scale)
-            setTextColor(onPrimaryContainerColor)
-            setGoogleSansFlexDefault(this, false)
-            setPadding(0, 0, 0, 0)
-        }
-        card.addView(contentTv)
-
-        root.addView(card)
-
-        val timeStamp = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date())
-        val footerTv = TextView(this).apply {
-            text = "Captured: $timeStamp"
-            textSize = (12f * scale)
-            setTextColor(onSurfaceVariantColor)
-            gravity = Gravity.END
-            setPadding(0, (dpToPx(8f) * scale).toInt(), 0, 0)
-        }
-        root.addView(footerTv)
-
-        val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
-        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        root.measure(widthSpec, heightSpec)
-        root.layout(0, 0, root.measuredWidth, root.measuredHeight)
-
-        return Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888).also { bitmap ->
-            Canvas(bitmap).apply { root.draw(this) }
-        }
+    // 根布局 – 与编辑器根背景相同
+    val root = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setBackgroundColor(surfaceContainerColor)
+        setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
     }
-    // ================= 修复结束 =================
+
+    // 标题标签
+    val titleLabel = TextView(this).apply {
+        text = getString(R.string.title)
+        textSize = (14f * scale)
+        setTextColor(onSurfaceVariantColor)
+        setGoogleSansFlexDefault(this, false)
+        setPadding(0, 0, 0, 0)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = labelBottomMargin }
+    }
+    root.addView(titleLabel)
+
+    // 标题内容 – 模拟 titleEdit 样式
+    val titleText = TextView(this).apply {
+        text = title
+        textSize = (18f * scale)
+        setTextColor(onPrimaryContainerColor)
+        setGoogleSansFlexDefault(this, false)
+        background = GradientDrawable().apply {
+            setCornerRadius(cornerRadiusPx)
+            setColor(surfaceLow)
+        }
+        setPadding(textPaddingHorizontal, textPaddingVertical, textPaddingHorizontal, textPaddingVertical)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = titleBottomMargin }
+    }
+    root.addView(titleText)
+
+    // 内容标签
+    val contentLabel = TextView(this).apply {
+        text = getString(R.string.content)
+        textSize = (14f * scale)
+        setTextColor(onSurfaceVariantColor)
+        setGoogleSansFlexDefault(this, false)
+        setPadding(0, 0, 0, 0)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = labelBottomMargin }
+    }
+    root.addView(contentLabel)
+
+    // 内容 – 模拟 contentEdit 样式，支持 Spannable
+    val contentText = TextView(this).apply {
+        setText(contentSpannable)   // 保留加粗、放大等样式
+        textSize = (16f * scale)
+        setTextColor(onPrimaryContainerColor)
+        setGoogleSansFlexDefault(this, false)
+        background = GradientDrawable().apply {
+            setCornerRadius(cornerRadiusPx)
+            setColor(surfaceLow)
+        }
+        setPadding(textPaddingHorizontal, textPaddingVertical, textPaddingHorizontal, textPaddingVertical)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+    }
+    root.addView(contentText)
+
+    // 测量和绘制
+    val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
+    val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+    root.measure(widthSpec, heightSpec)
+    root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+
+    return Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888).also { bitmap ->
+        Canvas(bitmap).apply { root.draw(this) }
+    }
+}
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
