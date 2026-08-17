@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.text.Html
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -45,7 +44,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
 
-    // Toolbar buttons
     private lateinit var copyBtn: ImageView
     private lateinit var pasteBtn: ImageView
     private lateinit var boldBtn: ImageView
@@ -80,12 +78,11 @@ class NoteEditorActivity : AppCompatActivity() {
 
         googleSansFlex = try {
             Typeface.createFromAsset(assets, "GoogleSansFlex.ttf")
-        } catch (e: Exception) { null }
+        } catch (_: Exception) { null }
 
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // Resolve colours
         val typedValue = TypedValue()
         fun resolveColor(attrRes: Int, fallback: Int): Int {
             return if (theme.resolveAttribute(attrRes, typedValue, true)) {
@@ -94,7 +91,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 fallback
             }
         }
-
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
 
@@ -120,14 +116,13 @@ class NoteEditorActivity : AppCompatActivity() {
         )
         surfaceContainerLowColor = surfaceLow
 
-        // Build UI
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceContainerColor)
             setPadding(dpToPx(20f), dpToPx(48f), dpToPx(20f), dpToPx(20f))
         }
 
-        // Top bar (unchanged)
+        // Top bar
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -252,7 +247,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentEdit)
 
-        // ---- Bottom toolbar ----
+        // ---- Toolbar ----
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -320,11 +315,8 @@ class NoteEditorActivity : AppCompatActivity() {
                 val start = contentEdit.selectionStart
                 val end = contentEdit.selectionEnd
                 val text = contentEdit.text
-                if (start != end) {
-                    text.replace(start, end, pasteText)
-                } else {
-                    text.insert(start, pasteText)
-                }
+                if (start != end) text.replace(start, end, pasteText)
+                else text.insert(start, pasteText)
             } else {
                 Toast.makeText(this@NoteEditorActivity, "Nothing to paste", Toast.LENGTH_SHORT).show()
             }
@@ -348,15 +340,19 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
-        // Load existing note
+        // Load existing note (spans from JSON)
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
-                val spannable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
-                } else {
-                    @Suppress("DEPRECATION")
-                    Html.fromHtml(note.content)
+                val spannable = SpannableStringBuilder(note.content)
+                for (spanData in note.spans) {
+                    when (spanData.type) {
+                        "bold" -> spannable.setSpan(StyleSpan(Typeface.BOLD), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        "bigger" -> {
+                            val size = spanData.size ?: 2.0f
+                            spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    }
                 }
                 contentEdit.setText(spannable)
             }
@@ -364,7 +360,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        // ---- Selection listeners ----
+        // Selection listeners
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -381,7 +377,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         updateToolbarButtons()
 
-        // ---- Keyboard inset ----
+        // Keyboard inset
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val keyboardHeight = imeInsets.bottom
@@ -423,55 +419,40 @@ class NoteEditorActivity : AppCompatActivity() {
         clipboard.setPrimaryClip(ClipData.newPlainText("note_text", text))
     }
 
-    // ----- Bold toggle -----
+    // ----- Bold toggle (using StyleSpan) -----
     private fun applyBoldToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
         if (start == end) return
-        val text = contentEdit.text
-        val spannable = text as Spannable
-
-        // Check if selection already has bold style
-        val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java)
+        val spannable = contentEdit.text as Spannable
+        val spans = spannable.getSpans(start, end, StyleSpan::class.java)
         var hasBold = false
-        for (span in boldSpans) {
+        for (span in spans) {
             if (span.style == Typeface.BOLD) {
                 hasBold = true
                 break
             }
         }
-
         if (hasBold) {
-            // Remove all StyleSpans in the selection
-            for (span in boldSpans) {
-                spannable.removeSpan(span)
+            for (span in spans) {
+                if (span.style == Typeface.BOLD) spannable.removeSpan(span)
             }
         } else {
-            // Apply bold
             spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         Selection.setSelection(contentEdit.text, start, end)
     }
 
-    // ----- Bigger toggle (2.0x) -----
+    // ----- Bigger toggle (RelativeSizeSpan, 2.0f) -----
     private fun applyBiggerToSelection() {
         val start = contentEdit.selectionStart
         val end = contentEdit.selectionEnd
         if (start == end) return
-        val text = contentEdit.text
-        val spannable = text as Spannable
-
-        // Check if selection already has a RelativeSizeSpan
-        val sizeSpans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
-        val hasSize = sizeSpans.isNotEmpty()
-
-        if (hasSize) {
-            // Remove all size spans in selection
-            for (span in sizeSpans) {
-                spannable.removeSpan(span)
-            }
+        val spannable = contentEdit.text as Spannable
+        val spans = spannable.getSpans(start, end, RelativeSizeSpan::class.java)
+        if (spans.isNotEmpty()) {
+            for (span in spans) spannable.removeSpan(span)
         } else {
-            // Apply 2.0x size
             spannable.setSpan(RelativeSizeSpan(2.0f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         Selection.setSelection(contentEdit.text, start, end)
@@ -497,23 +478,13 @@ class NoteEditorActivity : AppCompatActivity() {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 v.animate().cancel()
-                v.animate()
-                    .scaleX(0.95f)
-                    .scaleY(0.95f)
-                    .alpha(0.88f)
-                    .setDuration(120)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
-                    .start()
+                v.animate().scaleX(0.95f).scaleY(0.95f).alpha(0.88f)
+                    .setDuration(120).setInterpolator(android.view.animation.DecelerateInterpolator(1.5f)).start()
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 v.animate().cancel()
-                v.animate()
-                    .scaleX(1.0f)
-                    .scaleY(1.0f)
-                    .alpha(1.0f)
-                    .setDuration(350)
-                    .setInterpolator(springBackInterpolator)
-                    .start()
+                v.animate().scaleX(1.0f).scaleY(1.0f).alpha(1.0f)
+                    .setDuration(350).setInterpolator(springBackInterpolator).start()
             }
         }
         false
@@ -522,7 +493,34 @@ class NoteEditorActivity : AppCompatActivity() {
     private fun saveNote() {
         val title = titleEdit.text.toString().trim()
         val plainText = contentEdit.text.toString()
-        val htmlContent = Html.toHtml(contentEdit.text, Html.TO_HTML_PARAGRAPH_LINES_INDIVIDUAL)
+        val spans = mutableListOf<SpanData>()
+        val spannable = contentEdit.text as? Spannable
+        if (spannable != null) {
+            // Collect StyleSpan (bold)
+            val boldSpans = spannable.getSpans(0, spannable.length, StyleSpan::class.java)
+            for (span in boldSpans) {
+                if (span.style == Typeface.BOLD) {
+                    spans.add(SpanData(
+                        start = spannable.getSpanStart(span),
+                        end = spannable.getSpanEnd(span),
+                        type = "bold"
+                    ))
+                }
+            }
+            // Collect RelativeSizeSpan (bigger)
+            val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
+            for (span in sizeSpans) {
+                val size = spannable.getSpanSize(span) // This gives size change? Actually we need the size value.
+                // We don't have direct access to the value, but we can store the size we used (2.0f)
+                // Since we only apply 2.0f, we'll store that.
+                spans.add(SpanData(
+                    start = spannable.getSpanStart(span),
+                    end = spannable.getSpanEnd(span),
+                    type = "bigger",
+                    size = 2.0f
+                ))
+            }
+        }
 
         if (title.isEmpty()) {
             Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
@@ -530,10 +528,10 @@ class NoteEditorActivity : AppCompatActivity() {
         }
 
         if (isNewNote) {
-            NoteRepository.saveNote(title, plainText, htmlContent)
+            NoteRepository.saveNote(title, plainText, spans)
         } else {
             NoteRepository.deleteNote(noteId)
-            NoteRepository.saveNote(title, plainText, htmlContent)
+            NoteRepository.saveNote(title, plainText, spans)
         }
         setResult(Activity.RESULT_OK)
         finish()
