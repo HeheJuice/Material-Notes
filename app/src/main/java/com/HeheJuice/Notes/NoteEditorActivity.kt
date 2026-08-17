@@ -5,7 +5,9 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.view.ContextThemeWrapper
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -20,6 +22,7 @@ import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -90,6 +93,10 @@ class NoteEditorActivity : AppCompatActivity() {
     private var onSurfaceVariantColor: Int = 0
     private var surfaceContainerColor: Int = 0
     private var surfaceLow: Int = 0
+
+    // For image capture
+    private val REQUEST_SAVE_IMAGE = 1002
+    private var lastGeneratedBitmap: Bitmap? = null
 
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
@@ -307,7 +314,7 @@ class NoteEditorActivity : AppCompatActivity() {
             if (isMenuOpen) {
                 menuPopup?.dismiss()
             } else {
-                showMenu(splitButton) // anchor to splitButton
+                showMenu(splitButton)
             }
         }
 
@@ -558,7 +565,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
             root.setPadding(
                 dpToPx(20f),
-                statusBarTop + dpToPx(12f),   // exact match to main activity
+                statusBarTop + dpToPx(12f),
                 dpToPx(20f),
                 dpToPx(20f)
             )
@@ -632,7 +639,8 @@ class NoteEditorActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                Toast.makeText(this@NoteEditorActivity, getString(R.string.capture_notes_to_image), Toast.LENGTH_SHORT).show()
+                // Capture the note to image
+                captureNoteToImage()
                 menuPopup?.dismiss()
             }
             setOnTouchListener(pressScaleTouchListener)
@@ -662,14 +670,163 @@ class NoteEditorActivity : AppCompatActivity() {
                 animateTrailingButtonShape(expand = false)
                 isMenuOpen = false
             }
-            // Calculate offset so right edge of menu aligns with right edge of split button
             val xOffset = anchor.width - menuView.measuredWidth
             showAsDropDown(anchor, xOffset, dpToPx(8f))
             isMenuOpen = true
         }
     }
 
-    // ========== Existing methods ==========
+    // ========== SAVE NOTE DATA (without finishing) ==========
+    private fun saveNoteData(): Boolean {
+        val title = titleEdit.text.toString().trim()
+        val plainText = contentEdit.text.toString()
+        val spans = mutableListOf<SpanData>()
+        val spannable = contentEdit.text as? Spannable
+        if (spannable != null) {
+            val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
+            for (span in boldSpans) {
+                val start = spannable.getSpanStart(span)
+                val end = spannable.getSpanEnd(span)
+                if (start >= 0 && end >= 0) {
+                    spans.add(SpanData(start = start, end = end, type = "bold"))
+                }
+            }
+            val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
+            for (span in sizeSpans) {
+                val start = spannable.getSpanStart(span)
+                val end = spannable.getSpanEnd(span)
+                if (start >= 0 && end >= 0) {
+                    spans.add(SpanData(start = start, end = end, type = "bigger", size = 2.0f))
+                }
+            }
+        }
+
+        if (title.isEmpty()) {
+            Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        if (isNewNote) {
+            NoteRepository.saveNote(title, plainText, spans)
+        } else {
+            NoteRepository.deleteNote(noteId)
+            NoteRepository.saveNote(title, plainText, spans)
+        }
+        return true
+    }
+
+    // ========== CAPTURE NOTES TO IMAGE ==========
+    private fun captureNoteToImage() {
+        // Save the note first
+        if (!saveNoteData()) {
+            return
+        }
+
+        val title = titleEdit.text.toString().trim()
+        val contentSpannable = contentEdit.text
+
+        if (title.isEmpty() && contentSpannable.isEmpty()) {
+            Toast.makeText(this, "Nothing to capture", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Generate bitmap
+        val bitmap = generateNoteBitmap(title, contentSpannable)
+        if (bitmap == null) {
+            Toast.makeText(this, "Failed to generate image", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lastGeneratedBitmap = bitmap
+
+        // Launch document picker
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "image/png"
+            val safeTitle = if (title.isNotEmpty()) title else "note"
+            putExtra(Intent.EXTRA_TITLE, "${safeTitle}_note.png")
+        }
+        startActivityForResult(intent, REQUEST_SAVE_IMAGE)
+    }
+
+    private fun generateNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
+        val maxWidth = resources.displayMetrics.widthPixels - dpToPx(40f)
+        val padding = dpToPx(20f)
+
+        // Create a temporary layout
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(surfaceContainerLowColor)
+            setPadding(padding, padding, padding, padding)
+        }
+
+        // Title TextView
+        val titleTv = TextView(this).apply {
+            text = title
+            textSize = 24f
+            setTextColor(onPrimaryContainerColor)
+            setTypeface(googleSansFlex, Typeface.BOLD)
+            setPadding(0, 0, 0, dpToPx(8f))
+        }
+        root.addView(titleTv)
+
+        // Content TextView
+        val contentTv = TextView(this).apply {
+            setText(contentSpannable)
+            textSize = 16f
+            setTextColor(onPrimaryContainerColor)
+            googleSansFlex?.let { typeface = it }
+            setPadding(0, 0, 0, 0)
+        }
+        root.addView(contentTv)
+
+        // Measure the layout
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
+        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        root.measure(widthSpec, heightSpec)
+        root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+
+        // Draw to bitmap
+        val bitmap = Bitmap.createBitmap(root.measuredWidth, root.measuredHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        root.draw(canvas)
+        return bitmap
+    }
+
+    // ========== HANDLE SAVE IMAGE RESULT ==========
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_SAVE_IMAGE && resultCode == RESULT_OK) {
+            data?.data?.let { uri ->
+                try {
+                    contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        val bitmap = lastGeneratedBitmap
+                        if (bitmap != null) {
+                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                            Toast.makeText(this, "Image saved successfully", Toast.LENGTH_SHORT).show()
+                            lastGeneratedBitmap = null
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Failed to save image: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            // User cancelled – clean up
+            lastGeneratedBitmap?.recycle()
+            lastGeneratedBitmap = null
+        }
+    }
+
+    // ========== EXISTING SAVE METHOD (save + finish) ==========
+    private fun saveNote() {
+        if (saveNoteData()) {
+            setResult(Activity.RESULT_OK)
+            finish()
+        }
+    }
+
+    // ========== EXISTING TOOLBAR / FORMATTING METHODS ==========
     private fun disableToolbar() {
         updateButtonState(copyBtn, false)
         updateButtonState(pasteBtn, false)
@@ -788,45 +945,6 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
         false
-    }
-
-    private fun saveNote() {
-        val title = titleEdit.text.toString().trim()
-        val plainText = contentEdit.text.toString()
-        val spans = mutableListOf<SpanData>()
-        val spannable = contentEdit.text as? Spannable
-        if (spannable != null) {
-            val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
-            for (span in boldSpans) {
-                val start = spannable.getSpanStart(span)
-                val end = spannable.getSpanEnd(span)
-                if (start >= 0 && end >= 0) {
-                    spans.add(SpanData(start = start, end = end, type = "bold"))
-                }
-            }
-            val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
-            for (span in sizeSpans) {
-                val start = spannable.getSpanStart(span)
-                val end = spannable.getSpanEnd(span)
-                if (start >= 0 && end >= 0) {
-                    spans.add(SpanData(start = start, end = end, type = "bigger", size = 2.0f))
-                }
-            }
-        }
-
-        if (title.isEmpty()) {
-            Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (isNewNote) {
-            NoteRepository.saveNote(title, plainText, spans)
-        } else {
-            NoteRepository.deleteNote(noteId)
-            NoteRepository.saveNote(title, plainText, spans)
-        }
-        setResult(Activity.RESULT_OK)
-        finish()
     }
 
     private fun dpToPx(dp: Float): Int =
