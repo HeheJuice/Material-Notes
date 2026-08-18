@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Time -->
+    <string name="app_name">ملاحظات</string>
+    <string name="last_edit_time">آخر تعديل: %1$s</string>
+    <string name="time_now">الآن</string>
+    <string name="time_minutes_ago">منذ %1$d دقيقة</string>
+    <string name="time_hours_ago">منذ %1$d ساعة</string>
+    <string name="time_days_ago">منذ %1$d يوم</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">الملاحظات</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Settings Page -->
+    <string name="category_general">عام</string>
+    <string name="setting_app_theme">مظهر التطبيق</string>
+    <string name="setting_theme_mode">وضع المظهر</string>
+    <string name="theme_light">الوضع الفاتح</string>
+    <string name="theme_dark">الوضع الداكن</string>
+    <string name="theme_system">تلقائي (حسب النظام)</string>
+    <string name="themerestart">تطبيق المظهر المحدد</string>
+    <string name="setting_follow_system">اتباع مظهر النظام</string>
+    <string name="setting_follow_system_subtitle">ضبط المظهر تلقائياً</string>
+
+    <!-- Editor Settings -->
+    <string name="settings_editor_category">المحرر</string>
+    <string name="show_lines_under_text">إظهار أسطر تحت النص</string>
+    <string name="show_lines_under_text_desc">إظهار أسطر مسطرة تحت نص الملاحظة داخل المحرر</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">إنشاء ملاحظات</string>
+    <string name="import_notes">استيراد ملاحظات TXT</string>
+    <string name="import_notes_toast">استيراد الملاحظات (قريباً)</string>
+
+    <!-- Note Editor -->
+    <string name="save">حفظ</string>
+    <string name="title">العنوان</string>
+    <string name="content">المحتوى</string>
+    <string name="new_note">ملاحظة جديدة</string>
+    <string name="edit_note">تعديل الملاحظة</string>
+    <string name="enter_title_hint">أدخل العنوان...</string>
+    <string name="write_content_hint">اكتب ملاحظتك هنا...</string>
+    <string name="note_cannot_be_empty">لا يمكن أن تكون الملاحظة فارغة</string>
+    <string name="back_content_desc">رجوع</string>
+    <string name="title_required">العنوان مطلوب</string>
+    <string name="capture_notes_to_image">تحويل الملاحظة إلى صورة</string>
+    <string name="more_options">خيارات إضافية</string>
+    <string name="copied">تم النسخ</string>
+    <string name="select_text_first">يرجى تحديد النص أولاً</string>
+    <string name="nothing_to_paste">لا يوجد شيء للصقه</string>
+
+    <!-- Network & About Settings -->
+    <string name="settings_network_about_category">الشبكة وحول التطبيق</string>
+    <string name="setting_app_network">اتصال التطبيق بالشبكة</string>
+    <string name="setting_app_network_desc">السماح للتطبيق بالوصول إلى ميزات الشبكة</string>
+    <string name="setting_updates_and_about">التحقق من التحديثات وحول التطبيق</string>
+    <string name="setting_updates_and_about_desc">إصدار التطبيق التفاصيل وتحديثات البرامج</string>
+    <string name="version_format">الإصدار %1$s</string>
+    <string name="zero_percent">0%</string>
+    <string name="progress_format">%1$d%%</string>
+    <string name="action_download">تنزيل</string>
+    <string name="action_install">تثبيت</string>
+    <string name="view_source_code">عرض الشفرة المصدرية</string>
+    <string name="view_license">عرض الترخيص</string>
+    <string name="download_failed">فشل التنزيل</string>
+    <string name="allow_unknown_sources">يرجى السماح بالتثبيت من مصادر غير معروفة</string>
+    <string name="no_app_found_install">لم يتم العثور على تطبيق لتثبيت ملف APK</string>
+    <string name="install_error">خطأ في التثبيت: %1$s</string>
+    <string name="acknowledgments">تقدير وشكر</string>
+    <string name="credit_hehejuice_desc">مطور هذا التطبيق</string>
+    <string name="credit_material_desc">مكتبة Material Design</string>
+    <string name="credit_google_sans_flex_desc">الخطوط المستخدمة في هذا التطبيق</string>
+    <string name="desc_source">اطّلع على الشفرة المصدرية لهذا التطبيق على GitHub</string>
+    <string name="desc_license">عرض استخدامات الطرف الثالث والتراخيص الخاصة بها وبالمكتبات</string>
+
+    <!-- Update Checker -->
+    <string name="update_checking">جاري التحقق من وجود تحديثات…</string>
+    <string name="update_new_version">يتوفر إصدار جديد: %s</string>
+    <string name="update_download">التنزيل من GitHub</string>
+    <string name="update_latest">أنت تستخدم أحدث إصدار (%s)</string>
+    <string name="update_server_error">فشل التحقق من التحديثات (خطأ في الخادم)</string>
+    <string name="update_connection_error">تعذر الاتصال بـ GitHub</string>
+    <string name="update_disabled_debug">تم تعطيل أداة التحقق من التحديثات لإصدار التصحيح (Debug)</string>
+
+    <!-- Toast & Messages -->
+    <string name="nothing_to_capture">لا يوجد شيء لالتقاطه</string>
+    <string name="failed_to_save_image">فشل حفظ الصورة: %s</string>
+    <string name="failed_to_generate_image">فشل إنشاء الصورة</string>
+    <string name="image_saved_successfully">تم حفظ الصورة بنجاح</string>
+    <string name="theme_already_applied">المظهر المحدد مُطبق بالفعل</string>
+    <string name="please_allow_unknown_sources">يرجى السماح بالتثبيت من مصادر غير معروفة</string>
+    <string name="please_enable_network_permission">يرجى تفعيل إذن الشبكة في الإعدادات</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">إضافة</string>
+</resources>

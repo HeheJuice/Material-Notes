@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Time -->
+    <string name="app_name">노트</string>
+    <string name="last_edit_time">최근 수정: %1$s</string>
+    <string name="time_now">방금 전</string>
+    <string name="time_minutes_ago">%1$d분 전</string>
+    <string name="time_hours_ago">%1$d시간 전</string>
+    <string name="time_days_ago">%1$d일 전</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">노트</string>
+    <string name="nav_settings">설정</string>
+
+    <!-- Settings Page -->
+    <string name="category_general">일반</string>
+    <string name="setting_app_theme">앱 테마</string>
+    <string name="setting_theme_mode">테마 모드</string>
+    <string name="theme_light">라이트 모드</string>
+    <string name="theme_dark">다크 모드</string>
+    <string name="theme_system">시스템 기본값</string>
+    <string name="themerestart">선택한 테마 적용</string>
+    <string name="setting_follow_system">시스템 테마 설정 따르기</string>
+    <string name="setting_follow_system_subtitle">화면 설정을 자동으로 조정합니다</string>
+
+    <!-- Editor Settings -->
+    <string name="settings_editor_category">편집기</string>
+    <string name="show_lines_under_text">텍스트 아래 줄 표시</string>
+    <string name="show_lines_under_text_desc">편집기 내부 노트 텍스트 아래에 노트 줄을 표시합니다</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">새 노트 작성</string>
+    <string name="import_notes">TXT 노트 가져오기</string>
+    <string name="import_notes_toast">노트 가져오기 (출시 예정)</string>
+
+    <!-- Note Editor -->
+    <string name="save">저장</string>
+    <string name="title">제목</string>
+    <string name="content">내용</string>
+    <string name="new_note">새 노트</string>
+    <string name="edit_note">노트 편집</string>
+    <string name="enter_title_hint">제목을 입력하세요...</string>
+    <string name="write_content_hint">노트 내용을 입력하세요...</string>
+    <string name="note_cannot_be_empty">노트 내용을 비워둘 수 없습니다</string>
+    <string name="back_content_desc">뒤로 가기</string>
+    <string name="title_required">제목은 필수 입력 항목입니다</string>
+    <string name="capture_notes_to_image">노트를 이미지로 저장</string>
+    <string name="more_options">더보기 옵션</string>
+    <string name="copied">복사되었습니다</string>
+    <string name="select_text_first">먼저 텍스트를 선택하세요</string>
+    <string name="nothing_to_paste">붙여넣을 내용이 없습니다</string>
+
+    <!-- Network & About Settings -->
+    <string name="settings_network_about_category">네트워크 및 정보</string>
+    <string name="setting_app_network">앱 네트워크 연결</string>
+    <string name="setting_app_network_desc">앱의 네트워크 기능 접근을 허용합니다</string>
+    <string name="setting_updates_and_about">업데이트 확인 및 앱 정보</string>
+    <string name="setting_updates_and_about_desc">앱 버전, 상세 정보 및 소프트웨어 업데이트</string>
+    <string name="version_format">버전 %1$s</string>
+    <string name="zero_percent">0%</string>
+    <string name="progress_format">%1$d%%</string>
+    <string name="action_download">다운로드</string>
+    <string name="action_install">설치</string>
+    <string name="view_source_code">소스 코드 보기</string>
+    <string name="view_license">라이선스 보기</string>
+    <string name="download_failed">다운로드 실패</string>
+    <string name="allow_unknown_sources">출처를 알 수 없는 앱 설치를 허용해 주세요</string>
+    <string name="no_app_found_install">APK를 설치할 수 있는 앱을 찾을 수 없습니다</string>
+    <string name="install_error">설치 오류: %1$s</string>
+    <string name="acknowledgments">오픈소스 및 기여</string>
+    <string name="credit_hehejuice_desc">이 앱의 개발자</string>
+    <string name="credit_material_desc">Material Design 라이브러리</string>
+    <string name="credit_google_sans_flex_desc">앱에 사용된 폰트</string>
+    <string name="desc_source">GitHub에서 이 앱의 소스 코드를 확인하세요</string>
+    <string name="desc_license">이 앱 및 서드파티 라이브러리의 사용권 및 라이선스를 확인합니다</string>
+
+    <!-- Update Checker -->
+    <string name="update_checking">업데이트 확인 중…</string>
+    <string name="update_new_version">새로운 버전 이용 가능: %s</string>
+    <string name="update_download">GitHub에서 다운로드</string>
+    <string name="update_latest">최신 버전을 사용 중입니다 (%s)</string>
+    <string name="update_server_error">업데이트 확인 실패 (서버 오류)</string>
+    <string name="update_connection_error">GitHub에 연결할 수 없습니다</string>
+    <string name="update_disabled_debug">디버그 버전에서는 업데이트 확인이 비활성화됩니다</string>
+
+    <!-- Toast & Messages -->
+    <string name="nothing_to_capture">캡처할 내용이 없습니다</string>
+    <string name="failed_to_save_image">이미지 저장 실패: %s</string>
+    <string name="failed_to_generate_image">이미지 생성 실패</string>
+    <string name="image_saved_successfully">이미지가 성공적으로 저장되었습니다</string>
+    <string name="theme_already_applied">선택한 테마가 이미 적용되어 있습니다</string>
+    <string name="please_allow_unknown_sources">출처를 알 수 없는 앱 설치를 허용해 주세요</string>
+    <string name="please_enable_network_permission">설정에서 네트워크 권한을 활성화해 주세요</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">추가</string>
+</resources>

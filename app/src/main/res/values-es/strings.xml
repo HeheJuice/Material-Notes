@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Time -->
+    <string name="app_name">Notas</string>
+    <string name="last_edit_time">Última edición: %1$s</string>
+    <string name="time_now">Ahora</string>
+    <string name="time_minutes_ago">Hace %1$d min</string>
+    <string name="time_hours_ago">Hace %1$d h</string>
+    <string name="time_days_ago">Hace %1$d d</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">Notas</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Settings Page -->
+    <string name="category_general">General</string>
+    <string name="setting_app_theme">Tema de la aplicación</string>
+    <string name="setting_theme_mode">Modo de tema</string>
+    <string name="theme_light">Modo claro</string>
+    <string name="theme_dark">Modo oscuro</string>
+    <string name="theme_system">Sistema</string>
+    <string name="themerestart">Aplicar tema seleccionado</string>
+    <string name="setting_follow_system">Seguir tema del sistema</string>
+    <string name="setting_follow_system_subtitle">Ajustar apariencia automáticamente</string>
+
+    <!-- Editor Settings -->
+    <string name="settings_editor_category">Editor</string>
+    <string name="show_lines_under_text">Mostrar líneas bajo el texto</string>
+    <string name="show_lines_under_text_desc">Muestra líneas de cuaderno debajo del texto dentro del editor</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">Crear notas</string>
+    <string name="import_notes">Importar notas TXT</string>
+    <string name="import_notes_toast">Importar notas (próximamente)</string>
+
+    <!-- Note Editor -->
+    <string name="save">Guardar</string>
+    <string name="title">Título</string>
+    <string name="content">Contenido</string>
+    <string name="new_note">Nueva nota</string>
+    <string name="edit_note">Editar nota</string>
+    <string name="enter_title_hint">Escribe un título...</string>
+    <string name="write_content_hint">Escribe tu nota aquí...</string>
+    <string name="note_cannot_be_empty">La nota no puede estar vacía</string>
+    <string name="back_content_desc">Volver</string>
+    <string name="title_required">El título es obligatorio</string>
+    <string name="capture_notes_to_image">Guardar nota como imagen</string>
+    <string name="more_options">Más opciones</string>
+    <string name="copied">Copiado</string>
+    <string name="select_text_first">Selecciona texto primero</string>
+    <string name="nothing_to_paste">Nada que pegar</string>
+
+    <!-- Network & About Settings -->
+    <string name="settings_network_about_category">Red y acerca de</string>
+    <string name="setting_app_network">Conexión a la red</string>
+    <string name="setting_app_network_desc">Permitir a la aplicación acceder a funciones de red</string>
+    <string name="setting_updates_and_about">Buscar actualizaciones y acerca de</string>
+    <string name="setting_updates_and_about_desc">Versión, detalles y actualizaciones de software</string>
+    <string name="version_format">Versión %1$s</string>
+    <string name="zero_percent">0%</string>
+    <string name="progress_format">%1$d%%</string>
+    <string name="action_download">Descargar</string>
+    <string name="action_install">Instalar</string>
+    <string name="view_source_code">Ver código fuente</string>
+    <string name="view_license">Ver licencia</string>
+    <string name="download_failed">Error en la descarga</string>
+    <string name="allow_unknown_sources">Permite la instalación desde fuentes desconocidas</string>
+    <string name="no_app_found_install">No se encontró una aplicación para instalar el APK</string>
+    <string name="install_error">Error de instalación: %1$s</string>
+    <string name="acknowledgments">Agradecimientos</string>
+    <string name="credit_hehejuice_desc">Desarrollador de esta aplicación</string>
+    <string name="credit_material_desc">Biblioteca Material Design</string>
+    <string name="credit_google_sans_flex_desc">Tipografías usadas en esta aplicación</string>
+    <string name="desc_source">Ver el código fuente de esta aplicación en GitHub</string>
+    <string name="desc_license">Ver uso de terceros y licencias para esta aplicación</string>
+
+    <!-- Update Checker -->
+    <string name="update_checking">Buscando actualizaciones…</string>
+    <string name="update_new_version">Nueva versión disponible: %s</string>
+    <string name="update_download">Descargar desde GitHub</string>
+    <string name="update_latest">Tienes la última versión (%s)</string>
+    <string name="update_server_error">Error al buscar actualizaciones (error del servidor)</string>
+    <string name="update_connection_error">No se pudo conectar a GitHub</string>
+    <string name="update_disabled_debug">Buscador de actualizaciones desactivado en versión de depuración</string>
+
+    <!-- Toast & Messages -->
+    <string name="nothing_to_capture">Nada que capturar</string>
+    <string name="failed_to_save_image">Error al guardar la imagen: %s</string>
+    <string name="failed_to_generate_image">Error al generar la imagen</string>
+    <string name="image_saved_successfully">Imagen guardada correctamente</string>
+    <string name="theme_already_applied">El tema seleccionado ya está aplicado</string>
+    <string name="please_allow_unknown_sources">Por favor, permite la instalación desde fuentes desconocidas</string>
+    <string name="please_enable_network_permission">Por favor, activa el permiso de red en Ajustes</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">Añadir</string>
+</resources>

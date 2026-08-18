@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Time -->
+    <string name="app_name">Ghi chú</string>
+    <string name="last_edit_time">Sửa lần cuối: %1$s</string>
+    <string name="time_now">Vừa xong</string>
+    <string name="time_minutes_ago">%1$d phút trước</string>
+    <string name="time_hours_ago">%1$d giờ trước</string>
+    <string name="time_days_ago">%1$d ngày trước</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">Ghi chú</string>
+    <string name="nav_settings">Cài đặt</string>
+
+    <!-- Settings Page -->
+    <string name="category_general">Chung</string>
+    <string name="setting_app_theme">Giao diện ứng dụng</string>
+    <string name="setting_theme_mode">Chế độ giao diện</string>
+    <string name="theme_light">Chế độ sáng</string>
+    <string name="theme_dark">Chế độ tối</string>
+    <string name="theme_system">Hệ thống</string>
+    <string name="themerestart">Áp dụng giao diện đã chọn</string>
+    <string name="setting_follow_system">Theo giao diện hệ thống</string>
+    <string name="setting_follow_system_subtitle">Tự động điều chỉnh giao diện</string>
+
+    <!-- Editor Settings -->
+    <string name="settings_editor_category">Trình chỉnh sửa</string>
+    <string name="show_lines_under_text">Hiển thị đường kẻ dưới văn bản</string>
+    <string name="show_lines_under_text_desc">Hiển thị các đường kẻ ngang dưới văn bản trong trình chỉnh sửa</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">Tạo ghi chú</string>
+    <string name="import_notes">Nhập ghi chú TXT</string>
+    <string name="import_notes_toast">Nhập ghi chú (sắp ra mắt)</string>
+
+    <!-- Note Editor -->
+    <string name="save">Lưu</string>
+    <string name="title">Tiêu đề</string>
+    <string name="content">Nội dung</string>
+    <string name="new_note">Ghi chú mới</string>
+    <string name="edit_note">Chỉnh sửa ghi chú</string>
+    <string name="enter_title_hint">Nhập tiêu đề...</string>
+    <string name="write_content_hint">Viết ghi chú của bạn ở đây...</string>
+    <string name="note_cannot_be_empty">Ghi chú không được để trống</string>
+    <string name="back_content_desc">Quay lại</string>
+    <string name="title_required">Tiêu đề là bắt buộc</string>
+    <string name="capture_notes_to_image">Lưu ghi chú thành hình ảnh</string>
+    <string name="more_options">Tùy chọn khác</string>
+    <string name="copied">Đã sao chép</string>
+    <string name="select_text_first">Vui lòng chọn văn bản trước</string>
+    <string name="nothing_to_paste">Không có gì để dán</string>
+
+    <!-- Network & About Settings -->
+    <string name="settings_network_about_category">Mạng &amp; Giới thiệu</string>
+    <string name="setting_app_network">Kết nối mạng của ứng dụng</string>
+    <string name="setting_app_network_desc">Cho phép ứng dụng truy cập các tính năng mạng</string>
+    <string name="setting_updates_and_about">Kiểm tra bản cập nhật &amp; Giới thiệu</string>
+    <string name="setting_updates_and_about_desc">Phiên bản ứng dụng, chi tiết và cập nhật phần mềm</string>
+    <string name="version_format">Phiên bản %1$s</string>
+    <string name="zero_percent">0%</string>
+    <string name="progress_format">%1$d%%</string>
+    <string name="action_download">Tải về</string>
+    <string name="action_install">Cài đặt</string>
+    <string name="view_source_code">Xem mã nguồn</string>
+    <string name="view_license">Xem giấy phép</string>
+    <string name="download_failed">Tải về thất bại</string>
+    <string name="allow_unknown_sources">Vui lòng cho phép cài đặt từ nguồn không xác định</string>
+    <string name="no_app_found_install">Không tìm thấy ứng dụng để cài đặt APK</string>
+    <string name="install_error">Lỗi cài đặt: %1$s</string>
+    <string name="acknowledgments">Ghi nhận công ơn</string>
+    <string name="credit_hehejuice_desc">Nhà phát triển ứng dụng này</string>
+    <string name="credit_material_desc">Thư viện Material Design</string>
+    <string name="credit_google_sans_flex_desc">Phông chữ được sử dụng trong ứng dụng</string>
+    <string name="desc_source">Xem mã nguồn của ứng dụng này trên GitHub</string>
+    <string name="desc_license">Xem thông tin sử dụng và giấy phép của bên thứ ba cũng như ứng dụng này</string>
+
+    <!-- Update Checker -->
+    <string name="update_checking">Đang kiểm tra bản cập nhật…</string>
+    <string name="update_new_version">Có phiên bản mới: %s</string>
+    <string name="update_download">Tải về từ GitHub</string>
+    <string name="update_latest">Bạn đang sử dụng phiên bản mới nhất (%s)</string>
+    <string name="update_server_error">Kiểm tra bản cập nhật thất bại (lỗi máy chủ)</string>
+    <string name="update_connection_error">Không thể kết nối với GitHub</string>
+    <string name="update_disabled_debug">Tính năng kiểm tra cập nhật bị tắt ở phiên bản Debug</string>
+
+    <!-- Toast & Messages -->
+    <string name="nothing_to_capture">Không có gì để chụp</string>
+    <string name="failed_to_save_image">Lưu hình ảnh thất bại: %s</string>
+    <string name="failed_to_generate_image">Tạo hình ảnh thất bại</string>
+    <string name="image_saved_successfully">Lưu hình ảnh thành công</string>
+    <string name="theme_already_applied">Giao diện đã chọn đã được áp dụng</string>
+    <string name="please_allow_unknown_sources">Vui lòng cho phép cài đặt từ nguồn không xác định</string>
+    <string name="please_enable_network_permission">Vui lòng bật quyền truy cập mạng trong Cài đặt</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">Thêm</string>
+</resources>
