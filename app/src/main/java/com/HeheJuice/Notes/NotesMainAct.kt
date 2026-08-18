@@ -360,8 +360,8 @@ class NotesMainAct : AppCompatActivity() {
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
-                // Add top padding to avoid overlapping with topBarLayout
-                setPadding(0, dpToPx(58f), 0, dpToPx(100f))
+                // Increased top padding from 58dp to 80dp for extra gap
+                setPadding(0, dpToPx(80f), 0, dpToPx(100f))
                 clipToPadding = false
             }
             notesRecyclerView = rv
@@ -980,9 +980,6 @@ class NotesMainAct : AppCompatActivity() {
             // contentHolder only needs the status bar inset
             contentHolder.setPadding(0, currentTopInset, 0, 0)
 
-            // topBarLayout is inside notesContainer, so we don't set its topMargin here
-            // (it's already positioned correctly via contentHolder padding)
-
             // Bottom bar and menu overlay margins
             val totalBottomMargin = dpToPx(16f) + bottomInset
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin
@@ -990,6 +987,23 @@ class NotesMainAct : AppCompatActivity() {
 
             insets
         }
+    }
+
+    // ---- Relative time formatter ----
+    private fun getRelativeTimeSpan(context: Context, timestamp: Long): String {
+        val now = System.currentTimeMillis()
+        val diffMillis = (now - timestamp).coerceAtLeast(0)
+        val minutes = diffMillis / (1000 * 60)
+        val hours = minutes / 60
+        val days = hours / 24
+
+        val timeString = when {
+            minutes < 1 -> context.getString(R.string.time_now)
+            hours < 1 -> context.getString(R.string.time_minutes_ago, minutes)
+            days < 1 -> context.getString(R.string.time_hours_ago, hours)
+            else -> context.getString(R.string.time_days_ago, days)
+        }
+        return context.getString(R.string.last_edit_time, timeString)
     }
 
     // ---- Theme application helper ----
@@ -1164,15 +1178,25 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
+    // ========== UPDATED NotesListAdapter ==========
     inner class NotesListAdapter(
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
     ) : RecyclerView.Adapter<NotesListAdapter.ViewHolder>() {
         private val expandedPositions = mutableSetOf<Int>()
-        inner class ViewHolder(val root: LinearLayout, val noteText: TextView, val actionContainer: LinearLayout) : RecyclerView.ViewHolder(root)
+
+        inner class ViewHolder(
+            val root: LinearLayout,
+            val cardContainer: LinearLayout,
+            val titleText: TextView,
+            val timeText: TextView,
+            val actionContainer: LinearLayout
+        ) : RecyclerView.ViewHolder(root)
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val root = LinearLayout(parent.context).apply {
+            val context = parent.context
+
+            val root = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 layoutParams = RecyclerView.LayoutParams(
@@ -1184,43 +1208,80 @@ class NotesMainAct : AppCompatActivity() {
                     rightMargin = dpToPx(12f)
                 }
             }
-            val noteText = TextView(parent.context).apply {
-                textSize = 16f
-                setTextColor(onPrimaryContainerColor)
-                setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(16f))
+
+            // Vertical container for title and timestamp inside the card
+            val cardContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
                 background = GradientDrawable().apply {
                     cornerRadius = dpToPx(12f).toFloat()
                     setColor(surfaceContainerHighestColor)
                 }
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
                 isClickable = true
                 isFocusable = true
                 isLongClickable = true
-                setGoogleSansFlexDefault(this, false)
             }
-            val actionContainer = LinearLayout(parent.context).apply {
+
+            val titleText = TextView(context).apply {
+                textSize = 16f
+                setTextColor(onPrimaryContainerColor)
+                setGoogleSansFlexDefault(this, true)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val timeText = TextView(context).apply {
+                textSize = 12f
+                setTextColor(onSurfaceVariantColor)
+                alpha = 0.7f
+                setGoogleSansFlexDefault(this, false)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(4f)
+                }
+            }
+
+            cardContainer.addView(titleText)
+            cardContainer.addView(timeText)
+
+            val actionContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 visibility = View.GONE
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginStart = dpToPx(8f) }
+                ).apply {
+                    marginStart = dpToPx(8f)
+                }
             }
-            val deleteBtn = ImageView(parent.context).apply {
-                setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.delete_24px))
+
+            val deleteBtn = ImageView(context).apply {
+                setImageDrawable(ContextCompat.getDrawable(context, R.drawable.delete_24px))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(redColor)
                 }
                 setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
-                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply { marginEnd = dpToPx(8f) }
+                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply {
+                    marginEnd = dpToPx(8f)
+                }
                 isClickable = true
                 isFocusable = true
                 setOnTouchListener(pressScaleTouchListener)
             }
-            val cancelBtn = ImageView(parent.context).apply {
-                setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.close_24px))
+
+            val cancelBtn = ImageView(context).apply {
+                setImageDrawable(ContextCompat.getDrawable(context, R.drawable.close_24px))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(surfaceContainerLowColor)
@@ -1231,49 +1292,67 @@ class NotesMainAct : AppCompatActivity() {
                 isFocusable = true
                 setOnTouchListener(pressScaleTouchListener)
             }
+
             actionContainer.addView(deleteBtn)
             actionContainer.addView(cancelBtn)
-            root.addView(noteText)
+
+            root.addView(cardContainer)
             root.addView(actionContainer)
-            return ViewHolder(root, noteText, actionContainer)
+
+            return ViewHolder(root, cardContainer, titleText, timeText, actionContainer)
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val note = items[position]
-            holder.noteText.text = note.title
-            holder.noteText.setOnClickListener { onItemClick(note) }
-            holder.noteText.setOnLongClickListener {
+
+            holder.titleText.text = note.title
+            holder.timeText.text = getRelativeTimeSpan(holder.root.context, note.lastModified)
+
+            holder.cardContainer.setOnClickListener {
+                onItemClick(note)
+            }
+
+            holder.cardContainer.setOnLongClickListener {
                 toggleExpansion(position)
                 true
             }
+
             val deleteBtn = holder.actionContainer.getChildAt(0) as ImageView
             deleteBtn.setOnClickListener {
                 NoteRepository.deleteNote(note.id)
                 expandedPositions.remove(position)
                 loadNotesList()
             }
+
             val cancelBtn = holder.actionContainer.getChildAt(1) as ImageView
             cancelBtn.setOnClickListener {
                 expandedPositions.remove(position)
                 notifyItemChanged(position)
             }
+
             val isExpanded = expandedPositions.contains(position)
             holder.actionContainer.visibility = if (isExpanded) View.VISIBLE else View.GONE
         }
 
         private fun toggleExpansion(position: Int) {
-            if (expandedPositions.contains(position)) expandedPositions.remove(position)
-            else { expandedPositions.clear(); expandedPositions.add(position) }
+            if (expandedPositions.contains(position)) {
+                expandedPositions.remove(position)
+            } else {
+                expandedPositions.clear()
+                expandedPositions.add(position)
+            }
             notifyDataSetChanged()
         }
 
         override fun getItemCount() = items.size
+
         fun updateItems(newItems: List<Note>) {
             items = newItems
             expandedPositions.clear()
             notifyDataSetChanged()
         }
     }
+    // =============================================
 
     private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {

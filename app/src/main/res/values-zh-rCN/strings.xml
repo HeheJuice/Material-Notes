@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">笔记</string>
+    <string name="last_edit_time">上次编辑：%1$s</string>
+<string name="time_now">刚刚</string>
+<string name="time_minutes_ago">%1$d 分钟前</string>
+<string name="time_hours_ago">%1$d 小时前</string>
+<string name="time_days_ago">%1$d 天前</string>
+
 
     <!-- Navigation Tabs -->
     <string name="nav_notes">笔记</string>

@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 <string name="app_name">Notes</string>
+<string name="last_edit_time">Last Edit: %1$s</string>
+<string name="time_now">Now</string>
+<string name="time_minutes_ago">%1$d Minutes Ago</string>
+<string name="time_hours_ago">%1$d Hours Ago</string>
+<string name="time_days_ago">%1$d Days Ago</string>
 
 <!-- Navigation Tabs -->
 <string name="nav_notes">Notes</string>
