@@ -285,11 +285,73 @@ class NotesMainAct : AppCompatActivity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
+        // ---- TOP BAR (moved into notesContainer later) ----
+        topBarLayout = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
+        }
+
+        appNamePill = TextView(this).apply {
+            text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(surfaceContainerHighestColor)
+            }
+            setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.START or Gravity.CENTER_VERTICAL
+            )
+        }
+
+        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+            drawable?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
+        }
+
+        val topBarRefreshContainer = FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(surfaceContainerHighestColor)
+            }
+            layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { /* empty */ }
+            setOnTouchListener(pressScaleTouchListener)
+        }
+        val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (_: Exception) { null }
+        val topBarRefreshIcon = ImageView(this).apply {
+            setImageDrawable(tintDrawableFunc(menuDrawable, onSurfaceVariantColor))
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            layoutParams = FrameLayout.LayoutParams(dpToPx(26f), dpToPx(26f), Gravity.CENTER)
+        }
+        topBarRefreshContainer.addView(topBarRefreshIcon)
+        topBarLayout.addView(appNamePill)
+        topBarLayout.addView(topBarRefreshContainer)
+        // ------------------------------------------
+
+        // ---- NOTES CONTAINER (now includes topBarLayout) ----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
             visibility = if (isNotesActive) View.VISIBLE else View.GONE
+
             val rv = RecyclerView(this@NotesMainAct).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -298,8 +360,13 @@ class NotesMainAct : AppCompatActivity() {
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
             }
             notesRecyclerView = rv
+
+            // Add RecyclerView first (background), then topBarLayout on top
             addView(rv)
+            // Add topBarLayout inside notesContainer
+            addView(topBarLayout)
         }
+        // ------------------------------------------
 
         settingsContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -587,64 +654,9 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(contentHolder)
 
-        // ---- Top bar (pill + menu) ----
-        topBarLayout = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-            setBackgroundColor(Color.TRANSPARENT)
-            setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
-        }
-
-        appNamePill = TextView(this).apply {
-            text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.START or Gravity.CENTER_VERTICAL
-            )
-        }
-
-        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
-            drawable?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, color)
-                wrapped
-            }
-        }
-
-        val topBarRefreshContainer = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(surfaceContainerHighestColor)
-            }
-            layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { /* empty */ }
-            setOnTouchListener(pressScaleTouchListener)
-        }
-        val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (_: Exception) { null }
-        val topBarRefreshIcon = ImageView(this).apply {
-            setImageDrawable(tintDrawableFunc(menuDrawable, onSurfaceVariantColor))
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            layoutParams = FrameLayout.LayoutParams(dpToPx(26f), dpToPx(26f), Gravity.CENTER)
-        }
-        topBarRefreshContainer.addView(topBarRefreshIcon)
-        topBarLayout.addView(appNamePill)
-        topBarLayout.addView(topBarRefreshContainer)
-        rootFrame.addView(topBarLayout)
+        // ---- NOTE: topBarLayout is NOT added to rootFrame anymore ----
+        // It was added directly to notesContainer above.
+        // rootFrame.addView(topBarLayout)  // REMOVED
 
         // ---- Dim overlay ----
         dimOverlay = View(this).apply {
@@ -910,17 +922,14 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ========== MODIFIED: switchTab with top bar visibility + balanced padding ==========
+        // ========== MODIFIED: switchTab (no manual topBarLayout visibility) ==========
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
 
-                // Completely hide the top bar layout on Settings
-                topBarLayout.visibility = if (toNotes) View.VISIBLE else View.GONE
-
-                // Adjust top padding dynamically
+                // Reset top padding cleanly
                 val topPad = if (toNotes) {
                     currentTopInset + dpToPx(66f)
                 } else {
@@ -969,6 +978,8 @@ class NotesMainAct : AppCompatActivity() {
 
             currentTopInset = topInset
 
+            // topBarLayout is now inside notesContainer, so its margin should be set
+            // via the container's padding or directly
             topBarLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> { topMargin = topInset }
 
             // Apply padding based on current tab state
