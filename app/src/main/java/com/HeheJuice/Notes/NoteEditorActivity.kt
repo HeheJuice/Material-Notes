@@ -36,7 +36,6 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -54,6 +53,9 @@ import com.google.android.material.color.MaterialColors
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Custom EditText that draws ruled notebook lines below each text line.
+ */
 class LinedEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -72,6 +74,7 @@ class LinedEditText @JvmOverloads constructor(
         }
 
     fun setLineColor(color: Int) {
+        // 透明度 20% 左右
         linePaint.color = ColorUtils.setAlphaComponent(color, 50)
         invalidate()
     }
@@ -81,11 +84,13 @@ class LinedEditText @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
+        // 先画线（在文字下方）
         if (showLines && lineCount > 0) {
             val count = lineCount
             val rect = Rect()
             for (i in 0 until count) {
                 val baseline = getLineBounds(i, rect)
+                // 在基线下方 8px 处画线
                 canvas.drawLine(
                     paddingLeft.toFloat(),
                     (baseline + 8).toFloat(),
@@ -95,6 +100,7 @@ class LinedEditText @JvmOverloads constructor(
                 )
             }
         }
+        // 再绘制文字（和背景）在上层
         super.onDraw(canvas)
     }
 }
@@ -137,7 +143,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var trailingChevronIcon: ImageView
     private var innerCornerPx: Float = 0f
     private var outerCornerPx: Float = 0f
-    private var menuPopup: PopupWindow? = null
+    private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
 
     private var surfaceContainerLowColor: Int = 0
@@ -181,6 +187,7 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
+        // ---- 颜色解析 ----
         surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF"))
         surfaceLow = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7"))
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
@@ -191,7 +198,9 @@ class NoteEditorActivity : AppCompatActivity() {
         cardBorderColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA"))
 
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, if (isDark) Color.parseColor("#141218") else Color.parseColor("#FEF7FF"))
+        // -------------------------------------------------
 
+        // 读取 “显示横线” 偏好
         val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
         val isShowLinesEnabled = prefs.getBoolean("show_lines_under_text", false)
 
@@ -201,6 +210,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
+        // ---- 顶部栏 ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -346,6 +356,7 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(splitButton)
         root.addView(topBar)
 
+        // ---- 标题 ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -383,6 +394,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
+        // ---- 内容 ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -428,12 +440,14 @@ class NoteEditorActivity : AppCompatActivity() {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
 
+            // 应用横线设置
             showLines = isShowLinesEnabled
             setLineColor(onSurfaceVariantColor)
         }
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
+        // ---- 工具栏 ----
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -518,8 +532,8 @@ class NoteEditorActivity : AppCompatActivity() {
             applyBoldRoundToSelection()
         }
 
-        biggerBtn = createToolButton(R.drawable.title_24px) { anchor ->
-            showZoomMenu(anchor)
+        biggerBtn = createToolButton(R.drawable.title_24px) {
+            applyBiggerRoundToSelection()
         }
 
         buttonRow.addView(copyBtn)
@@ -531,6 +545,7 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
+        // ---- 加载已有笔记 ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -549,7 +564,7 @@ class NoteEditorActivity : AppCompatActivity() {
                             }
                         }
                         "bigger" -> {
-                            val size = spanData.size ?: 2.0f
+                            val size = spanData.size ?: 1.75f
                             spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                         }
                     }
@@ -561,6 +576,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         setContentView(root)
 
+        // ---- 监听器 ----
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -577,6 +593,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         updateToolbarButtons()
 
+        // ---- 窗口边距 ----
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -597,83 +614,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun showZoomMenu(anchor: View) {
-        var zoomPopup: PopupWindow? = null
-
-        val menuView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.START
-            setPadding(dpToPx(4f), dpToPx(4f), dpToPx(4f), dpToPx(4f))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                setCornerRadius(dpToPx(20f).toFloat())
-                setColor(primaryContainerColor)
-            }
-            elevation = dpToPx(8f).toFloat()
-        }
-
-        val createMenuItem = { iconRes: Int, stringRes: Int, onClickAction: () -> Unit ->
-            val iconDrawable = ContextCompat.getDrawable(this, iconRes)?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, onPrimaryContainerColor)
-                wrapped
-            }
-
-            TextView(this).apply {
-                text = getString(stringRes)
-                textSize = 14f
-                setTextColor(onPrimaryContainerColor)
-                setGoogleSansFlexDefault(this, true)
-                setCompoundDrawablesWithIntrinsicBounds(iconDrawable, null, null, null)
-                compoundDrawablePadding = dpToPx(12f)
-                setPadding(dpToPx(16f), dpToPx(12f), dpToPx(20f), dpToPx(12f))
-                background = GradientDrawable().apply {
-                    setCornerRadius(dpToPx(16f).toFloat())
-                    setColor(Color.TRANSPARENT)
-                }
-                isClickable = true
-                isFocusable = true
-                setOnTouchListener(pressScaleTouchListener)
-                setOnClickListener {
-                    onClickAction()
-                    zoomPopup?.dismiss()
-                }
-            }
-        }
-
-        val item2x = createMenuItem(R.drawable.speed_2x_24px, R.string.editor_zoom_two) {
-            applyBiggerRoundToSelection(2.0f)
-        }
-
-        val item15x = createMenuItem(R.drawable.speed_1_5x_24px, R.string.editor_zoom_onefive) {
-            applyBiggerRoundToSelection(1.5f)
-        }
-
-        menuView.addView(item2x)
-        menuView.addView(item15x)
-
-        menuView.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-
-        zoomPopup = PopupWindow(
-            menuView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        ).apply {
-            elevation = dpToPx(8f).toFloat()
-            isOutsideTouchable = true
-            isFocusable = true
-            animationStyle = android.R.style.Animation_Dialog
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
-
-            val xOffset = (anchor.width - menuView.measuredWidth) / 2
-            val yOffset = -(anchor.height + menuView.measuredHeight + dpToPx(8f))
-            showAsDropDown(anchor, xOffset, yOffset)
-        }
-    }
+    // ---- 其余功能函数 ----
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
@@ -745,7 +686,7 @@ class NoteEditorActivity : AppCompatActivity() {
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
 
-        menuPopup = PopupWindow(
+        menuPopup = android.widget.PopupWindow(
             menuView,
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -786,7 +727,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 val spanStart = spannable.getSpanStart(span)
                 val spanEnd = spannable.getSpanEnd(span)
                 if (spanStart >= 0 && spanEnd >= 0) {
-                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = span.sizeChange))
+                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 1.75f))
                 }
             }
         }
@@ -835,7 +776,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
         val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
-        val scale = 2.0f
+        val scale = 1.75f
         val maxWidth = (baseWidth * scale).toInt()
 
         val paddingPx = (dpToPx(20f) * scale).toInt()
@@ -941,6 +882,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // ---- 隐藏键盘 ----
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
         currentFocus?.let { view ->
@@ -1020,7 +962,7 @@ class NoteEditorActivity : AppCompatActivity() {
         updateToolbarButtons()
     }
 
-    private fun applyBiggerRoundToSelection(scaleFactor: Float = 2.0f) {
+    private fun applyBiggerRoundToSelection() {
         val rawStart = contentEdit.selectionStart
         val rawEnd = contentEdit.selectionEnd
         if (rawStart == rawEnd) return
@@ -1030,18 +972,12 @@ class NoteEditorActivity : AppCompatActivity() {
         val editableText = contentEdit.text
 
         val sizeSpans = editableText.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
-        val isSameScale = sizeSpans.any { it.sizeChange == scaleFactor }
-        for (span in sizeSpans) {
-            editableText.removeSpan(span)
-        }
-
-        if (isSameScale) {
-            val boldSpans = editableText.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
-            for (span in boldSpans) {
+        if (sizeSpans.isNotEmpty()) {
+            for (span in sizeSpans) {
                 editableText.removeSpan(span)
             }
-            val styleSpans = editableText.getSpans(selStart, selEnd, StyleSpan::class.java)
-            for (span in styleSpans) {
+            val boldSpans = editableText.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
+            for (span in boldSpans) {
                 editableText.removeSpan(span)
             }
         } else {
@@ -1054,7 +990,7 @@ class NoteEditorActivity : AppCompatActivity() {
             } else {
                 editableText.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            editableText.setSpan(RelativeSizeSpan(scaleFactor), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            editableText.setSpan(RelativeSizeSpan(1.75f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         contentEdit.setText(editableText)
         Selection.setSelection(contentEdit.text, selStart, selEnd)

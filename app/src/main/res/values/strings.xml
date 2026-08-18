@@ -46,8 +46,6 @@
 <string name="copied">Copied</string>
 <string name="select_text_first">Select text first</string>
 <string name="nothing_to_paste">Nothing to paste</string>
-<string name="editor_zoom_onefive">Bold and Zoom Selected Words to 1.5X</string>
-<string name="editor_zoom_two">Bold and Zoom Selected Words to 2X</string>
 
 <!-- Network & About Settings -->
 <string name="settings_network_about_category">Network &amp; About</string>
