@@ -33,11 +33,10 @@ jobs:
         gradle-version: '8.9'  # <--- Add this line
 
 
-    # Safely injects your persistent identity key into the compiler tree
+    # Decodes Base64 secret directly into app directory
     - name: Prepare Keystore
       run: |
         echo "${{ secrets.SIGNING_KEY }}" | base64 -d --ignore-garbage > app/debug.keystore
-
 
     - name: Compile Debug APK
       run: gradle assembleDebug
@@ -59,5 +58,5 @@ jobs:
     - name: Upload Finished Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: lsposed-module-debug
+        name: HeheJuice
         path: DEV-Only/Debug/App_Debug.apk

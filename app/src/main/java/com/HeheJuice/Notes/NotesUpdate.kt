@@ -100,20 +100,35 @@ class NotesUpdate : AppCompatActivity() {
         val tertiaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorTertiaryContainer, Color.parseColor("#FFD8E4"))
 
         // ---------------------------------------------------------------------
-        // NEW LAYOUT: Pinned top bar + scrollable content
+        // TRANSPARENT FLOATING TOP BAR + SCROLLVIEW WITH CLIPTOPADDING = FALSE
         // ---------------------------------------------------------------------
-        val mainContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        val mainContainer = FrameLayout(this).apply {
             setBackgroundColor(surfaceColor)
         }
 
-        // ---- Back Button Header (Pinned Top Bar) ----
+        // ScrollView: clipToPadding = false so content scrolls under the top bar
+        val scrollView = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_ALWAYS
+            clipToPadding = false
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        // Top bar: transparent, floats above ScrollView
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+            setBackgroundColor(Color.TRANSPARENT)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
@@ -133,25 +148,10 @@ class NotesUpdate : AppCompatActivity() {
         }
         topBar.addView(backBtn)
 
-        // ---- ScrollView with content (weight=1 fills remaining space) ----
-        val scrollView = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_ALWAYS
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        }
-
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-
-        // Assemble main container: topBar pinned, scrollView below
-        mainContainer.addView(topBar)
+        // Assemble: ScrollView first, topBar on top
         scrollView.addView(root)
         mainContainer.addView(scrollView)
+        mainContainer.addView(topBar)
         setContentView(mainContainer)
 
         // ---- Big Title ----
@@ -760,7 +760,7 @@ class NotesUpdate : AppCompatActivity() {
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val navBarBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
 
-            // Apply status bar inset and horizontal padding to pinned top bar
+            // Position topBar relative to status bar
             topBar.setPadding(
                 dpToPx(16f),
                 statusBarTop + dpToPx(8f),
@@ -768,10 +768,13 @@ class NotesUpdate : AppCompatActivity() {
                 dpToPx(8f)
             )
 
-            // Apply navigation bar inset and horizontal padding to scrollable root content
+            // Calculate total height occupied by top bar (padding + 50dp button + bottom padding)
+            val totalTopBarHeight = statusBarTop + dpToPx(8f + 50f + 8f)
+
+            // Set initial content padding so title sits right below the back button
             root.setPadding(
                 dpToPx(16f),
-                0,
+                totalTopBarHeight,
                 dpToPx(16f),
                 navBarBottom + dpToPx(16f)
             )
