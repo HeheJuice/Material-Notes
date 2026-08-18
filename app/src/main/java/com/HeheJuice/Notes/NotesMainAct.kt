@@ -811,25 +811,35 @@ class NotesMainAct : AppCompatActivity() {
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
 
-        // 2. Check for Updates & About App Row (In the same row)
-        val updatesAndAboutRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            setMinimumHeight(dpToPx(56f))
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
-            setOnClickListener {
-                val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
-                startActivity(intent)
-            }
+// 2. Check for Updates & About App Row (In the same row)
+val updatesAndAboutRow = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+    setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    )
+    setMinimumHeight(dpToPx(56f))
+    isClickable = true
+    isFocusable = true
+    setOnTouchListener(pressScaleTouchListener)
+    setOnClickListener {
+        val isNetworkAllowed = prefsNotes.getBoolean("app_network_connection", true)
+        if (isNetworkAllowed) {
+            val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
+            startActivity(intent)
+        } else {
+            Toast.makeText(
+                this@NotesMainAct,
+                "Please enable network connection in settings first",
+                Toast.LENGTH_SHORT
+            ).show()
         }
+    }
+}
+
 
         val updatesTextContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

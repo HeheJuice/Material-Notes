@@ -71,7 +71,7 @@ class NotesUpdate : AppCompatActivity() {
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
         val surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
         val onPrimaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B"))
-        val primaryColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4"))
+        val primaryColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4"))
 
         // Monet Gradient Colors
         val primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.parseColor("#E8DEF8"))
