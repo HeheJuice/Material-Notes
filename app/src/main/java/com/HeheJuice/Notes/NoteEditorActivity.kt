@@ -15,6 +15,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
 import android.text.Selection
@@ -23,6 +24,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
+import android.util.AttributeSet          // <-- 修复 1：添加缺失导入
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -53,6 +55,7 @@ import java.util.*
 
 /**
  * Custom EditText that draws ruled notebook lines below each text line.
+ * 修复：重写 getText() 返回非空 Editable，消除 .text 可空类型错误
  */
 class LinedEditText @JvmOverloads constructor(
     context: Context,
@@ -72,19 +75,24 @@ class LinedEditText @JvmOverloads constructor(
         }
 
     fun setLineColor(color: Int) {
-        // Set a subtle line color (e.g. onSurfaceVariant with transparency)
-        linePaint.color = ColorUtils.setAlphaComponent(color, 50) // ~20% opacity
+        // 透明度 20% 左右
+        linePaint.color = ColorUtils.setAlphaComponent(color, 50)
         invalidate()
     }
 
+    // 修复 2：重写 getText() 返回非空 Editable，解决所有 .text 可空错误
+    override fun getText(): Editable {
+        return super.getText() ?: SpannableStringBuilder("")
+    }
+
     override fun onDraw(canvas: Canvas) {
-        // Draw lines first (under the text)
+        // 先画线（在文字下方）
         if (showLines && lineCount > 0) {
             val count = lineCount
             val rect = Rect()
             for (i in 0 until count) {
                 val baseline = getLineBounds(i, rect)
-                // Draw line 8px below line baseline
+                // 在基线下方 8px 处画线
                 canvas.drawLine(
                     paddingLeft.toFloat(),
                     (baseline + 8).toFloat(),
@@ -94,7 +102,7 @@ class LinedEditText @JvmOverloads constructor(
                 )
             }
         }
-        // Draw the text (and background) on top
+        // 再绘制文字（和背景）在上层
         super.onDraw(canvas)
     }
 }
@@ -121,7 +129,7 @@ class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text
 class NoteEditorActivity : AppCompatActivity() {
 
     private lateinit var titleEdit: EditText
-    private lateinit var contentEdit: LinedEditText   // Changed to LinedEditText
+    private lateinit var contentEdit: LinedEditText
     private var noteId: String = ""
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
@@ -181,7 +189,7 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // ---- COLOR RESOLUTION using MaterialColors ----
+        // ---- 颜色解析 ----
         surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF"))
         surfaceLow = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7"))
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
@@ -194,7 +202,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, if (isDark) Color.parseColor("#141218") else Color.parseColor("#FEF7FF"))
         // -------------------------------------------------
 
-        // Read preference for showing lines
+        // 读取 “显示横线” 偏好
         val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
         val isShowLinesEnabled = prefs.getBoolean("show_lines_under_text", false)
 
@@ -204,6 +212,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
+        // ---- 顶部栏 ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -349,6 +358,7 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(splitButton)
         root.addView(topBar)
 
+        // ---- 标题 ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -386,6 +396,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
+        // ---- 内容 ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -411,13 +422,11 @@ class NoteEditorActivity : AppCompatActivity() {
             overScrollMode = View.OVER_SCROLL_ALWAYS
         }
 
-        // ---- Replace EditText with LinedEditText ----
         contentEdit = LinedEditText(this).apply {
             hint = getString(R.string.write_content_hint)
             setHintTextColor(onSurfaceVariantColor)
             setTextColor(onPrimaryContainerColor)
             textSize = 16f
-            // Keep the same background
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
                 setColor(surfaceContainerHighestColor)
@@ -433,15 +442,14 @@ class NoteEditorActivity : AppCompatActivity() {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
 
-            // Apply line settings
+            // 应用横线设置
             showLines = isShowLinesEnabled
             setLineColor(onSurfaceVariantColor)
         }
-        // ------------------------------------------------
-
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
+        // ---- 工具栏 ----
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -539,6 +547,7 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
+        // ---- 加载已有笔记 ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -569,6 +578,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         setContentView(root)
 
+        // ---- 监听器 ----
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -585,6 +595,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         updateToolbarButtons()
 
+        // ---- 窗口边距 ----
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -604,6 +615,8 @@ class NoteEditorActivity : AppCompatActivity() {
             insets
         }
     }
+
+    // ---- 其余功能函数（不变） ----
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
