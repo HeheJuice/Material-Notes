@@ -49,6 +49,9 @@
     <string name="copied">已复制</string>
     <string name="select_text_first">请先选择文本</string>
     <string name="nothing_to_paste">没有可粘贴的内容</string>
+    <string name="editor_zoom_onefive">加粗并将所选文本放大至 1.5 倍</string>
+<string name="editor_zoom_two">加粗并将所选文本放大至 2 倍</string>
+
 
     <!-- Network & About Settings -->
     <string name="settings_network_about_category">网络与关于</string>

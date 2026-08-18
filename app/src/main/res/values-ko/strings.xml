@@ -49,6 +49,9 @@
     <string name="copied">복사되었습니다</string>
     <string name="select_text_first">먼저 텍스트를 선택하세요</string>
     <string name="nothing_to_paste">붙여넣을 내용이 없습니다</string>
+    <string name="editor_zoom_onefive">선택한 단어 굵게 및 1.5배 확대</string>
+<string name="editor_zoom_two">선택한 단어 굵게 및 2배 확대</string>
+
 
     <!-- Network & About Settings -->
     <string name="settings_network_about_category">네트워크 및 정보</string>

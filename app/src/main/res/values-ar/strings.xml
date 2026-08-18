@@ -49,6 +49,9 @@
     <string name="copied">تم النسخ</string>
     <string name="select_text_first">يرجى تحديد النص أولاً</string>
     <string name="nothing_to_paste">لا يوجد شيء للصقه</string>
+    <string name="editor_zoom_onefive">تغليظ الكلمات المحددة وتكبيرها إلى 1.5X</string>
+<string name="editor_zoom_two">تغليظ الكلمات المحددة وتكبيرها إلى 2X</string>
+
 
     <!-- Network & About Settings -->
     <string name="settings_network_about_category">الشبكة وحول التطبيق</string>

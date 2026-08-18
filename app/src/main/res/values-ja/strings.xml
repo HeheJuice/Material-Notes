@@ -49,6 +49,9 @@
     <string name="copied">コピーしました</string>
     <string name="select_text_first">最初にテキストを選択してください</string>
     <string name="nothing_to_paste">貼り付ける項目がありません</string>
+    <string name="editor_zoom_onefive">選択した文字を太字にして1.5倍に拡大</string>
+<string name="editor_zoom_two">選択した文字を太字にして2倍に拡大</string>
+
 
     <!-- Network & About Settings -->
     <string name="settings_network_about_category">ネットワークとアプリ情報</string>

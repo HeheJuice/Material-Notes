@@ -49,6 +49,9 @@
     <string name="copied">Đã sao chép</string>
     <string name="select_text_first">Vui lòng chọn văn bản trước</string>
     <string name="nothing_to_paste">Không có gì để dán</string>
+    <string name="editor_zoom_onefive">In đậm và phóng to từ đã chọn lên 1.5X</string>
+<string name="editor_zoom_two">In đậm và phóng to từ đã chọn lên 2X</string>
+
 
     <!-- Network & About Settings -->
     <string name="settings_network_about_category">Mạng &amp; Giới thiệu</string>

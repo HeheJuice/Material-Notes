@@ -49,6 +49,9 @@
     <string name="copied">Copiado</string>
     <string name="select_text_first">Selecciona texto primero</string>
     <string name="nothing_to_paste">Nada que pegar</string>
+    <string name="editor_zoom_onefive">Poner en negrita y ampliar palabras seleccionadas a 1,5X</string>
+<string name="editor_zoom_two">Poner en negrita y ampliar palabras seleccionadas a 2X</string>
+
 
     <!-- Network & About Settings -->
     <string name="settings_network_about_category">Red y acerca de</string>
