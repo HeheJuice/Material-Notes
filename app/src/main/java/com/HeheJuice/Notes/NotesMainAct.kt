@@ -324,7 +324,7 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
-        // ---- ADD LARGE SETTINGS TITLE ----
+        // ---- ADD LARGE SETTINGS TITLE (balanced margins) ----
         val bigSettingsTitle = TextView(this).apply {
             text = getString(R.string.nav_settings) // "Settings"
             textSize = 32f
@@ -334,9 +334,10 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = dpToPx(12f)
-                bottomMargin = dpToPx(20f)
-                marginStart = dpToPx(4f)
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+                marginStart = dpToPx(8f)
+                marginEnd = dpToPx(8f)
             }
         }
         settingsContentLayout.addView(bigSettingsTitle)
@@ -371,13 +372,13 @@ class NotesMainAct : AppCompatActivity() {
         val outerRadiusPx = dpToPx(16f).toFloat()
         val innerRadiusPx = dpToPx(4f).toFloat()
 
-        // Category Header
+        // Category Header (aligned with title margins)
         val categoryHeader = TextView(this).apply {
             text = getString(R.string.category_general)
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             setGoogleSansFlexDefault(this, true)
-            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(8f))
+            setPadding(dpToPx(8f), dpToPx(12f), dpToPx(8f), dpToPx(8f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -414,8 +415,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.setting_follow_system)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            // BOLD ROUND restored (true)
-            setGoogleSansFlexDefault(this, true)
+            setGoogleSansFlexDefault(this, true) // Bold Round
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -559,14 +559,16 @@ class NotesMainAct : AppCompatActivity() {
         }
         updateRowState()
 
-        // ========== SWITCH LISTENER (No timer, direct apply) ==========
+        // ========== SWITCH LISTENER (with 200ms delay for animation) ==========
         followSwitch.setOnCheckedChangeListener { _, isChecked ->
             followSystem = isChecked
             prefs.edit().putBoolean("follow_system", followSystem).apply()
             updateRowState()
-            // Apply theme and recreate immediately – switch animation still plays smoothly
             applyThemeFromPrefs()
-            recreate()
+            // Delay recreate() slightly so switch animation completes
+            followSwitch.postDelayed({
+                recreate()
+            }, 200)
         }
         // ===============================================================
 
@@ -908,21 +910,21 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ========== MODIFIED: switchTab with top bar visibility + padding ==========
+        // ========== MODIFIED: switchTab with top bar visibility + balanced padding ==========
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
 
-                // Show/hide top bar pill + menu button
+                // Completely hide the top bar layout on Settings
                 topBarLayout.visibility = if (toNotes) View.VISIBLE else View.GONE
 
-                // Adjust content padding dynamically
+                // Adjust top padding dynamically
                 val topPad = if (toNotes) {
                     currentTopInset + dpToPx(66f)
                 } else {
-                    currentTopInset + dpToPx(16f)
+                    currentTopInset + dpToPx(8f) // Reduced padding for better balance
                 }
                 contentHolder.setPadding(0, topPad, 0, 0)
 
@@ -973,7 +975,7 @@ class NotesMainAct : AppCompatActivity() {
             val topPad = if (isNotesActive) {
                 topInset + dpToPx(66f)
             } else {
-                topInset + dpToPx(16f)
+                topInset + dpToPx(8f)
             }
             contentHolder.setPadding(0, topPad, 0, 0)
 
