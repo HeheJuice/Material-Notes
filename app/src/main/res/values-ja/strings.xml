@@ -53,6 +53,18 @@
 <string name="setting_app_network_desc">アプリによるネットワーク機能へのアクセスを許可します</string>
 <string name="setting_updates_and_about">アップデート確認・アプリ情報</string>
 <string name="setting_updates_and_about_desc">アプリのバージョン、詳細情報、ソフトウェアの更新</string>
+<string name="version_format">バージョン %1$s</string>
+<string name="zero_percent">0%</string>
+<string name="progress_format">%1$d%%</string>
+<string name="action_download">ダウンロード</string>
+<string name="action_install">インストール</string>
+<string name="view_source_code">ソースコードを表示</string>
+<string name="view_license">ライセンスを表示</string>
+<string name="download_failed">ダウンロードに失敗しました</string>
+<string name="allow_unknown_sources">不明なソースからのインストールを許可してください</string>
+<string name="no_app_found_install">APKをインストールできるアプリが見つかりません</string>
+<string name="install_error">インストールエラー: %1$s</string>
+
 
 
     <!-- Misc -->

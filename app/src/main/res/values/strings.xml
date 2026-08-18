@@ -53,6 +53,18 @@
 <string name="setting_app_network_desc">Allow the app to access network features</string>
 <string name="setting_updates_and_about">Check for Updates &amp; About App</string>
 <string name="setting_updates_and_about_desc">App version, details, and software updates</string>
+<string name="version_format">Version %1$s</string>
+<string name="zero_percent">0%</string>
+<string name="progress_format">%1$d%%</string>
+<string name="action_download">Download</string>
+<string name="action_install">Install</string>
+<string name="view_source_code">View Source Code</string>
+<string name="view_license">View License</string>
+<string name="download_failed">Download failed</string>
+<string name="allow_unknown_sources">Please allow installation from unknown sources</string>
+<string name="no_app_found_install">No app found to install APK</string>
+<string name="install_error">Install error: %1$s</string>
+
 
 <!-- Misc -->
 <string name="add_button_content_desc">Add</string>

@@ -1,27 +1,52 @@
 package com.HeheJuice.Notes
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.SpannableStringBuilder
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.StyleSpan
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.view.Window
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 class NotesUpdate : AppCompatActivity() {
 
     private var googleSansFlex: Typeface? = null
+    private lateinit var updateStatusView: TextView
+    private lateinit var updateActionView: TextView
+    private lateinit var releaseNotesView: TextView
+    private lateinit var downloadProgressText: TextView
+    private var downloadTask: DownloadApkTask? = null
+    private var downloadedApkFile: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -46,14 +71,20 @@ class NotesUpdate : AppCompatActivity() {
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
         val surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
         val onPrimaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B"))
+        val primaryColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4"))
 
         // Monet Gradient Colors
         val primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.parseColor("#E8DEF8"))
         val tertiaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorTertiaryContainer, Color.parseColor("#FFD8E4"))
 
+        val scrollView = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_ALWAYS
+            setBackgroundColor(surfaceColor)
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceColor)
             setPadding(dpToPx(16f), 0, dpToPx(16f), dpToPx(16f))
         }
 
@@ -110,7 +141,7 @@ class NotesUpdate : AppCompatActivity() {
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(primaryContainerColor, tertiaryContainerColor)
         ).apply {
-            cornerRadius = dpToPx(28f).toFloat()
+            cornerRadius = dpToPx(16f).toFloat()
         }
 
         val appInfoCard = LinearLayout(this).apply {
@@ -157,15 +188,8 @@ class NotesUpdate : AppCompatActivity() {
         appInfoCard.addView(appNameText)
 
         // App Version
-        val versionName = try {
-            val pInfo = packageManager.getPackageInfo(packageName, 0)
-            pInfo.versionName ?: "1.0.0"
-        } catch (_: Exception) {
-            "1.0.0"
-        }
-
         val appVersionText = TextView(this).apply {
-            text = "Version $versionName"
+            text = getString(R.string.version_format, getVersionName())
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             alpha = 0.8f
@@ -182,10 +206,169 @@ class NotesUpdate : AppCompatActivity() {
 
         root.addView(appInfoCard)
 
-        setContentView(root)
+        // ---- Update Checker Card ----
+        val updateCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(surfaceContainerHighestColor)
+                cornerRadius = dpToPx(16f).toFloat()
+            }
+            setPadding(dpToPx(20f), dpToPx(24f), dpToPx(20f), dpToPx(24f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dpToPx(16f) }
+        }
+
+        updateStatusView = TextView(this).apply {
+            text = getString(R.string.update_checking)
+            textSize = 15f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, false)
+            gravity = Gravity.CENTER
+        }
+        updateCard.addView(updateStatusView)
+
+        releaseNotesView = TextView(this).apply {
+            visibility = View.GONE
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, false)
+        }
+        updateCard.addView(releaseNotesView)
+
+        downloadProgressText = TextView(this).apply {
+            text = getString(R.string.zero_percent)
+            visibility = View.GONE
+            textSize = 14f
+            setTextColor(primaryColor)
+            setGoogleSansFlexDefault(this, false)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(8f)
+            }
+        }
+        updateCard.addView(downloadProgressText)
+
+        updateActionView = TextView(this).apply {
+            text = getString(R.string.action_download)
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(primaryColor)
+                cornerRadius = dpToPx(100f).toFloat()
+            }
+            setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            isClickable = true
+            isFocusable = true
+            visibility = View.GONE
+        }
+        updateCard.addView(updateActionView)
+        root.addView(updateCard)
+
+        // ---- Info Card (Source Code & License) ----
+        val infoCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(surfaceContainerHighestColor)
+                cornerRadius = dpToPx(16f).toFloat()
+            }
+            setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dpToPx(16f) }
+        }
+
+        val sourceBtn = TextView(this).apply {
+            text = getString(R.string.view_source_code)
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(primaryColor)
+                cornerRadius = dpToPx(100f).toFloat()
+            }
+            setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dpToPx(8f) }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Crash-Logs-Browser")))
+            }
+        }
+
+        val licenseBtn = TextView(this).apply {
+            text = getString(R.string.view_license)
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(primaryColor)
+                cornerRadius = dpToPx(100f).toFloat()
+            }
+            setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dpToPx(8f) }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Crash-Logs-Browser/blob/main/LICENSE")))
+            }
+        }
+
+        infoCard.addView(sourceBtn)
+        infoCard.addView(licenseBtn)
+        root.addView(infoCard)
+
+        scrollView.addView(root)
+        setContentView(scrollView)
+
+        // Restore cached downloaded APK state if present
+        val cachedFile = File(cacheDir, "app-release.apk")
+        if (cachedFile.exists()) {
+            downloadedApkFile = cachedFile
+            updateActionView.text = getString(R.string.action_install)
+            updateActionView.isEnabled = true
+            updateActionView.visibility = View.VISIBLE
+            downloadProgressText.visibility = View.GONE
+        }
+
+        updateActionView.setOnClickListener {
+            if (updateActionView.text == getString(R.string.action_install) && downloadedApkFile?.exists() == true) {
+                installApk(downloadedApkFile!!)
+            } else {
+                downloadApk()
+            }
+        }
+
+        val versionName = getVersionName()
+        if (versionName.contains("Debug", ignoreCase = true)) {
+            updateStatusView.text = getString(R.string.update_disabled_debug)
+            updateActionView.visibility = View.GONE
+            releaseNotesView.visibility = View.GONE
+            downloadProgressText.visibility = View.GONE
+            deleteCachedApk()
+        } else {
+            checkForUpdates()
+        }
 
         // Apply dynamic system bar paddings
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(scrollView) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val navBarBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
 
@@ -197,6 +380,247 @@ class NotesUpdate : AppCompatActivity() {
             )
             insets
         }
+    }
+
+    // ========== Check For Updates Logic ==========
+    private fun checkForUpdates() {
+        updateStatusView.text = getString(R.string.update_checking)
+        updateActionView.visibility = View.GONE
+        releaseNotesView.visibility = View.GONE
+        downloadProgressText.visibility = View.GONE
+
+        Thread {
+            try {
+                val url = URL("https://api.github.com/repos/HeheJuice/Crash-Logs-Browser/releases/latest")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                val responseCode = connection.responseCode
+                if (responseCode == HttpsURLConnection.HTTP_OK) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(response)
+                    val latestTag = json.getString("tag_name")
+                    val currentVersion = getVersionName()
+
+                    val latestVersion = latestTag.replace(Regex("^[^0-9]*"), "")
+                    val currentVer = currentVersion.replace(Regex("^[^0-9]*"), "")
+                    val comparison = compareVersions(latestVersion, currentVer)
+
+                    runOnUiThread {
+                        if (comparison > 0) {
+                            updateStatusView.text = getString(R.string.update_new_version, latestVersion)
+                            val releaseBody = json.optString("body", "")
+                            if (releaseBody.isNotEmpty()) {
+                                releaseNotesView.text = formatReleaseNotes(releaseBody)
+                                releaseNotesView.visibility = View.VISIBLE
+                                val lp = releaseNotesView.layoutParams as LinearLayout.LayoutParams
+                                lp.topMargin = dpToPx(8f)
+                                lp.bottomMargin = dpToPx(8f)
+                                releaseNotesView.layoutParams = lp
+                            } else {
+                                releaseNotesView.visibility = View.GONE
+                            }
+
+                            updateActionView.text = getString(R.string.action_download)
+                            updateActionView.visibility = View.VISIBLE
+                            updateActionView.isEnabled = true
+                            downloadedApkFile = null
+                        } else {
+                            updateStatusView.text = getString(R.string.update_latest, currentVer)
+                            releaseNotesView.visibility = View.GONE
+                            updateActionView.visibility = View.GONE
+                            deleteCachedApk()
+                        }
+                    }
+                } else {
+                    runOnUiThread {
+                        updateStatusView.text = getString(R.string.update_server_error)
+                        releaseNotesView.visibility = View.GONE
+                        updateActionView.visibility = View.GONE
+                    }
+                }
+                connection.disconnect()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    updateStatusView.text = getString(R.string.update_connection_error)
+                    releaseNotesView.visibility = View.GONE
+                    updateActionView.visibility = View.GONE
+                }
+            }
+        }.start()
+    }
+
+    // ========== APK Download Task ==========
+    private fun downloadApk() {
+        downloadTask?.cancel(true)
+        downloadTask = DownloadApkTask()
+        downloadTask?.execute()
+    }
+
+    inner class DownloadApkTask : AsyncTask<Void, Int, File?>() {
+        override fun onPreExecute() {
+            updateActionView.text = getString(R.string.zero_percent)
+            updateActionView.isEnabled = false
+            updateActionView.visibility = View.VISIBLE
+            downloadProgressText.visibility = View.GONE
+        }
+
+        override fun doInBackground(vararg params: Void?): File? {
+            try {
+                val url = URL("https://api.github.com/repos/HeheJuice/Crash-Logs-Browser/releases/latest")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                if (connection.responseCode != HttpsURLConnection.HTTP_OK) return null
+
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(response)
+                val assets = json.getJSONArray("assets")
+                var apkUrl: String? = null
+                for (i in 0 until assets.length()) {
+                    val asset = assets.getJSONObject(i)
+                    val name = asset.getString("name")
+                    if (name.endsWith(".apk")) {
+                        apkUrl = asset.getString("browser_download_url")
+                        break
+                    }
+                }
+                connection.disconnect()
+                if (apkUrl == null) return null
+
+                val apkConnection = URL(apkUrl).openConnection() as HttpsURLConnection
+                apkConnection.connectTimeout = 10000
+                apkConnection.readTimeout = 10000
+                val contentLength = apkConnection.contentLength
+                val inputStream = apkConnection.inputStream
+
+                val outputFile = File(cacheDir, "app-release.apk")
+                if (outputFile.exists()) outputFile.delete()
+
+                val outputStream = FileOutputStream(outputFile)
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                var totalBytesRead = 0
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                    totalBytesRead += bytesRead
+                    if (contentLength > 0) {
+                        val progress = (totalBytesRead * 100 / contentLength)
+                        publishProgress(progress)
+                    }
+                }
+                outputStream.close()
+                inputStream.close()
+                apkConnection.disconnect()
+                return outputFile
+            } catch (e: Exception) {
+                Log.e("NotesUpdate", "Download failed", e)
+                return null
+            }
+        }
+
+        override fun onProgressUpdate(vararg values: Int?) {
+            val progress = values[0] ?: 0
+            updateActionView.text = getString(R.string.progress_format, progress)
+        }
+
+        override fun onPostExecute(result: File?) {
+            if (result != null && result.exists()) {
+                downloadedApkFile = result
+                updateActionView.text = getString(R.string.action_install)
+                updateActionView.isEnabled = true
+            } else {
+                Toast.makeText(this@NotesUpdate, getString(R.string.download_failed), Toast.LENGTH_SHORT).show()
+                updateActionView.text = getString(R.string.action_download)
+                updateActionView.isEnabled = true
+                downloadedApkFile = null
+            }
+            downloadTask = null
+            downloadProgressText.visibility = View.GONE
+        }
+    }
+
+    private fun installApk(file: File) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!packageManager.canRequestPackageInstalls()) {
+                Toast.makeText(this, getString(R.string.allow_unknown_sources), Toast.LENGTH_LONG).show()
+                startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES))
+                return
+            }
+        }
+        try {
+            val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, getString(R.string.no_app_found_install), Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Log.e("NotesUpdate", "Install failed", e)
+            Toast.makeText(this, getString(R.string.install_error, e.message ?: ""), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun deleteCachedApk() {
+        try {
+            val file = File(cacheDir, "app-release.apk")
+            if (file.exists()) {
+                file.delete()
+                if (downloadedApkFile == file) downloadedApkFile = null
+                if (updateActionView.text == getString(R.string.action_install)) {
+                    updateActionView.text = getString(R.string.action_download)
+                    updateActionView.isEnabled = true
+                }
+            }
+        } catch (_: Exception) { }
+    }
+
+    private fun formatReleaseNotes(body: String): SpannableStringBuilder {
+        val lines = body.split("\n")
+        val spannable = SpannableStringBuilder()
+        for (line in lines) {
+            val trimmed = line.trim()
+            when {
+                trimmed.startsWith("# ") || trimmed.startsWith("## ") || trimmed.startsWith("### ") || trimmed.startsWith("#### ") -> {
+                    val text = trimmed.replace(Regex("^#+\\s*"), "")
+                    val span = SpannableString(text + "\n")
+                    span.setSpan(AbsoluteSizeSpan(dpToPx(16f)), 0, span.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    span.setSpan(StyleSpan(Typeface.BOLD), 0, span.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannable.append(span)
+                }
+                trimmed.startsWith("- ") -> spannable.append("• " + trimmed.substring(2) + "\n")
+                else -> if (trimmed.isNotEmpty()) spannable.append(trimmed + "\n") else spannable.append("\n")
+            }
+        }
+        return spannable
+    }
+
+    private fun compareVersions(v1: String, v2: String): Int {
+        val clean1 = v1.replace(Regex("[^0-9.]"), "")
+        val clean2 = v2.replace(Regex("[^0-9.]"), "")
+        val parts1 = clean1.split(".").map { it.toIntOrNull() ?: 0 }
+        val parts2 = clean2.split(".").map { it.toIntOrNull() ?: 0 }
+        val maxLen = maxOf(parts1.size, parts2.size)
+        for (i in 0 until maxLen) {
+            val p1 = if (i < parts1.size) parts1[i] else 0
+            val p2 = if (i < parts2.size) parts2[i] else 0
+            if (p1 != p2) return p1 - p2
+        }
+        return 0
+    }
+
+    private fun getVersionName(): String {
+        return try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
+        } catch (_: Exception) { "1.0.0" }
     }
 
     private fun setGoogleSansFlexDefault(textView: TextView, bold: Boolean = false) {
