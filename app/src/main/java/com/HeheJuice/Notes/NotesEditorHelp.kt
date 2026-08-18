@@ -51,6 +51,22 @@ class NotesEditorHelp : AppCompatActivity() {
         val primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.parseColor("#E8DEF8"))
         val tertiaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorTertiaryContainer, Color.parseColor("#FFD8E4"))
 
+        val outerRadiusPx = dpToPx(16f).toFloat()
+        val innerRadiusPx = dpToPx(4f).toFloat()
+
+        fun createGroupItemBg(topRadius: Float, bottomRadius: Float): GradientDrawable {
+            return GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(surfaceContainerHighestColor)
+                cornerRadii = floatArrayOf(
+                    topRadius, topRadius,
+                    topRadius, topRadius,
+                    bottomRadius, bottomRadius,
+                    bottomRadius, bottomRadius
+                )
+            }
+        }
+
         val mainContainer = FrameLayout(this).apply {
             setBackgroundColor(surfaceColor)
         }
@@ -131,14 +147,9 @@ class NotesEditorHelp : AppCompatActivity() {
         }
         gradientCard.addView(headerImage)
 
-        // Options Card
-        val optionsCard = LinearLayout(this).apply {
+        // Options Group
+        val optionsGroup = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(surfaceContainerHighestColor)
-                cornerRadius = dpToPx(16f).toFloat()
-            }
-            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -154,15 +165,25 @@ class NotesEditorHelp : AppCompatActivity() {
             Triple(R.drawable.title_24px, R.string.title_title, R.string.title_desc)
         )
 
-        optionsList.forEach { (iconRes, titleRes, descRes) ->
+        optionsList.forEachIndexed { index, (iconRes, titleRes, descRes) ->
+            val isFirst = index == 0
+            val isLast = index == optionsList.lastIndex
+
+            val topR = if (isFirst) outerRadiusPx else innerRadiusPx
+            val bottomR = if (isLast) outerRadiusPx else innerRadiusPx
+
             val optionRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dpToPx(4f), dpToPx(12f), dpToPx(4f), dpToPx(12f))
+                background = createGroupItemBg(topR, bottomR)
+                setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                )
+                ).apply {
+                    if (!isLast) bottomMargin = dpToPx(2f)
+                }
+                setMinimumHeight(dpToPx(56f))
             }
 
             val iconIv = ImageView(this).apply {
@@ -209,11 +230,11 @@ class NotesEditorHelp : AppCompatActivity() {
             optionRow.addView(iconIv)
             optionRow.addView(textContainer)
 
-            optionsCard.addView(optionRow)
+            optionsGroup.addView(optionRow)
         }
 
         root.addView(gradientCard)
-        root.addView(optionsCard)
+        root.addView(optionsGroup)
         scrollView.addView(root)
         mainContainer.addView(scrollView)
         mainContainer.addView(topBar)

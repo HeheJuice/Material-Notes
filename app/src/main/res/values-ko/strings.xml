@@ -22,6 +22,9 @@
     <string name="themerestart">선택한 테마 적용</string>
     <string name="setting_follow_system">시스템 테마 설정 따르기</string>
     <string name="setting_follow_system_subtitle">화면 설정을 자동으로 조정합니다</string>
+    <string name="helper_title">편집기 도움말</string>
+<string name="helper_desc">팁 및 단축키 알아보기</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">편집기</string>

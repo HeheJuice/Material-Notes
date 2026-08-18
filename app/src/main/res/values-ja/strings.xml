@@ -22,6 +22,9 @@
     <string name="themerestart">選択したテーマを適用</string>
     <string name="setting_follow_system">システムのテーマに従う</string>
     <string name="setting_follow_system_subtitle">外観を自動的に調整します</string>
+    <string name="helper_title">エディターのヘルプ</string>
+<string name="helper_desc">ヒントやショートカットを確認</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">エディター</string>

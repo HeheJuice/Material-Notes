@@ -22,6 +22,9 @@
     <string name="themerestart">Áp dụng giao diện đã chọn</string>
     <string name="setting_follow_system">Theo giao diện hệ thống</string>
     <string name="setting_follow_system_subtitle">Tự động điều chỉnh giao diện</string>
+    <string name="helper_title">Trợ giúp trình chỉnh sửa</string>
+<string name="helper_desc">Tìm hiểu mẹo và phím tắt</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">Trình chỉnh sửa</string>

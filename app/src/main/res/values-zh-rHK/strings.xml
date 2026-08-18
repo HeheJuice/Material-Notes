@@ -22,6 +22,9 @@
     <string name="themerestart">套用所選主題</string>
     <string name="setting_follow_system">跟隨系統主題</string>
     <string name="setting_follow_system_subtitle">自動調整外觀</string>
+    <string name="helper_title">編輯器說明</string>
+<string name="helper_desc">了解技巧與快速鍵</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">編輯器</string>

@@ -22,6 +22,9 @@
     <string name="themerestart">应用所选主题</string>
     <string name="setting_follow_system">跟随系统主题</string>
     <string name="setting_follow_system_subtitle">自动调整外观</string>
+    <string name="helper_title">编辑器帮助</string>
+<string name="helper_desc">了解技巧与快捷方式</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">编辑器</string>

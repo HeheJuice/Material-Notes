@@ -22,6 +22,9 @@
     <string name="themerestart">Aplicar tema seleccionado</string>
     <string name="setting_follow_system">Seguir tema del sistema</string>
     <string name="setting_follow_system_subtitle">Ajustar apariencia automáticamente</string>
+    <string name="helper_title">Ayuda del editor</string>
+<string name="helper_desc">Aprende consejos y atajos</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">Editor</string>

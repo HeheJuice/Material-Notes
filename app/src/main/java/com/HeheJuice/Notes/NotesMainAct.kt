@@ -616,30 +616,24 @@ class NotesMainAct : AppCompatActivity() {
         val editorSectionTitle = TextView(this).apply {
             text = getString(R.string.settings_editor_category)
             textSize = 14f
-            setTextColor(onSurfaceVariantColor)
+            setTextColor(onPrimaryContainerColor)
             setGoogleSansFlexDefault(this, true)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(24f)
-                bottomMargin = dpToPx(8f)
-                marginStart = dpToPx(12f)
-            }
-        }
-
-        val editorSettingsCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(16f).toFloat()
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(16f), dpToPx(4f), dpToPx(16f), dpToPx(4f))
+            setPadding(dpToPx(8f), dpToPx(12f), dpToPx(8f), dpToPx(8f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
+
+        val editorGroup = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        editorGroup.addView(editorSectionTitle)
 
         val prefsNotes = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
         val showLinesSwitch = LayoutInflater.from(this)
@@ -652,12 +646,15 @@ class NotesMainAct : AppCompatActivity() {
         val showLinesRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(4f), dpToPx(8f), dpToPx(4f), dpToPx(8f))
+            background = createGroupItemBg(outerRadiusPx, innerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            setMinimumHeight(dpToPx(48f))
+            ).apply {
+                bottomMargin = dpToPx(2f)
+            }
+            setMinimumHeight(dpToPx(56f))
         }
 
         val linesTextContainer = LinearLayout(this).apply {
@@ -714,16 +711,17 @@ class NotesMainAct : AppCompatActivity() {
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
 
-        // ---- NEW: Helper Row ----
+        // Helper Row
         val helperRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(4f), dpToPx(8f), dpToPx(4f), dpToPx(8f))
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            setMinimumHeight(dpToPx(48f))
+            setMinimumHeight(dpToPx(56f))
             isClickable = true
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
@@ -767,14 +765,11 @@ class NotesMainAct : AppCompatActivity() {
         helperTextContainer.addView(helperSubtitle)
         helperRow.addView(helperTextContainer)
 
-        // Add both rows to the editor settings card
-        editorSettingsCard.addView(showLinesRow)
-        editorSettingsCard.addView(helperRow)
+        editorGroup.addView(showLinesRow)
+        editorGroup.addView(helperRow)
 
-        // End of new row
+        settingsContentLayout.addView(editorGroup)
 
-        settingsContentLayout.addView(editorSectionTitle)
-        settingsContentLayout.addView(editorSettingsCard)
 
         // ================================================================
         // NETWORK & ABOUT SETTINGS CARD

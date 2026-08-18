@@ -22,6 +22,9 @@
     <string name="themerestart">تطبيق المظهر المحدد</string>
     <string name="setting_follow_system">اتباع مظهر النظام</string>
     <string name="setting_follow_system_subtitle">ضبط المظهر تلقائياً</string>
+    <string name="helper_title">مساعدة المحرر</string>
+<string name="helper_desc">تعرف على النصائح والاختصارات</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">المحرر</string>
