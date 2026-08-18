@@ -287,33 +287,29 @@ class NotesMainAct : AppCompatActivity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
-        // ---- TOP BAR (moved into notesContainer) ----
+        // ---- TOP BAR (Big Title + More Button for Notes Page) ----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
             setBackgroundColor(Color.TRANSPARENT)
-            setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
+            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
         }
 
         appNamePill = TextView(this).apply {
-            text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
+            text = getString(R.string.nav_notes)
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
             setGoogleSansFlexDefault(this, true)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.START or Gravity.CENTER_VERTICAL
-            )
+            ).apply {
+                marginStart = dpToPx(8f)
+            }
         }
 
         val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
@@ -346,7 +342,7 @@ class NotesMainAct : AppCompatActivity() {
         topBarLayout.addView(topBarRefreshContainer)
         // ------------------------------------------
 
-        // ---- NOTES CONTAINER (now includes topBarLayout) ----
+        // ---- NOTES CONTAINER ----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -360,7 +356,7 @@ class NotesMainAct : AppCompatActivity() {
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
-                setPadding(0, dpToPx(80f), 0, dpToPx(100f))
+                setPadding(0, dpToPx(84f), 0, dpToPx(100f))
                 clipToPadding = false
             }
             notesRecyclerView = rv
@@ -629,9 +625,8 @@ class NotesMainAct : AppCompatActivity() {
         // ================================================================
 
         // ================================================================
-        // NEW SEPARATE CARD: EDITOR SETTINGS
+        // EDITOR SETTINGS CARD
         // ================================================================
-        // Editor section title
         val editorSectionTitle = TextView(this).apply {
             text = getString(R.string.settings_editor_category)
             textSize = 14f
@@ -646,40 +641,38 @@ class NotesMainAct : AppCompatActivity() {
                 marginStart = dpToPx(12f)
             }
         }
-// Editor settings card container
-val editorSettingsCard = LinearLayout(this).apply {
-    orientation = LinearLayout.VERTICAL
-    background = GradientDrawable().apply {
-        cornerRadius = dpToPx(16f).toFloat()
-        setColor(surfaceContainerHighestColor) // <-- Changed from surfaceContainerLowColor
-    }
-    setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
-    layoutParams = LinearLayout.LayoutParams(
-        LinearLayout.LayoutParams.MATCH_PARENT,
-        LinearLayout.LayoutParams.WRAP_CONTENT
-    )
-}
 
-
-        // Load preference for lines
-        val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
-        val showLinesSwitch = LayoutInflater.from(this)
-            .inflate(R.layout.switch_material, null) as MaterialSwitch
-        showLinesSwitch.isChecked = prefs.getBoolean("show_lines_under_text", false)
-        showLinesSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("show_lines_under_text", isChecked).apply()
-        }
-
-        // Build the setting row (similar style to theme rows)
-        val showLinesRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(4f), dpToPx(12f), dpToPx(4f), dpToPx(12f))
+        // Compact Editor settings card container
+        val editorSettingsCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                cornerRadius = dpToPx(16f).toFloat()
+                setColor(surfaceContainerHighestColor)
+            }
+            setPadding(dpToPx(16f), dpToPx(4f), dpToPx(16f), dpToPx(4f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            setMinimumHeight(dpToPx(56f))
+        }
+
+        val prefsNotes = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
+        val showLinesSwitch = LayoutInflater.from(this)
+            .inflate(R.layout.switch_material, null) as MaterialSwitch
+        showLinesSwitch.isChecked = prefsNotes.getBoolean("show_lines_under_text", false)
+        showLinesSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefsNotes.edit().putBoolean("show_lines_under_text", isChecked).apply()
+        }
+
+        val showLinesRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(4f), dpToPx(8f), dpToPx(4f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(48f))
         }
 
         val linesTextContainer = LinearLayout(this).apply {
@@ -719,7 +712,6 @@ val editorSettingsCard = LinearLayout(this).apply {
         linesTextContainer.addView(linesLabel)
         linesTextContainer.addView(linesSubtitle)
 
-        // Apply same switch colors as followSwitch
         showLinesSwitch.trackTintList = ColorStateList(trackStates, trackColors)
         showLinesSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
         showLinesSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
@@ -740,6 +732,167 @@ val editorSettingsCard = LinearLayout(this).apply {
         editorSettingsCard.addView(showLinesRow)
         settingsContentLayout.addView(editorSectionTitle)
         settingsContentLayout.addView(editorSettingsCard)
+        // ================================================================
+
+        // ================================================================
+        // NEW NETWORK & ABOUT SETTINGS CARD
+        // ================================================================
+        val networkAboutSectionTitle = TextView(this).apply {
+            text = getString(R.string.settings_network_about_category)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(24f)
+                bottomMargin = dpToPx(8f)
+                marginStart = dpToPx(12f)
+            }
+        }
+
+        val networkAboutGroup = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // 1. App Network Connection Row
+        val appNetworkRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(outerRadiusPx, innerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(2f)
+            }
+            setMinimumHeight(dpToPx(56f))
+        }
+
+        val networkTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val networkLabel = TextView(this).apply {
+            text = getString(R.string.setting_app_network)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val networkSubtitle = TextView(this).apply {
+            text = getString(R.string.setting_app_network_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        networkTextContainer.addView(networkLabel)
+        networkTextContainer.addView(networkSubtitle)
+
+        val appNetworkSwitch = LayoutInflater.from(this)
+            .inflate(R.layout.switch_material, null) as MaterialSwitch
+
+        appNetworkSwitch.trackTintList = ColorStateList(trackStates, trackColors)
+        appNetworkSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
+        appNetworkSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
+        appNetworkSwitch.trackDecorationTintList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(Color.TRANSPARENT, outlineColor)
+        )
+
+        appNetworkSwitch.isChecked = prefsNotes.getBoolean("app_network_connection", true)
+        appNetworkSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefsNotes.edit().putBoolean("app_network_connection", isChecked).apply()
+        }
+
+        appNetworkRow.addView(networkTextContainer)
+        appNetworkRow.addView(appNetworkSwitch, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
+        // 2. Check for Updates & About App Row (In the same row)
+        val updatesAndAboutRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+        val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
+        startActivity(intent)
+    }
+
+        }
+
+        val updatesTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val updatesLabel = TextView(this).apply {
+            text = getString(R.string.setting_updates_and_about)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val updatesSubtitle = TextView(this).apply {
+            text = getString(R.string.setting_updates_and_about_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        updatesTextContainer.addView(updatesLabel)
+        updatesTextContainer.addView(updatesSubtitle)
+        updatesAndAboutRow.addView(updatesTextContainer)
+
+        networkAboutGroup.addView(appNetworkRow)
+        networkAboutGroup.addView(updatesAndAboutRow)
+
+        settingsContentLayout.addView(networkAboutSectionTitle)
+        settingsContentLayout.addView(networkAboutGroup)
         // ================================================================
 
         settingsScrollView.addView(settingsContentLayout)
@@ -1025,7 +1178,6 @@ val editorSettingsCard = LinearLayout(this).apply {
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
 
                 contentHolder.setPadding(0, currentTopInset, 0, 0)
-                appNamePill.text = if (toNotes) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             }
         }
 
@@ -1182,7 +1334,6 @@ val editorSettingsCard = LinearLayout(this).apply {
         }
     }
 
-    // ---- Existing methods ----
     override fun onResume() {
         super.onResume()
         if (::notesAdapter.isInitialized) loadNotesList()

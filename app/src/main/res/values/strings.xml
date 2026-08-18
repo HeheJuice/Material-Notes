@@ -47,6 +47,13 @@
 <string name="select_text_first">Select text first</string>
 <string name="nothing_to_paste">Nothing to paste</string>
 
+<!-- Network & About Settings -->
+<string name="settings_network_about_category">Network &amp; About</string>
+<string name="setting_app_network">App Network Connection</string>
+<string name="setting_app_network_desc">Allow the app to access network features</string>
+<string name="setting_updates_and_about">Check for Updates &amp; About App</string>
+<string name="setting_updates_and_about_desc">App version, details, and software updates</string>
+
 <!-- Misc -->
 <string name="add_button_content_desc">Add</string>
 </resources>

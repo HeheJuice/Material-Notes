@@ -49,6 +49,13 @@
     <string name="copied">已複製</string>
     <string name="select_text_first">請先選取文字</string>
     <string name="nothing_to_paste">沒有可貼上的內容</string>
+    <!-- Network & About Settings -->
+<string name="settings_network_about_category">網絡與關於</string>
+<string name="setting_app_network">應用程式網絡連接</string>
+<string name="setting_app_network_desc">允許應用程式存取網絡功能</string>
+<string name="setting_updates_and_about">檢查更新與關於應用程式</string>
+<string name="setting_updates_and_about_desc">應用程式版本、詳細資料及軟件更新</string>
+
 
     <!-- Misc -->
     <string name="add_button_content_desc">新增</string>

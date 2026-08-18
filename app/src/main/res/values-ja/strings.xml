@@ -47,6 +47,13 @@
     <string name="copied">コピーしました</string>
     <string name="select_text_first">最初にテキストを選択してください</string>
     <string name="nothing_to_paste">貼り付ける項目がありません</string>
+    <!-- Network & About Settings -->
+<string name="settings_network_about_category">ネットワークとアプリ情報</string>
+<string name="setting_app_network">アプリのネットワーク接続</string>
+<string name="setting_app_network_desc">アプリによるネットワーク機能へのアクセスを許可します</string>
+<string name="setting_updates_and_about">アップデート確認・アプリ情報</string>
+<string name="setting_updates_and_about_desc">アプリのバージョン、詳細情報、ソフトウェアの更新</string>
+
 
     <!-- Misc -->
     <string name="add_button_content_desc">追加</string>

@@ -49,6 +49,13 @@
     <string name="copied">已复制</string>
     <string name="select_text_first">请先选择文本</string>
     <string name="nothing_to_paste">没有可粘贴的内容</string>
+    <!-- Network & About Settings -->
+<string name="settings_network_about_category">网络与关于</string>
+<string name="setting_app_network">应用网络连接</string>
+<string name="setting_app_network_desc">允许应用访问网络功能</string>
+<string name="setting_updates_and_about">检查更新与关于应用</string>
+<string name="setting_updates_and_about_desc">应用版本、详细信息及软件更新</string>
+
 
     <!-- Misc -->
     <string name="add_button_content_desc">添加</string>
