@@ -71,6 +71,8 @@
 <string name="credit_hehejuice_desc">本應用程式的開發者</string>
 <string name="credit_material_desc">Material Design 函式庫</string>
 <string name="credit_google_sans_flex_desc">本應用程式所使用的字型</string>
+<string name="desc_source">在 GitHub 上檢視本應用程式的原始碼</string>
+<string name="desc_license">檢視本應用程式及第三方套件的使用條款與授權條款</string>
 
 
     <!-- Update Checker -->

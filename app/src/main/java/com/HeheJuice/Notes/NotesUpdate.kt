@@ -362,7 +362,22 @@ class NotesUpdate : AppCompatActivity() {
             setGoogleSansFlexDefault(this, true)
         }
 
+        val sourceSubtitle = TextView(this).apply {
+            text = getString(R.string.desc_source)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
         sourceTextContainer.addView(sourceLabel)
+        sourceTextContainer.addView(sourceSubtitle)
         sourceRow.addView(sourceTextContainer)
 
         // 2. License Row
@@ -400,7 +415,22 @@ class NotesUpdate : AppCompatActivity() {
             setGoogleSansFlexDefault(this, true)
         }
 
+        val licenseSubtitle = TextView(this).apply {
+            text = getString(R.string.desc_license)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
         licenseTextContainer.addView(licenseLabel)
+        licenseTextContainer.addView(licenseSubtitle)
         licenseRow.addView(licenseTextContainer)
 
         infoGroup.addView(sourceRow)

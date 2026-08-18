@@ -71,6 +71,8 @@
 <string name="credit_hehejuice_desc">このアプリの開発者</string>
 <string name="credit_material_desc">Material Design ライブラリ</string>
 <string name="credit_google_sans_flex_desc">このアプリで使用されているフォント</string>
+<string name="desc_source">GitHub でこのアプリのソースコードを確認</string>
+<string name="desc_license">このアプリおよびサードパーティ製ライブラリのライセンスを確認</string>
 
 
     <!-- Update Checker -->

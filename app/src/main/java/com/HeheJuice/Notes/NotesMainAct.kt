@@ -1506,33 +1506,35 @@ class NotesMainAct : AppCompatActivity() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val context = parent.context
 
-            if (viewType == TYPE_HEADER) {
-                val headerView = FrameLayout(context).apply {
-                    layoutParams = RecyclerView.LayoutParams(
-                        RecyclerView.LayoutParams.MATCH_PARENT,
-                        RecyclerView.LayoutParams.WRAP_CONTENT
-                    )
-                    setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(8f))
+if (viewType == TYPE_HEADER) {
+    val headerView = FrameLayout(context).apply {
+        layoutParams = RecyclerView.LayoutParams(
+            RecyclerView.LayoutParams.MATCH_PARENT,
+            RecyclerView.LayoutParams.WRAP_CONTENT
+        )
+        // Updated top padding from dpToPx(16f) to dpToPx(64f)
+        setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
 
-                    val appNamePill = TextView(context).apply {
-                        text = context.getString(R.string.nav_notes)
-                        textSize = 32f
-                        setTextColor(onPrimaryContainerColor)
-                        setGoogleSansFlexDefault(this, true)
-                        gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                        layoutParams = FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT
-                        ).apply {
-                            topMargin = dpToPx(8f)
-                            bottomMargin = dpToPx(16f)
-                            marginStart = dpToPx(8f)
-                        }
-                    }
-                    addView(appNamePill)
-                }
-                return HeaderViewHolder(headerView)
+        val appNamePill = TextView(context).apply {
+            text = context.getString(R.string.nav_notes)
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+                marginStart = dpToPx(8f)
             }
+        }
+        addView(appNamePill)
+    }
+    return HeaderViewHolder(headerView)
+}
+
 
             val root = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL

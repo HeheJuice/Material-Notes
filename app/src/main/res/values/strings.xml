@@ -68,6 +68,9 @@
 <string name="credit_hehejuice_desc">Developer of this App</string>
 <string name="credit_material_desc">Material Design Library</string>
 <string name="credit_google_sans_flex_desc">Fonts Uses in this app</string>
+<string name="desc_source">Check for source code of this app on GitHub</string>
+<string name="desc_license">View 3rd Party Usage and License for them and this app</string>
+
 
 
 <!-- Misc -->
