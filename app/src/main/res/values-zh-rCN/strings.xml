@@ -30,7 +30,7 @@
 
     <!-- Menu Actions -->
     <string name="create_notes">新建笔记</string>
-    <string name="import_notes">导入笔记</string>
+    <string name="import_notes">导入TXT笔记</string>
     <string name="import_notes_toast">导入笔记（即将推出）</string>
 
     <!-- Note Editor -->

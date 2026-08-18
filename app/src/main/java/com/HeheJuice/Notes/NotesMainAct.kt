@@ -9,8 +9,10 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
 import android.transition.TransitionSet
@@ -31,6 +33,7 @@ import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
@@ -230,6 +233,11 @@ class NotesMainAct : AppCompatActivity() {
 
     // Store top inset for dynamic padding adjustment
     private var currentTopInset = 0
+
+    // SAF File Picker for Importing Notes
+    private val importNoteLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let { importNoteFromUri(it) }
+    }
 
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
         val springBackInterpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
@@ -969,7 +977,7 @@ class NotesMainAct : AppCompatActivity() {
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                Toast.makeText(this@NotesMainAct, getString(R.string.import_notes_toast), Toast.LENGTH_SHORT).show()
+                importNoteLauncher.launch(arrayOf("text/plain"))
             }
         }
         menuOverlayContainer.addView(createNotesItem)
@@ -1205,6 +1213,29 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
+    private fun importNoteFromUri(uri: Uri) {
+        try {
+            var fileName = "imported_note"
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex != -1 && cursor.moveToFirst()) {
+                    fileName = cursor.getString(nameIndex)
+                }
+            }
+            
+            val title = fileName.substringBeforeLast(".")
+            val textContent = contentResolver.openInputStream(uri)?.use { stream ->
+                stream.bufferedReader().use { it.readText() }
+            } ?: ""
+
+            NoteRepository.saveNote(title, textContent, emptyList())
+            loadNotesList()
+            Toast.makeText(this, getString(R.string.import_notes_toast), Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to import file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun getRelativeTimeSpan(context: Context, timestamp: Long): String {
         val now = System.currentTimeMillis()
         val diffMillis = (now - timestamp).coerceAtLeast(0)
@@ -1435,7 +1466,6 @@ class NotesMainAct : AppCompatActivity() {
                     }
                 }
 
-                // FIX: Correctly reference the outer ViewHolder for smooth collapse animation
                 cancelBtn.setOnClickListener {
                     toggleExpansion(bindingAdapterPosition, this@ViewHolder)
                 }
@@ -1444,13 +1474,14 @@ class NotesMainAct : AppCompatActivity() {
             }
 
             fun setExpandedState(expanded: Boolean, animate: Boolean) {
-                val springInterpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+                val expandInterpolator = DecelerateInterpolator(1.5f)
+                val collapseInterpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
 
                 if (animate) {
                     val transition = TransitionSet().apply {
                         addTransition(ChangeBounds())
-                        duration = 250L
-                        interpolator = springInterpolator
+                        duration = if (expanded) 350L else 220L
+                        interpolator = if (expanded) expandInterpolator else collapseInterpolator
                     }
                     TransitionManager.beginDelayedTransition(root, transition)
                 }
@@ -1459,12 +1490,12 @@ class NotesMainAct : AppCompatActivity() {
                     actionContainer.visibility = View.VISIBLE
                     if (animate) {
                         actionContainer.alpha = 0f
-                        actionContainer.translationX = dpToPx(16f).toFloat()
+                        actionContainer.translationX = dpToPx(24f).toFloat()
                         actionContainer.animate()
                             .alpha(1f)
                             .translationX(0f)
-                            .setDuration(250L)
-                            .setInterpolator(springInterpolator)
+                            .setDuration(350L)
+                            .setInterpolator(expandInterpolator)
                             .start()
                     } else {
                         actionContainer.alpha = 1f
@@ -1476,7 +1507,7 @@ class NotesMainAct : AppCompatActivity() {
                             .alpha(0f)
                             .translationX(dpToPx(16f).toFloat())
                             .setDuration(200L)
-                            .setInterpolator(springInterpolator)
+                            .setInterpolator(collapseInterpolator)
                             .withEndAction {
                                 actionContainer.visibility = View.GONE
                             }
@@ -1552,20 +1583,20 @@ class NotesMainAct : AppCompatActivity() {
             cardContainer.addView(titleText)
             cardContainer.addView(timeText)
 
-            // ---- ACTION CONTAINER (Updated to MATCH_PARENT height) ----
+            // ---- ACTION CONTAINER ----
             val actionContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 visibility = View.GONE
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT  // Fill the root height
+                    LinearLayout.LayoutParams.MATCH_PARENT
                 ).apply {
                     marginStart = dpToPx(8f)
                 }
             }
 
-            // ---- DELETE BUTTON (Rounded rectangle, red background) ----
+            // ---- DELETE BUTTON ----
             val deleteBtn = ImageView(context).apply {
                 val deleteIcon = ContextCompat.getDrawable(context, R.drawable.delete_24px)?.let {
                     val wrapped = DrawableCompat.wrap(it).mutate()
@@ -1590,7 +1621,7 @@ class NotesMainAct : AppCompatActivity() {
                 setOnTouchListener(pressScaleTouchListener)
             }
 
-            // ---- CANCEL / X BUTTON (Rounded rectangle, card background) ----
+            // ---- CANCEL / X BUTTON ----
             val cancelBtn = ImageView(context).apply {
                 val closeIcon = ContextCompat.getDrawable(context, R.drawable.close_24px)?.let {
                     val wrapped = DrawableCompat.wrap(it).mutate()

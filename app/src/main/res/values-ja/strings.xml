@@ -30,7 +30,7 @@
 
     <!-- Menu Actions -->
     <string name="create_notes">ノートを作成</string>
-    <string name="import_notes">ノートをインポート</string>
+    <string name="import_notes">ノートをインポートTXT</string>
     <string name="import_notes_toast">ノートをインポート（近日公開予定）</string>
 
     <!-- Note Editor -->

@@ -23,7 +23,7 @@
 <string name="setting_follow_system_subtitle">Automatically adjust appearance</string>
 <!-- Menu Actions -->
 <string name="create_notes">Create Notes</string>
-<string name="import_notes">Import Notes</string>
+<string name="import_notes">Import TXT Notes</string>
 <string name="import_notes_toast">Import Notes (coming soon)</string>
     <string name="settings_editor_category">Editor</string>
 <string name="show_lines_under_text">Show Lines Under Texts</string>
