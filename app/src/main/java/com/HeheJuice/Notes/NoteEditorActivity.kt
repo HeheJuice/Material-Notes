@@ -882,8 +882,17 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // ---- 隐藏键盘 ----
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        currentFocus?.let { view ->
+            imm?.hideSoftInputFromWindow(view.windowToken, 0)
+        }
+    }
+
     private fun saveNote() {
         if (saveNoteData()) {
+            hideKeyboard()
             setResult(Activity.RESULT_OK)
             finish()
         }

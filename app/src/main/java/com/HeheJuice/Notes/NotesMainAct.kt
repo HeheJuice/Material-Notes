@@ -1176,14 +1176,16 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
+        // ---- Window insets listener - FIXED: removed ime() ----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetTop
             }
+            // Listen ONLY to navigationBars(), omitting ime()
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                insets.getInsets(WindowInsets.Type.navigationBars() or WindowInsets.Type.ime()).bottom
+                insets.getInsets(WindowInsets.Type.navigationBars()).bottom
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }

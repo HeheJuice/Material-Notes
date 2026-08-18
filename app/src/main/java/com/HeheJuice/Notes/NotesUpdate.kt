@@ -276,23 +276,24 @@ class NotesUpdate : AppCompatActivity() {
         updateCard.addView(downloadProgressText)
 
         updateActionView = TextView(this).apply {
-            text = getString(R.string.action_download)
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(primaryColor)
-                cornerRadius = dpToPx(100f).toFloat()
-            }
-            setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            isClickable = true
-            isFocusable = true
-            visibility = View.GONE
-        }
+    text = getString(R.string.action_download)
+    textSize = 15f
+    setTextColor(onPrimaryContainerColor) // Updated from Color.WHITE
+    gravity = Gravity.CENTER
+    background = GradientDrawable().apply {
+        setColor(primaryContainerColor) // Updated from primaryColor
+        cornerRadius = dpToPx(100f).toFloat()
+    }
+    setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    )
+    isClickable = true
+    isFocusable = true
+    visibility = View.GONE
+}
+
         updateCard.addView(updateActionView)
         root.addView(updateCard)
 
@@ -340,7 +341,7 @@ class NotesUpdate : AppCompatActivity() {
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Crash-Logs-Browser")))
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Material-Notes")))
             }
         }
 
@@ -378,7 +379,7 @@ class NotesUpdate : AppCompatActivity() {
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Crash-Logs-Browser/blob/main/LICENSE")))
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Material-Notes/blob/main/LICENSE")))
             }
         }
 
@@ -469,7 +470,7 @@ class NotesUpdate : AppCompatActivity() {
 
         Thread {
             try {
-                val url = URL("https://api.github.com/repos/HeheJuice/Crash-Logs-Browser/releases/latest")
+                val url = URL("https://api.github.com/repos/HeheJuice/Material-Notes/releases/latest")
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
@@ -547,7 +548,7 @@ class NotesUpdate : AppCompatActivity() {
 
         override fun doInBackground(vararg params: Void?): File? {
             try {
-                val url = URL("https://api.github.com/repos/HeheJuice/Crash-Logs-Browser/releases/latest")
+                val url = URL("https://api.github.com/repos/HeheJuice/Material-Notes/releases/latest")
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
