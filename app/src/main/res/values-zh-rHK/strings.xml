@@ -22,6 +22,11 @@
     <string name="theme_system">系統預設</string>
     <string name="category_general">一般</string>
     <string name="setting_follow_system_subtitle">自動調整外觀</string>
+    <string name="settings_editor_category">編輯器</string>
+    
+    <string name="show_lines_under_text">顯示文字下方橫線</string>
+<string name="show_lines_under_text_desc">在編輯器內的筆記文字下方顯示橫線</string>
+
 
     <!-- Menu Actions -->
     <string name="create_notes">新增備忘錄</string>

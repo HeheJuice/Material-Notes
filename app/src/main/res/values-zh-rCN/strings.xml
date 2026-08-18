@@ -22,6 +22,11 @@
     <string name="theme_system">系统默认</string>
     <string name="category_general">通用</string>
     <string name="setting_follow_system_subtitle">自动调整外观</string>
+    <string name="settings_editor_category">编辑器</string>
+    
+    <string name="show_lines_under_text">显示文本下方横线</string>
+<string name="show_lines_under_text_desc">在编辑器内的笔记文本下方显示横线</string>
+
 
     <!-- Menu Actions -->
     <string name="create_notes">新建笔记</string>

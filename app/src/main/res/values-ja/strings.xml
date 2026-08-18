@@ -20,6 +20,11 @@
     <string name="theme_system">システム</string>
     <string name="category_general">一般</string>
     <string name="setting_follow_system_subtitle">外観を自動的に調整します</string>
+    <string name="settings_editor_category">エディター</string>
+    
+    <string name="show_lines_under_text">テキストの下に罫線を表示</string>
+<string name="show_lines_under_text_desc">エディター内のノートテキストの下に罫線を表示します</string>
+
 
     <!-- Menu Actions -->
     <string name="create_notes">ノートを作成</string>

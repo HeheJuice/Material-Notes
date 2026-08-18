@@ -9,6 +9,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -36,7 +38,9 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -46,6 +50,54 @@ import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import java.text.SimpleDateFormat
 import java.util.*
+
+/**
+ * Custom EditText that draws ruled notebook lines below each text line.
+ */
+class LinedEditText @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = androidx.appcompat.R.attr.editTextStyle
+) : AppCompatEditText(context, attrs, defStyleAttr) {
+
+    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
+
+    var showLines: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    fun setLineColor(color: Int) {
+        // Set a subtle line color (e.g. onSurfaceVariant with transparency)
+        linePaint.color = ColorUtils.setAlphaComponent(color, 50) // ~20% opacity
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        // Draw lines first (under the text)
+        if (showLines && lineCount > 0) {
+            val count = lineCount
+            val rect = Rect()
+            for (i in 0 until count) {
+                val baseline = getLineBounds(i, rect)
+                // Draw line 8px below line baseline
+                canvas.drawLine(
+                    paddingLeft.toFloat(),
+                    (baseline + 8).toFloat(),
+                    (width - paddingRight).toFloat(),
+                    (baseline + 8).toFloat(),
+                    linePaint
+                )
+            }
+        }
+        // Draw the text (and background) on top
+        super.onDraw(canvas)
+    }
+}
 
 class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("sans-serif") {
     override fun updateDrawState(ds: android.text.TextPaint) {
@@ -69,7 +121,7 @@ class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text
 class NoteEditorActivity : AppCompatActivity() {
 
     private lateinit var titleEdit: EditText
-    private lateinit var contentEdit: EditText
+    private lateinit var contentEdit: LinedEditText   // Changed to LinedEditText
     private var noteId: String = ""
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
@@ -139,13 +191,16 @@ class NoteEditorActivity : AppCompatActivity() {
         surfaceContainerLowColor = surfaceLow
         cardBorderColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA"))
 
-        // Get the bright Surface color for the background
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, if (isDark) Color.parseColor("#141218") else Color.parseColor("#FEF7FF"))
         // -------------------------------------------------
 
+        // Read preference for showing lines
+        val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
+        val isShowLinesEnabled = prefs.getBoolean("show_lines_under_text", false)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surfaceColor)  // fixed: use colorSurface
+            setBackgroundColor(surfaceColor)
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
@@ -164,7 +219,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.arrow_back_24px))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
+                setColor(surfaceContainerHighestColor)
             }
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
@@ -317,7 +372,7 @@ class NoteEditorActivity : AppCompatActivity() {
             imeOptions = EditorInfo.IME_ACTION_NEXT
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
+                setColor(surfaceContainerHighestColor)
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             layoutParams = LinearLayout.LayoutParams(
@@ -356,14 +411,16 @@ class NoteEditorActivity : AppCompatActivity() {
             overScrollMode = View.OVER_SCROLL_ALWAYS
         }
 
-        contentEdit = EditText(this).apply {
+        // ---- Replace EditText with LinedEditText ----
+        contentEdit = LinedEditText(this).apply {
             hint = getString(R.string.write_content_hint)
             setHintTextColor(onSurfaceVariantColor)
             setTextColor(onPrimaryContainerColor)
             textSize = 16f
+            // Keep the same background
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceContainerHighestColor)   // 改为 Surface bright
+                setColor(surfaceContainerHighestColor)
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             gravity = Gravity.TOP or Gravity.START
@@ -375,7 +432,13 @@ class NoteEditorActivity : AppCompatActivity() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
+
+            // Apply line settings
+            showLines = isShowLinesEnabled
+            setLineColor(onSurfaceVariantColor)
         }
+        // ------------------------------------------------
+
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
@@ -394,7 +457,7 @@ class NoteEditorActivity : AppCompatActivity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setCornerRadius(dpToPx(100f).toFloat())
-                setColor(surfaceContainerLowColor)   // 保持原样，未要求改
+                setColor(surfaceContainerLowColor)
             }
             setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
             layoutParams = LinearLayout.LayoutParams(
@@ -700,7 +763,6 @@ class NoteEditorActivity : AppCompatActivity() {
         startActivityForResult(intent, REQUEST_SAVE_IMAGE)
     }
 
-    // 生成截图 – 完全匹配编辑器样式，无时间戳，背景使用 Surface bright
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
         val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
         val scale = 2.0f
@@ -713,7 +775,6 @@ class NoteEditorActivity : AppCompatActivity() {
         val textPaddingHorizontal = (dpToPx(16f) * scale).toInt()
         val textPaddingVertical = (dpToPx(14f) * scale).toInt()
 
-        // Use the same surfaceColor for the image background (bright Surface)
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
 
         val root = LinearLayout(this).apply {
@@ -722,7 +783,6 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
         }
 
-        // 标题标签
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = (14f * scale)
@@ -735,7 +795,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleLabel)
 
-        // 标题内容 – 使用 Surface bright
         val titleText = TextView(this).apply {
             text = title
             textSize = (18f * scale)
@@ -753,7 +812,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleText)
 
-        // 内容标签
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = (14f * scale)
@@ -766,7 +824,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentLabel)
 
-        // 内容 – 使用 Surface bright，支持 Spannable
         val contentText = TextView(this).apply {
             setText(contentSpannable)
             textSize = (16f * scale)
@@ -784,7 +841,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(contentText)
 
-        // 测量和绘制
         val widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.EXACTLY)
         val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         root.measure(widthSpec, heightSpec)

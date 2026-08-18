@@ -360,15 +360,12 @@ class NotesMainAct : AppCompatActivity() {
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
-                // Increased top padding from 58dp to 80dp for extra gap
                 setPadding(0, dpToPx(80f), 0, dpToPx(100f))
                 clipToPadding = false
             }
             notesRecyclerView = rv
 
-            // Add RecyclerView first (background), then topBarLayout on top
             addView(rv)
-            // Add topBarLayout inside notesContainer
             addView(topBarLayout)
         }
         // ------------------------------------------
@@ -388,18 +385,17 @@ class NotesMainAct : AppCompatActivity() {
             clipToPadding = false
         }
         val settingsContentLayout = LinearLayout(this).apply {
-    orientation = LinearLayout.VERTICAL
-    layoutParams = LinearLayout.LayoutParams(
-        FrameLayout.LayoutParams.MATCH_PARENT,
-        FrameLayout.LayoutParams.WRAP_CONTENT
-    )
-    // Change top padding from dpToPx(16f) to dpToPx(64f)
-    setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(100f))
-}
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(100f))
+        }
 
-        // ---- ADD LARGE SETTINGS TITLE (balanced margins) ----
+        // ---- ADD LARGE SETTINGS TITLE ----
         val bigSettingsTitle = TextView(this).apply {
-            text = getString(R.string.nav_settings) // "Settings"
+            text = getString(R.string.nav_settings)
             textSize = 32f
             setTextColor(onPrimaryContainerColor)
             setGoogleSansFlexDefault(this, true)
@@ -417,7 +413,7 @@ class NotesMainAct : AppCompatActivity() {
         // ---------------------------------
 
         // ================================================================
-        // Material Design 3 grouped list style
+        // THEME SETTINGS CARD (General group)
         // ================================================================
         val themeGroup = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -427,25 +423,23 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
-        // Helper to create backgrounds with separate top and bottom corner radii
         fun createGroupItemBg(topRadius: Float, bottomRadius: Float): GradientDrawable {
             return GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setColor(surfaceContainerHighestColor)
                 cornerRadii = floatArrayOf(
-                    topRadius, topRadius,   // Top-left
-                    topRadius, topRadius,   // Top-right
-                    bottomRadius, bottomRadius, // Bottom-right
-                    bottomRadius, bottomRadius   // Bottom-left
+                    topRadius, topRadius,
+                    topRadius, topRadius,
+                    bottomRadius, bottomRadius,
+                    bottomRadius, bottomRadius
                 )
             }
         }
 
-        // Outer 16dp, inner 4dp
         val outerRadiusPx = dpToPx(16f).toFloat()
         val innerRadiusPx = dpToPx(4f).toFloat()
 
-        // Category Header (aligned with title margins)
+        // Category Header
         val categoryHeader = TextView(this).apply {
             text = getString(R.string.category_general)
             textSize = 14f
@@ -474,7 +468,6 @@ class NotesMainAct : AppCompatActivity() {
             setMinimumHeight(dpToPx(56f))
         }
 
-        // Text container for title + subtitle
         val followTextContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -488,7 +481,7 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.setting_follow_system)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true) // Bold Round
+            setGoogleSansFlexDefault(this, true)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -514,50 +507,40 @@ class NotesMainAct : AppCompatActivity() {
 
         val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, Color.parseColor("#E8DEF8"))
         val trackOnColor = accentColor
-
         val trackOffColor = if (isDark) {
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, Color.parseColor("#1C1B1F"))
         } else {
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#E6E0E9"))
         }
-
         val thumbOnColor = if (isDark) {
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimary, Color.WHITE)
         } else {
             Color.WHITE
         }
-
         val thumbOffColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.parseColor("#79747E"))
 
         val followSwitch = LayoutInflater.from(this)
             .inflate(R.layout.switch_material, null) as MaterialSwitch
 
-        // Track tint
         val trackStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val trackColors = intArrayOf(trackOnColor, trackOffColor)
         followSwitch.trackTintList = ColorStateList(trackStates, trackColors)
 
-        // Thumb tint
         val thumbStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val thumbColors = intArrayOf(thumbOnColor, thumbOffColor)
         followSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
 
-        // Thumb icon tint
         val iconStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val iconColors = intArrayOf(accentColor, trackOffColor)
         followSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
 
-        // Border transition (explicit)
         val outlineColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.GRAY)
         followSwitch.trackDecorationTintList = ColorStateList(
             arrayOf(
                 intArrayOf(android.R.attr.state_checked),
                 intArrayOf(-android.R.attr.state_checked)
             ),
-            intArrayOf(
-                Color.TRANSPARENT,
-                outlineColor
-            )
+            intArrayOf(Color.TRANSPARENT, outlineColor)
         )
 
         followSwitch.isChecked = followSystem
@@ -632,20 +615,132 @@ class NotesMainAct : AppCompatActivity() {
         }
         updateRowState()
 
-        // ========== SWITCH LISTENER (with 200ms delay for animation) ==========
         followSwitch.setOnCheckedChangeListener { _, isChecked ->
             followSystem = isChecked
             prefs.edit().putBoolean("follow_system", followSystem).apply()
             updateRowState()
             applyThemeFromPrefs()
-            // Delay recreate() slightly so switch animation completes
             followSwitch.postDelayed({
                 recreate()
             }, 200)
         }
-        // ===============================================================
 
         settingsContentLayout.addView(themeGroup)
+        // ================================================================
+
+        // ================================================================
+        // NEW SEPARATE CARD: EDITOR SETTINGS
+        // ================================================================
+        // Editor section title
+        val editorSectionTitle = TextView(this).apply {
+            text = getString(R.string.settings_editor_category)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(24f)
+                bottomMargin = dpToPx(8f)
+                marginStart = dpToPx(12f)
+            }
+        }
+
+        // Editor settings card container
+        val editorSettingsCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                cornerRadius = dpToPx(16f).toFloat()
+                setColor(surfaceContainerLowColor)
+            }
+            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // Load preference for lines
+        val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
+        val showLinesSwitch = LayoutInflater.from(this)
+            .inflate(R.layout.switch_material, null) as MaterialSwitch
+        showLinesSwitch.isChecked = prefs.getBoolean("show_lines_under_text", false)
+        showLinesSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("show_lines_under_text", isChecked).apply()
+        }
+
+        // Build the setting row (similar style to theme rows)
+        val showLinesRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(4f), dpToPx(12f), dpToPx(4f), dpToPx(12f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
+        }
+
+        val linesTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val linesLabel = TextView(this).apply {
+            text = getString(R.string.show_lines_under_text)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val linesSubtitle = TextView(this).apply {
+            text = getString(R.string.show_lines_under_text_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        linesTextContainer.addView(linesLabel)
+        linesTextContainer.addView(linesSubtitle)
+
+        // Apply same switch colors as followSwitch
+        showLinesSwitch.trackTintList = ColorStateList(trackStates, trackColors)
+        showLinesSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
+        showLinesSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
+        showLinesSwitch.trackDecorationTintList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(Color.TRANSPARENT, outlineColor)
+        )
+
+        showLinesRow.addView(linesTextContainer)
+        showLinesRow.addView(showLinesSwitch, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
+        editorSettingsCard.addView(showLinesRow)
+        settingsContentLayout.addView(editorSectionTitle)
+        settingsContentLayout.addView(editorSettingsCard)
+        // ================================================================
 
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
@@ -659,9 +754,6 @@ class NotesMainAct : AppCompatActivity() {
             addView(settingsContainer)
         }
         rootFrame.addView(contentHolder)
-
-        // ---- NOTE: topBarLayout is NOT added to rootFrame anymore ----
-        // It was added directly to notesContainer above.
 
         // ---- Dim overlay ----
         dimOverlay = View(this).apply {
@@ -868,7 +960,6 @@ class NotesMainAct : AppCompatActivity() {
         notesRecyclerView.adapter = notesAdapter
         loadNotesList()
 
-        // ---- Tint helpers ----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -927,21 +1018,16 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ========== MODIFIED: switchTab (clean padding) ==========
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
 
-                // Only keep status bar inset, no extra padding
                 contentHolder.setPadding(0, currentTopInset, 0, 0)
-
-                // Update app name pill text
                 appNamePill.text = if (toNotes) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             }
         }
-        // =====================================================
 
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
@@ -963,7 +1049,6 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        // ---- Window insets listener (fixed) ----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
@@ -978,10 +1063,8 @@ class NotesMainAct : AppCompatActivity() {
 
             currentTopInset = statusBarInset
 
-            // contentHolder only needs the status bar inset
             contentHolder.setPadding(0, currentTopInset, 0, 0)
 
-            // Bottom bar and menu overlay margins
             val totalBottomMargin = dpToPx(16f) + bottomInset
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin
             (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin + dpToPx(60f)
@@ -1179,7 +1262,6 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
-    // ========== UPDATED NotesListAdapter ==========
     inner class NotesListAdapter(
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
@@ -1210,7 +1292,6 @@ class NotesMainAct : AppCompatActivity() {
                 }
             }
 
-            // Vertical container for title and timestamp inside the card
             val cardContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 background = GradientDrawable().apply {
@@ -1353,7 +1434,6 @@ class NotesMainAct : AppCompatActivity() {
             notifyDataSetChanged()
         }
     }
-    // =============================================
 
     private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
