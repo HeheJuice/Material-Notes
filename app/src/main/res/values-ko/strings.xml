@@ -94,4 +94,14 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">추가</string>
+    <!-- Helper -->
+<string name="copy_title">복사</string>
+<string name="copy_desc">선택한 텍스트 복사</string>
+<string name="paste_title">붙여넣기</string>
+<string name="paste_desc">클립보드에서 붙여넣기</string>
+<string name="title_title">본문 제목</string>
+<string name="title_desc">선택한 텍스트 굵게 및 1.8배 확대</string>
+<string name="bold_title">굵게</string>
+<string name="bold_desc">선택한 텍스트 굵게 설정 또는 해제</string>
+
 </resources>

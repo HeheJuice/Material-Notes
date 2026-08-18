@@ -94,4 +94,14 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">Thêm</string>
+    <!-- Helper -->
+<string name="copy_title">Sao chép</string>
+<string name="copy_desc">Sao chép văn bản đã chọn</string>
+<string name="paste_title">Dán</string>
+<string name="paste_desc">Dán từ khay nhớ tạm</string>
+<string name="title_title">Tiêu đề nội dung</string>
+<string name="title_desc">Phóng to văn bản đã chọn lên 1.8X và in đậm</string>
+<string name="bold_title">In đậm</string>
+<string name="bold_desc">Bật hoặc hủy in đậm cho văn bản đã chọn</string>
+
 </resources>

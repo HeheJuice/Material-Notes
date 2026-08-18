@@ -95,4 +95,14 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">添加</string>
+    <!-- Helper -->
+<string name="copy_title">复制</string>
+<string name="copy_desc">复制所选文本</string>
+<string name="paste_title">粘贴</string>
+<string name="paste_desc">从剪贴板粘贴</string>
+<string name="title_title">内容标题</string>
+<string name="title_desc">将所选文本放大至 1.8 倍并加粗</string>
+<string name="bold_title">加粗</string>
+<string name="bold_desc">对所选文本应用或取消加粗</string>
+
 </resources>

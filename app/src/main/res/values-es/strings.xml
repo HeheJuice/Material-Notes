@@ -94,4 +94,14 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">Añadir</string>
+    <!-- Helper -->
+<string name="copy_title">Copiar</string>
+<string name="copy_desc">Copiar los textos seleccionados</string>
+<string name="paste_title">Pegar</string>
+<string name="paste_desc">Pegar desde el portapapeles</string>
+<string name="title_title">Título del contenido</string>
+<string name="title_desc">Aumentar textos seleccionados a 1,8X y poner en negrita</string>
+<string name="bold_title">Negrita</string>
+<string name="bold_desc">Aplicar o quitar negrita a los textos seleccionados</string>
+
 </resources>

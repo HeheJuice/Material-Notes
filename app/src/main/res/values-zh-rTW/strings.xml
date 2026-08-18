@@ -94,4 +94,14 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">新增</string>
+    <!-- Helper -->
+<string name="copy_title">複製</string>
+<string name="copy_desc">複製所選文字</string>
+<string name="paste_title">貼上</string>
+<string name="paste_desc">從剪貼簿貼上</string>
+<string name="title_title">內文標題</string>
+<string name="title_desc">將所選文字放大至 1.8 倍並套用粗體</string>
+<string name="bold_title">粗體</string>
+<string name="bold_desc">套用或取消所選文字的粗體效果</string>
+
 </resources>

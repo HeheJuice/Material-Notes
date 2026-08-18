@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector
+    android:height="56.0dip"
+    android:width="236.0dip"
+    android:viewportWidth="236.0"
+    android:viewportHeight="56.0"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <path
+        android:fillColor="@android:color/system_neutral1_900"
+        android:pathData="M 28,0 L 208,0 A 28,28 0 0,1 236,28 A 28,28 0 0,1 208,56 L 28,56 A 28,28 0 0,1 0,28 A 28,28 0 0,1 28,0 Z" />
+    <path
+        android:fillColor="@android:color/system_accent1_700"
+        android:pathData="M 34,6 A 22,22 0 1,0 34,50 A 22,22 0 1,0 34,6 Z" />
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateX="22.0"
+        android:translateY="16.0">
+        <path
+            android:fillColor="@android:color/system_accent1_100"
+            android:pathData="M360,720Q327,720 303.5,696.5Q280,673 280,640L280,160Q280,127 303.5,103.5Q327,80 360,80L720,80Q753,80 776.5,103.5Q800,127 800,160L800,640Q800,673 776.5,696.5Q753,720 720,720L360,720ZM360,640L720,640Q720,640 720,640Q720,640 720,640L720,160Q720,160 720,160Q720,160 720,160L360,160Q360,160 360,160Q360,160 360,160L360,640Q360,640 360,640Q360,640 360,640ZM200,880Q167,880 143.5,856.5Q120,833 120,800L120,240L200,240L200,800Q200,800 200,800Q200,800 200,800L640,800L640,880L200,880ZM360,640Q360,640 360,640Q360,640 360,640L360,160Q360,160 360,160Q360,160 360,160L360,160Q360,160 360,160Q360,160 360,160L360,640Q360,640 360,640Q360,640 360,640Z" />
+    </group>
+    <path
+        android:fillColor="@android:color/system_accent1_700"
+        android:pathData="M 90,6 A 22,22 0 1,0 90,50 A 22,22 0 1,0 90,6 Z" />
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateX="78.0"
+        android:translateY="16.0">
+        <path
+            android:fillColor="@android:color/system_accent1_100"
+            android:pathData="M200,840Q167,840 143.5,816.5Q120,793 120,760L120,200Q120,167 143.5,143.5Q167,120 200,120L367,120Q378,85 410,62.5Q442,40 480,40Q520,40 551.5,62.5Q583,85 594,120L760,120Q793,120 816.5,143.5Q840,167 840,200L840,760Q840,793 816.5,816.5Q793,840 760,840L200,840ZM200,760L760,760Q760,760 760,760Q760,760 760,760L760,200Q760,200 760,200Q760,200 760,200L680,200L680,280Q680,297 668.5,308.5Q657,320 640,320L320,320Q303,320 291.5,308.5Q280,297 280,280L280,200L200,200Q200,200 200,200Q200,200 200,200L200,760Q200,760 200,760Q200,760 200,760ZM508.5,188.5Q520,177 520,160Q520,143 508.5,131.5Q497,120 480,120Q463,120 451.5,131.5Q440,143 440,160Q440,177 451.5,188.5Q463,200 480,200Q497,200 508.5,188.5Z" />
+    </group>
+    <path
+        android:fillColor="@android:color/system_accent1_700"
+        android:pathData="M 146,6 A 22,22 0 1,0 146,50 A 22,22 0 1,0 146,6 Z" />
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateX="134.0"
+        android:translateY="16.0">
+        <path
+            android:fillColor="@android:color/system_accent1_100"
+            android:pathData="M352,760Q319,760 295.5,736.5Q272,713 272,680L272,280Q272,247 295.5,223.5Q319,200 352,200L493,200Q558,200 613,240Q668,280 668,351Q668,402 645,429.5Q622,457 602,469L602,469Q627,480 657.5,510Q688,540 688,600Q688,689 623,724.5Q558,760 501,760L352,760ZM393,648L497,648Q545,648 555.5,623.5Q566,599 566,588Q566,577 555.5,552.5Q545,528 494,528L393,528L393,648ZM393,420L486,420Q519,420 534,403Q549,386 549,365Q549,341 532,326Q515,311 488,311L393,311L393,420Z" />
+    </group>
+    <path
+        android:fillColor="@android:color/system_accent1_700"
+        android:pathData="M 202,6 A 22,22 0 1,0 202,50 A 22,22 0 1,0 202,6 Z" />
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateX="190.0"
+        android:translateY="16.0">
+        <path
+            android:fillColor="@android:color/system_accent1_100"
+            android:pathData="M420,280L260,280Q235,280 217.5,262.5Q200,245 200,220Q200,195 217.5,177.5Q235,160 260,160L700,160Q725,160 742.5,177.5Q760,195 760,220Q760,245 742.5,262.5Q725,280 700,280L540,280L540,740Q540,765 522.5,782.5Q505,800 480,800Q455,800 437.5,782.5Q420,765 420,740L420,280Z" />
+    </group>
+</vector>

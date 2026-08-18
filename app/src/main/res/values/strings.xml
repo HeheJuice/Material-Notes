@@ -21,6 +21,8 @@
 <string name="theme_system">System</string>
 <string name="category_general">General</string>
 <string name="setting_follow_system_subtitle">Automatically adjust appearance</string>
+<string name="helper_title">Editor Help</string>
+<string name="helper_desc">Learn tips and shortcuts</string>
 <!-- Menu Actions -->
 <string name="create_notes">Create Notes</string>
 <string name="import_notes">Import TXT Notes</string>
@@ -91,4 +93,14 @@
 <string name="theme_already_applied">Selected theme is already applied</string>
 <string name="please_allow_unknown_sources">Please allow installation from unknown sources</string>
 <string name="please_enable_network_permission">Please enable network permission in Settings</string>
+<!-- Helper -->
+<string name="copy_title">Copy</string>
+<string name="copy_desc">Copy selected texts</string>
+<string name="paste_title">Paste</string>
+<string name="paste_desc">Paste from your clipboard</string>
+<string name="title_title">Content Title</string>
+<string name="title_desc">Make selected texts 1.8X and bold</string>
+<string name="bold_title">Bold</string>
+<string name="bold_desc">Bold or Cancel Bold for selected texts</string>
+
 </resources>

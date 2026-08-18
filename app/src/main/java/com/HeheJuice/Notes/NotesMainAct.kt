@@ -714,7 +714,65 @@ class NotesMainAct : AppCompatActivity() {
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
 
+        // ---- NEW: Helper Row ----
+        val helperRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(4f), dpToPx(8f), dpToPx(4f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(48f))
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                val intent = Intent(this@NotesMainAct, NotesEditorHelp::class.java)
+                startActivity(intent)
+            }
+        }
+
+        val helperTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val helperLabel = TextView(this).apply {
+            text = getString(R.string.helper_title)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val helperSubtitle = TextView(this).apply {
+            text = getString(R.string.helper_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        helperTextContainer.addView(helperLabel)
+        helperTextContainer.addView(helperSubtitle)
+        helperRow.addView(helperTextContainer)
+
+        // Add both rows to the editor settings card
         editorSettingsCard.addView(showLinesRow)
+        editorSettingsCard.addView(helperRow)
+
+        // End of new row
+
         settingsContentLayout.addView(editorSectionTitle)
         settingsContentLayout.addView(editorSettingsCard)
 
@@ -1506,35 +1564,33 @@ class NotesMainAct : AppCompatActivity() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val context = parent.context
 
-if (viewType == TYPE_HEADER) {
-    val headerView = FrameLayout(context).apply {
-        layoutParams = RecyclerView.LayoutParams(
-            RecyclerView.LayoutParams.MATCH_PARENT,
-            RecyclerView.LayoutParams.WRAP_CONTENT
-        )
-        // Updated top padding from dpToPx(16f) to dpToPx(64f)
-        setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
+            if (viewType == TYPE_HEADER) {
+                val headerView = FrameLayout(context).apply {
+                    layoutParams = RecyclerView.LayoutParams(
+                        RecyclerView.LayoutParams.MATCH_PARENT,
+                        RecyclerView.LayoutParams.WRAP_CONTENT
+                    )
+                    setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
 
-        val appNamePill = TextView(context).apply {
-            text = context.getString(R.string.nav_notes)
-            textSize = 32f
-            setTextColor(onPrimaryContainerColor)
-            setGoogleSansFlexDefault(this, true)
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(8f)
-                bottomMargin = dpToPx(16f)
-                marginStart = dpToPx(8f)
+                    val appNamePill = TextView(context).apply {
+                        text = context.getString(R.string.nav_notes)
+                        textSize = 32f
+                        setTextColor(onPrimaryContainerColor)
+                        setGoogleSansFlexDefault(this, true)
+                        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                        layoutParams = FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            topMargin = dpToPx(8f)
+                            bottomMargin = dpToPx(16f)
+                            marginStart = dpToPx(8f)
+                        }
+                    }
+                    addView(appNamePill)
+                }
+                return HeaderViewHolder(headerView)
             }
-        }
-        addView(appNamePill)
-    }
-    return HeaderViewHolder(headerView)
-}
-
 
             val root = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL

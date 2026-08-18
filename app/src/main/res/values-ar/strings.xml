@@ -94,4 +94,14 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">إضافة</string>
+    <!-- Helper -->
+<string name="copy_title">نسخ</string>
+<string name="copy_desc">نسخ النصوص المحددة</string>
+<string name="paste_title">لصق</string>
+<string name="paste_desc">اللصق من الحافظة</string>
+<string name="title_title">عنوان المحتوى</string>
+<string name="title_desc">جعل النصوص المحددة بحجم 1.8X وتغليظها</string>
+<string name="bold_title">عريض</string>
+<string name="bold_desc">تطبيق الخط العريض أو إلغاؤه للنصوص المحددة</string>
+
 </resources>
