@@ -11,6 +11,9 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
+import android.transition.ChangeBounds
+import android.transition.TransitionManager
+import android.transition.TransitionSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -20,6 +23,7 @@ import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowInsets
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -228,7 +232,7 @@ class NotesMainAct : AppCompatActivity() {
     private var currentTopInset = 0
 
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
-        val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+        val springBackInterpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 v.animate().cancel()
@@ -287,7 +291,7 @@ class NotesMainAct : AppCompatActivity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
-        // ---- TOP BAR (Big Title for Notes Page, without "more" button) ----
+        // ---- TOP BAR (Big Title for Notes Page) ----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1137,7 +1141,7 @@ class NotesMainAct : AppCompatActivity() {
             val currentProgress = if (x1 > x0) ((currentX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
             pillAnimator = ValueAnimator.ofFloat(currentProgress, targetProgress).apply {
                 duration = 250L
-                interpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+                interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
                 addUpdateListener { anim -> updatePillPosition(anim.animatedValue as Float) }
                 addListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) { onEnd() }
@@ -1176,14 +1180,13 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        // ---- Window insets listener - FIXED: removed ime() ----
+        // ---- Window insets listener ----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetTop
             }
-            // Listen ONLY to navigationBars(), omitting ime()
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.navigationBars()).bottom
             } else {
@@ -1343,7 +1346,7 @@ class NotesMainAct : AppCompatActivity() {
             menuOverlayContainer.layoutParams = lp
         }
         plusBtnRef.animate().rotation(45f).setDuration(250)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
         dimOverlay.visibility = View.VISIBLE
         dimOverlay.animate().alpha(1f).setDuration(200).start()
         menuOverlayContainer.visibility = View.VISIBLE
@@ -1353,14 +1356,14 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.translationY = dpToPx(16f).toFloat()
         menuOverlayContainer.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
             .setDuration(250)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
     }
 
     private fun closeMenu() {
         isMenuExpanded = false
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         plusBtnRef.animate().rotation(0f).setDuration(250)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
         dimOverlay.animate().alpha(0f).setDuration(200).withEndAction {
             dimOverlay.visibility = View.GONE
         }.start()
@@ -1391,15 +1394,100 @@ class NotesMainAct : AppCompatActivity() {
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
     ) : RecyclerView.Adapter<NotesListAdapter.ViewHolder>() {
-        private val expandedPositions = mutableSetOf<Int>()
+        private var expandedPosition: Int = RecyclerView.NO_POSITION
 
         inner class ViewHolder(
             val root: LinearLayout,
             val cardContainer: LinearLayout,
             val titleText: TextView,
             val timeText: TextView,
-            val actionContainer: LinearLayout
-        ) : RecyclerView.ViewHolder(root)
+            val actionContainer: LinearLayout,
+            val deleteBtn: ImageView,
+            val cancelBtn: ImageView
+        ) : RecyclerView.ViewHolder(root) {
+
+            fun bind(note: Note, isExpanded: Boolean, animate: Boolean) {
+                titleText.text = note.title
+                timeText.text = getRelativeTimeSpan(root.context, note.lastModified)
+
+                cardContainer.setOnClickListener {
+                    if (expandedPosition != RecyclerView.NO_POSITION) {
+                        val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(expandedPosition) as? ViewHolder
+                        expandedPosition = RecyclerView.NO_POSITION
+                        prevHolder?.setExpandedState(false, animate = true)
+                    } else {
+                        onItemClick(note)
+                    }
+                }
+
+                cardContainer.setOnLongClickListener {
+                    cardContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    toggleExpansion(bindingAdapterPosition, this)
+                    true
+                }
+
+                deleteBtn.setOnClickListener {
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        NoteRepository.deleteNote(note.id)
+                        expandedPosition = RecyclerView.NO_POSITION
+                        loadNotesList()
+                    }
+                }
+
+                cancelBtn.setOnClickListener {
+                    toggleExpansion(bindingAdapterPosition, this)
+                }
+
+                setExpandedState(isExpanded, animate)
+            }
+
+            fun setExpandedState(expanded: Boolean, animate: Boolean) {
+                val springInterpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+
+                if (animate) {
+                    val transition = TransitionSet().apply {
+                        addTransition(ChangeBounds())
+                        duration = 250L
+                        interpolator = springInterpolator
+                    }
+                    TransitionManager.beginDelayedTransition(root, transition)
+                }
+
+                if (expanded) {
+                    actionContainer.visibility = View.VISIBLE
+                    if (animate) {
+                        actionContainer.alpha = 0f
+                        actionContainer.translationX = dpToPx(16f).toFloat()
+                        actionContainer.animate()
+                            .alpha(1f)
+                            .translationX(0f)
+                            .setDuration(250L)
+                            .setInterpolator(springInterpolator)
+                            .start()
+                    } else {
+                        actionContainer.alpha = 1f
+                        actionContainer.translationX = 0f
+                    }
+                } else {
+                    if (animate && actionContainer.visibility == View.VISIBLE) {
+                        actionContainer.animate()
+                            .alpha(0f)
+                            .translationX(dpToPx(16f).toFloat())
+                            .setDuration(200L)
+                            .setInterpolator(springInterpolator)
+                            .withEndAction {
+                                actionContainer.visibility = View.GONE
+                            }
+                            .start()
+                    } else {
+                        actionContainer.visibility = View.GONE
+                        actionContainer.alpha = 0f
+                        actionContainer.translationX = dpToPx(16f).toFloat()
+                    }
+                }
+            }
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val context = parent.context
@@ -1412,18 +1500,20 @@ class NotesMainAct : AppCompatActivity() {
                     RecyclerView.LayoutParams.WRAP_CONTENT
                 ).apply {
                     bottomMargin = dpToPx(8f)
-                    leftMargin = dpToPx(12f)
-                    rightMargin = dpToPx(12f)
+                    leftMargin = dpToPx(16f)
+                    rightMargin = dpToPx(16f)
                 }
             }
 
+            // ---- Settings Card Style Matching ----
             val cardContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 background = GradientDrawable().apply {
-                    cornerRadius = dpToPx(12f).toFloat()
+                    cornerRadius = dpToPx(16f).toFloat()
                     setColor(surfaceContainerHighestColor)
                 }
-                setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+                setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+                setMinimumHeight(dpToPx(56f))
                 layoutParams = LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1432,11 +1522,12 @@ class NotesMainAct : AppCompatActivity() {
                 isClickable = true
                 isFocusable = true
                 isLongClickable = true
+                setOnTouchListener(pressScaleTouchListener)
             }
 
             val titleText = TextView(context).apply {
                 textSize = 16f
-                setTextColor(onPrimaryContainerColor)
+                setTextColor(onSurfaceVariantColor)
                 setGoogleSansFlexDefault(this, true)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1445,7 +1536,7 @@ class NotesMainAct : AppCompatActivity() {
             }
 
             val timeText = TextView(context).apply {
-                textSize = 12f
+                textSize = 14f
                 setTextColor(onSurfaceVariantColor)
                 alpha = 0.7f
                 setGoogleSansFlexDefault(this, false)
@@ -1453,7 +1544,7 @@ class NotesMainAct : AppCompatActivity() {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = dpToPx(4f)
+                    topMargin = dpToPx(2f)
                 }
             }
 
@@ -1506,56 +1597,36 @@ class NotesMainAct : AppCompatActivity() {
             root.addView(cardContainer)
             root.addView(actionContainer)
 
-            return ViewHolder(root, cardContainer, titleText, timeText, actionContainer)
+            return ViewHolder(root, cardContainer, titleText, timeText, actionContainer, deleteBtn, cancelBtn)
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val note = items[position]
-
-            holder.titleText.text = note.title
-            holder.timeText.text = getRelativeTimeSpan(holder.root.context, note.lastModified)
-
-            holder.cardContainer.setOnClickListener {
-                onItemClick(note)
-            }
-
-            holder.cardContainer.setOnLongClickListener {
-                toggleExpansion(position)
-                true
-            }
-
-            val deleteBtn = holder.actionContainer.getChildAt(0) as ImageView
-            deleteBtn.setOnClickListener {
-                NoteRepository.deleteNote(note.id)
-                expandedPositions.remove(position)
-                loadNotesList()
-            }
-
-            val cancelBtn = holder.actionContainer.getChildAt(1) as ImageView
-            cancelBtn.setOnClickListener {
-                expandedPositions.remove(position)
-                notifyItemChanged(position)
-            }
-
-            val isExpanded = expandedPositions.contains(position)
-            holder.actionContainer.visibility = if (isExpanded) View.VISIBLE else View.GONE
+            val isExpanded = position == expandedPosition
+            holder.bind(note, isExpanded, animate = false)
         }
 
-        private fun toggleExpansion(position: Int) {
-            if (expandedPositions.contains(position)) {
-                expandedPositions.remove(position)
+        private fun toggleExpansion(position: Int, holder: ViewHolder) {
+            if (position == RecyclerView.NO_POSITION) return
+            val prevExpanded = expandedPosition
+            if (expandedPosition == position) {
+                expandedPosition = RecyclerView.NO_POSITION
+                holder.setExpandedState(false, animate = true)
             } else {
-                expandedPositions.clear()
-                expandedPositions.add(position)
+                expandedPosition = position
+                if (prevExpanded != RecyclerView.NO_POSITION) {
+                    val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(prevExpanded) as? ViewHolder
+                    prevHolder?.setExpandedState(false, animate = true)
+                }
+                holder.setExpandedState(true, animate = true)
             }
-            notifyDataSetChanged()
         }
 
         override fun getItemCount() = items.size
 
         fun updateItems(newItems: List<Note>) {
             items = newItems
-            expandedPositions.clear()
+            expandedPosition = RecyclerView.NO_POSITION
             notifyDataSetChanged()
         }
     }

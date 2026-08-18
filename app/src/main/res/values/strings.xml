@@ -64,6 +64,10 @@
 <string name="allow_unknown_sources">Please allow installation from unknown sources</string>
 <string name="no_app_found_install">No app found to install APK</string>
 <string name="install_error">Install error: %1$s</string>
+<string name="acknowledgments">Acknowledgments</string>
+<string name="credit_hehejuice_desc">Developer of this App</string>
+<string name="credit_material_desc">Material Design Library</string>
+<string name="credit_google_sans_flex_desc">Fonts Uses in this app</string>
 
 
 <!-- Misc -->

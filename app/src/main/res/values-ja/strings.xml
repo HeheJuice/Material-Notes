@@ -67,6 +67,11 @@
     <string name="allow_unknown_sources">不明なソースからのインストールを許可してください</string>
     <string name="no_app_found_install">APKをインストールできるアプリが見つかりません</string>
     <string name="install_error">インストールエラー: %1$s</string>
+    <string name="acknowledgments">謝辞</string>
+<string name="credit_hehejuice_desc">このアプリの開発者</string>
+<string name="credit_material_desc">Material Design ライブラリ</string>
+<string name="credit_google_sans_flex_desc">このアプリで使用されているフォント</string>
+
 
     <!-- Update Checker -->
     <string name="update_checking">アップデートを確認中…</string>
