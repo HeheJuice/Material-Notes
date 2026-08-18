@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Time -->
+    <string name="app_name">笔记</string>
+    <string name="last_edit_time">上次编辑：%1$s</string>
+    <string name="time_now">刚刚</string>
+    <string name="time_minutes_ago">%1$d 分钟前</string>
+    <string name="time_hours_ago">%1$d 小时前</string>
+    <string name="time_days_ago">%1$d 天前</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">笔记</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Settings Page -->
+    <string name="category_general">通用</string>
+    <string name="setting_app_theme">应用主题</string>
+    <string name="setting_theme_mode">主题模式</string>
+    <string name="theme_light">浅色模式</string>
+    <string name="theme_dark">深色模式</string>
+    <string name="theme_system">系统默认</string>
+    <string name="themerestart">应用所选主题</string>
+    <string name="setting_follow_system">跟随系统主题</string>
+    <string name="setting_follow_system_subtitle">自动调整外观</string>
+
+    <!-- Editor Settings -->
+    <string name="settings_editor_category">编辑器</string>
+    <string name="show_lines_under_text">显示文本下方横线</string>
+    <string name="show_lines_under_text_desc">在编辑器内的笔记文本下方显示横线</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">新建笔记</string>
+    <string name="import_notes">导入TXT笔记</string>
+    <string name="import_notes_toast">导入笔记（即将推出）</string>
+
+    <!-- Note Editor -->
+    <string name="save">保存</string>
+    <string name="title">标题</string>
+    <string name="content">内容</string>
+    <string name="new_note">新建笔记</string>
+    <string name="edit_note">编辑笔记</string>
+    <string name="enter_title_hint">请输入标题...</string>
+    <string name="write_content_hint">在此输入内容...</string>
+    <string name="note_cannot_be_empty">笔记不能为空</string>
+    <string name="back_content_desc">返回</string>
+    <string name="title_required">请输入标题</string>
+    <string name="capture_notes_to_image">生成笔记图片</string>
+    <string name="more_options">更多选项</string>
+    <string name="copied">已复制</string>
+    <string name="select_text_first">请先选择文本</string>
+    <string name="nothing_to_paste">没有可粘贴的内容</string>
+
+    <!-- Network & About Settings -->
+    <string name="settings_network_about_category">网络与关于</string>
+    <string name="setting_app_network">应用网络连接</string>
+    <string name="setting_app_network_desc">允许应用访问网络功能</string>
+    <string name="setting_updates_and_about">检查更新与关于应用</string>
+    <string name="setting_updates_and_about_desc">应用版本、详细信息及软件更新</string>
+    <string name="version_format">版本 %1$s</string>
+    <string name="zero_percent">0%</string>
+    <string name="progress_format">%1$d%%</string>
+    <string name="action_download">下载</string>
+    <string name="action_install">安装</string>
+    <string name="view_source_code">查看源代码</string>
+    <string name="view_license">查看许可证</string>
+    <string name="download_failed">下载失败</string>
+    <string name="allow_unknown_sources">请允许安装未知来源的应用</string>
+    <string name="no_app_found_install">未找到用于安装 APK 的应用</string>
+    <string name="install_error">安装错误：%1$s</string>
+    <string name="acknowledgments">致谢</string>
+<string name="credit_hehejuice_desc">本应用的开发者</string>
+<string name="credit_material_desc">Material Design 库</string>
+<string name="credit_google_sans_flex_desc">本应用使用的字体</string>
+<string name="desc_source">在 GitHub 上查看本应用的源代码</string>
+<string name="desc_license">查看本应用及第三方库的使用与许可证信息</string>
+
+
+    <!-- Update Checker -->
+    <string name="update_checking">正在检查更新…</string>
+    <string name="update_new_version">有新版本可用：%s</string>
+    <string name="update_download">从 GitHub 下载</string>
+    <string name="update_latest">已是最新版本 (%s)</string>
+    <string name="update_server_error">检查更新失败（服务器错误）</string>
+    <string name="update_connection_error">无法连接至 GitHub</string>
+    <string name="update_disabled_debug">调试版本已禁用更新检查</string>
+
+    <!-- Toast & Messages -->
+    <string name="nothing_to_capture">没有可截取的内容</string>
+    <string name="failed_to_save_image">保存图片失败：%s</string>
+    <string name="failed_to_generate_image">生成图片失败</string>
+    <string name="image_saved_successfully">图片已保存成功</string>
+    <string name="theme_already_applied">已应用所选主题</string>
+    <string name="please_allow_unknown_sources">请允许安装未知来源的应用</string>
+    <string name="please_enable_network_permission">请在设置中开启网络权限</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">添加</string>
+</resources>

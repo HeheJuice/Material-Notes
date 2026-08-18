@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Time -->
+    <string name="app_name">ノート</string>
+    <string name="last_edit_time">最終編集: %1$s</string>
+    <string name="time_now">たった今</string>
+    <string name="time_minutes_ago">%1$d 分前</string>
+    <string name="time_hours_ago">%1$d 時間前</string>
+    <string name="time_days_ago">%1$d 日前</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">ノート</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- Settings Page -->
+    <string name="category_general">一般</string>
+    <string name="setting_app_theme">アプリのテーマ</string>
+    <string name="setting_theme_mode">テーマモード</string>
+    <string name="theme_light">ライトモード</string>
+    <string name="theme_dark">ダークモード</string>
+    <string name="theme_system">システム</string>
+    <string name="themerestart">選択したテーマを適用</string>
+    <string name="setting_follow_system">システムのテーマに従う</string>
+    <string name="setting_follow_system_subtitle">外観を自動的に調整します</string>
+
+    <!-- Editor Settings -->
+    <string name="settings_editor_category">エディター</string>
+    <string name="show_lines_under_text">テキストの下に罫線を表示</string>
+    <string name="show_lines_under_text_desc">エディター内のノートテキストの下に罫線を表示します</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">ノートを作成</string>
+    <string name="import_notes">ノートをインポートTXT</string>
+    <string name="import_notes_toast">ノートをインポート（近日公開予定）</string>
+
+    <!-- Note Editor -->
+    <string name="save">保存</string>
+    <string name="title">タイトル</string>
+    <string name="content">内容</string>
+    <string name="new_note">新規ノート</string>
+    <string name="edit_note">ノートを編集</string>
+    <string name="enter_title_hint">タイトルを入力...</string>
+    <string name="write_content_hint">ここにノートを入力...</string>
+    <string name="note_cannot_be_empty">ノートを空にすることはできません</string>
+    <string name="back_content_desc">戻る</string>
+    <string name="title_required">タイトルは必須です</string>
+    <string name="capture_notes_to_image">ノートを画像として保存</string>
+    <string name="more_options">その他のオプション</string>
+    <string name="copied">コピーしました</string>
+    <string name="select_text_first">最初にテキストを選択してください</string>
+    <string name="nothing_to_paste">貼り付ける項目がありません</string>
+
+    <!-- Network & About Settings -->
+    <string name="settings_network_about_category">ネットワークとアプリ情報</string>
+    <string name="setting_app_network">アプリのネットワーク接続</string>
+    <string name="setting_app_network_desc">アプリによるネットワーク機能へのアクセスを許可します</string>
+    <string name="setting_updates_and_about">アップデート確認・アプリ情報</string>
+    <string name="setting_updates_and_about_desc">アプリのバージョン、詳細情報、ソフトウェアの更新</string>
+    <string name="version_format">バージョン %1$s</string>
+    <string name="zero_percent">0%</string>
+    <string name="progress_format">%1$d%%</string>
+    <string name="action_download">ダウンロード</string>
+    <string name="action_install">インストール</string>
+    <string name="view_source_code">ソースコードを表示</string>
+    <string name="view_license">ライセンスを表示</string>
+    <string name="download_failed">ダウンロードに失敗しました</string>
+    <string name="allow_unknown_sources">不明なソースからのインストールを許可してください</string>
+    <string name="no_app_found_install">APKをインストールできるアプリが見つかりません</string>
+    <string name="install_error">インストールエラー: %1$s</string>
+    <string name="acknowledgments">謝辞</string>
+<string name="credit_hehejuice_desc">このアプリの開発者</string>
+<string name="credit_material_desc">Material Design ライブラリ</string>
+<string name="credit_google_sans_flex_desc">このアプリで使用されているフォント</string>
+<string name="desc_source">GitHub でこのアプリのソースコードを確認</string>
+<string name="desc_license">このアプリおよびサードパーティ製ライブラリのライセンスを確認</string>
+
+
+    <!-- Update Checker -->
+    <string name="update_checking">アップデートを確認中…</string>
+    <string name="update_new_version">新しいバージョンが利用可能です: %s</string>
+    <string name="update_download">GitHub からダウンロード</string>
+    <string name="update_latest">最新バージョンを使用しています (%s)</string>
+    <string name="update_server_error">アップデートの確認に失敗しました（サーバーエラー）</string>
+    <string name="update_connection_error">GitHub に接続できませんでした</string>
+    <string name="update_disabled_debug">デバッグ版ではアップデート確認が無効化されています</string>
+
+    <!-- Toast & Messages -->
+    <string name="nothing_to_capture">キャプチャする内容がありません</string>
+    <string name="failed_to_save_image">画像の保存に失敗しました: %s</string>
+    <string name="failed_to_generate_image">画像の生成に失敗しました</string>
+    <string name="image_saved_successfully">画像を保存しました</string>
+    <string name="theme_already_applied">選択したテーマは既に適用されています</string>
+    <string name="please_allow_unknown_sources">不明なソースからのインストールを許可してください</string>
+    <string name="please_enable_network_permission">設定でネットワーク権限を有効にしてください</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">追加</string>
+</resources>

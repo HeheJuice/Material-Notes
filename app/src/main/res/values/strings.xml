@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 <string name="app_name">Notes</string>
+<string name="last_edit_time">Last Edit: %1$s</string>
+<string name="time_now">Now</string>
+<string name="time_minutes_ago">%1$d Minutes Ago</string>
+<string name="time_hours_ago">%1$d Hours Ago</string>
+<string name="time_days_ago">%1$d Days Ago</string>
 
 <!-- Navigation Tabs -->
 <string name="nav_notes">Notes</string>
@@ -14,10 +19,16 @@
 <string name="setting_follow_system">Follow system theme</string>
 <string name="setting_theme_mode">Theme Mode</string>
 <string name="theme_system">System</string>
+<string name="category_general">General</string>
+<string name="setting_follow_system_subtitle">Automatically adjust appearance</string>
 <!-- Menu Actions -->
 <string name="create_notes">Create Notes</string>
-<string name="import_notes">Import Notes</string>
+<string name="import_notes">Import TXT Notes</string>
 <string name="import_notes_toast">Import Notes (coming soon)</string>
+    <string name="settings_editor_category">Editor</string>
+<string name="show_lines_under_text">Show Lines Under Texts</string>
+<string name="show_lines_under_text_desc">Display ruled lines under note text inside editor</string>
+
 
 <!-- Note Editor -->
 <string name="save">Save</string>
@@ -36,6 +47,48 @@
 <string name="select_text_first">Select text first</string>
 <string name="nothing_to_paste">Nothing to paste</string>
 
+<!-- Network & About Settings -->
+<string name="settings_network_about_category">Network &amp; About</string>
+<string name="setting_app_network">App Network Connection</string>
+<string name="setting_app_network_desc">Allow the app to access network features</string>
+<string name="setting_updates_and_about">Check for Updates &amp; About App</string>
+<string name="setting_updates_and_about_desc">App version, details, and software updates</string>
+<string name="version_format">Version %1$s</string>
+<string name="zero_percent">0%</string>
+<string name="progress_format">%1$d%%</string>
+<string name="action_download">Download</string>
+<string name="action_install">Install</string>
+<string name="view_source_code">View Source Code</string>
+<string name="view_license">View License</string>
+<string name="download_failed">Download failed</string>
+<string name="allow_unknown_sources">Please allow installation from unknown sources</string>
+<string name="no_app_found_install">No app found to install APK</string>
+<string name="install_error">Install error: %1$s</string>
+<string name="acknowledgments">Acknowledgments</string>
+<string name="credit_hehejuice_desc">Developer of this App</string>
+<string name="credit_material_desc">Material Design Library</string>
+<string name="credit_google_sans_flex_desc">Fonts Uses in this app</string>
+<string name="desc_source">Check for source code of this app on GitHub</string>
+<string name="desc_license">View 3rd Party Usage and License for them and this app</string>
+
+
+
 <!-- Misc -->
 <string name="add_button_content_desc">Add</string>
+<!-- Update checker -->
+<string name="update_checking">Checking for updates…</string>
+<string name="update_new_version">New version available: %s</string>
+<string name="update_download">Download from GitHub</string>
+<string name="update_latest">You are on the latest version (%s)</string>
+<string name="update_server_error">Failed to check updates (server error)</string>
+<string name="update_connection_error">Could not connect to GitHub</string>
+<string name="update_disabled_debug">Update Checker Disabled for Debug Version</string>
+<!-- NoteEditorActivity -->
+<string name="nothing_to_capture">Nothing to capture</string>
+<string name="failed_to_save_image">Failed to save image: %s</string>
+<string name="failed_to_generate_image">Failed to generate image</string>
+<string name="image_saved_successfully">Image saved successfully</string>
+<string name="theme_already_applied">Selected theme is already applied</string>
+<string name="please_allow_unknown_sources">Please allow installation from unknown sources</string>
+<string name="please_enable_network_permission">Please enable network permission in Settings</string>
 </resources>

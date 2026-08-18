@@ -2,7 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.HeheJuice.Notes">
+        <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Allows the app to make network calls -->
+<uses-permission android:name="android.permission.INTERNET" />
+<!-- Allows checking if Wi-Fi or Cellular is actively connected -->
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_hehe"
@@ -22,7 +27,16 @@
 
         <!-- Add this line -->
         <activity android:name=".NoteEditorActivity" />
-
+        <activity android:name=".NotesUpdate" />
+    <provider
+    android:name="androidx.core.content.FileProvider"
+    android:authorities="${applicationId}.fileprovider"
+    android:exported="false"
+    android:grantUriPermissions="true">
+    <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/file_paths" />
+</provider>
     </application>
 
 </manifest>

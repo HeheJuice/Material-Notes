@@ -8,10 +8,14 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.OpenableColumns
+import android.transition.ChangeBounds
+import android.transition.TransitionManager
+import android.transition.TransitionSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -21,6 +25,7 @@ import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowInsets
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -28,11 +33,14 @@ import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -187,6 +195,11 @@ object NoteRepository {
 
 class NotesMainAct : AppCompatActivity() {
 
+    companion object {
+        private const val TYPE_HEADER = 0
+        private const val TYPE_NOTE = 1
+    }
+
     private lateinit var slidingPillView: View
     private lateinit var notesTabBtn: TextView
     private lateinit var settingsTabBtn: TextView
@@ -223,8 +236,16 @@ class NotesMainAct : AppCompatActivity() {
     private var followSystem: Boolean = true
     private var themeMode: Int = 0  // 0 = Light, 1 = Dark
 
+    // Store top inset for dynamic padding adjustment
+    private var currentTopInset = 0
+
+    // SAF File Picker for Importing Notes
+    private val importNoteLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let { importNoteFromUri(it) }
+    }
+
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
-        val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+        val springBackInterpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 v.animate().cancel()
@@ -283,19 +304,53 @@ class NotesMainAct : AppCompatActivity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
+        // ---- TOP BAR (Big Title for Notes Page) ----
+        topBarLayout = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
+        }
+
+        appNamePill = TextView(this).apply {
+            text = getString(R.string.nav_notes)
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+                marginStart = dpToPx(8f)
+            }
+        }
+
+        topBarLayout.addView(appNamePill)
+
+        // ---- NOTES CONTAINER ----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
             visibility = if (isNotesActive) View.VISIBLE else View.GONE
+
             val rv = RecyclerView(this@NotesMainAct).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
+                setPadding(0, 0, 0, dpToPx(100f))
+                clipToPadding = false
             }
             notesRecyclerView = rv
+
             addView(rv)
         }
 
@@ -319,45 +374,85 @@ class NotesMainAct : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
-            setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
+            setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(100f))
         }
 
-        // -------- THEME SETTINGS CARD ----------
-        val themeCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(24f).toFloat()
-                setColor(surfaceContainerHighestColor)
+        // ---- ADD LARGE SETTINGS TITLE ----
+        val bigSettingsTitle = TextView(this).apply {
+            text = getString(R.string.nav_settings)
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+                marginStart = dpToPx(8f)
+                marginEnd = dpToPx(8f)
             }
-            setPadding(dpToPx(20f), dpToPx(10f), dpToPx(20f), dpToPx(10f))
+        }
+        settingsContentLayout.addView(bigSettingsTitle)
+
+        // ================================================================
+        // THEME SETTINGS CARD (General group)
+        // ================================================================
+        val themeGroup = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
-        // Helper to create equal-height rows (44dp)
-        fun createRow(): LinearLayout {
-            return LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
+        fun createGroupItemBg(topRadius: Float, bottomRadius: Float): GradientDrawable {
+            return GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(surfaceContainerHighestColor)
+                cornerRadii = floatArrayOf(
+                    topRadius, topRadius,
+                    topRadius, topRadius,
+                    bottomRadius, bottomRadius,
+                    bottomRadius, bottomRadius
                 )
-                setMinimumHeight(dpToPx(44f))
-                setPadding(0, 0, 0, 0)
             }
         }
 
-        // 1. Follow system switch row
-        val followSystemRow = createRow()
-        val followLabel = TextView(this).apply {
-            text = getString(R.string.setting_follow_system)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
+        val outerRadiusPx = dpToPx(16f).toFloat()
+        val innerRadiusPx = dpToPx(4f).toFloat()
+
+        // Category Header
+        val categoryHeader = TextView(this).apply {
+            text = getString(R.string.category_general)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
             setGoogleSansFlexDefault(this, true)
+            setPadding(dpToPx(8f), dpToPx(12f), dpToPx(8f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        themeGroup.addView(categoryHeader)
+
+        // 1. Follow system switch row
+        val followSystemRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(outerRadiusPx, innerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(2f)
+            }
+            setMinimumHeight(dpToPx(56f))
+        }
+
+        val followTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -365,81 +460,94 @@ class NotesMainAct : AppCompatActivity() {
             )
         }
 
+        val followLabel = TextView(this).apply {
+            text = getString(R.string.setting_follow_system)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
 
-val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, Color.parseColor("#E8DEF8"))
+        val followSubtitle = TextView(this).apply {
+            text = getString(R.string.setting_follow_system_subtitle)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        followTextContainer.addView(followLabel)
+        followTextContainer.addView(followSubtitle)
+
+        val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, Color.parseColor("#E8DEF8"))
         val trackOnColor = accentColor
-
         val trackOffColor = if (isDark) {
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, Color.parseColor("#1C1B1F"))
         } else {
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#E6E0E9"))
         }
-
         val thumbOnColor = if (isDark) {
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimary, Color.WHITE)
         } else {
             Color.WHITE
         }
-
         val thumbOffColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.parseColor("#79747E"))
 
-        // Inflate switch
         val followSwitch = LayoutInflater.from(this)
             .inflate(R.layout.switch_material, null) as MaterialSwitch
 
-        // 1. Track Tint State List
-        val trackStates = arrayOf(
-            intArrayOf(android.R.attr.state_checked),
-            intArrayOf()
-        )
+        val trackStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val trackColors = intArrayOf(trackOnColor, trackOffColor)
         followSwitch.trackTintList = ColorStateList(trackStates, trackColors)
 
-        // 2. Thumb Tint State List
-        val thumbStates = arrayOf(
-            intArrayOf(android.R.attr.state_checked),
-            intArrayOf()
-        )
+        val thumbStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val thumbColors = intArrayOf(thumbOnColor, thumbOffColor)
         followSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
 
-        // 3. Thumb Icon Tint State List (Check / Cross contrast)
-        val iconStates = arrayOf(
-            intArrayOf(android.R.attr.state_checked),
-            intArrayOf()
-        )
-        val iconColors = intArrayOf(
-            accentColor,   // Accent checkmark on white thumb when ON
-            trackOffColor  // Dark crossmark on outline thumb when OFF
-        )
+        val iconStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+        val iconColors = intArrayOf(accentColor, trackOffColor)
         followSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
 
-        followSwitch.isChecked = followSystem
-        // ---------------------------------------------------------
+        val outlineColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.GRAY)
+        followSwitch.trackDecorationTintList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(Color.TRANSPARENT, outlineColor)
+        )
 
-        followSystemRow.addView(followLabel)
+        followSwitch.isChecked = followSystem
+
+        followSystemRow.addView(followTextContainer)
         followSystemRow.addView(followSwitch, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
-        themeCard.addView(followSystemRow)
+        themeGroup.addView(followSystemRow)
 
-        // Divider
-        val divider = View(this).apply {
+        // 2. Theme Mode row
+        val themeModeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(1f)
-            ).apply {
-                topMargin = dpToPx(4f)
-                bottomMargin = dpToPx(4f)
-            }
-            setBackgroundColor(onSurfaceVariantColor)
-            alpha = 0.3f
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
         }
-        themeCard.addView(divider)
 
-        // 2. Theme Mode row (clickable) – no chevron
-        val themeModeRow = createRow()
         val themeModeLabel = TextView(this).apply {
             text = getString(R.string.setting_theme_mode)
             textSize = 16f
@@ -451,6 +559,7 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
                 1f
             )
         }
+
         val themeModeSubtitle = TextView(this).apply {
             text = if (themeMode == 0) getString(R.string.theme_light) else getString(R.string.theme_dark)
             textSize = 14f
@@ -461,6 +570,7 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
+
         themeModeRow.addView(themeModeLabel)
         themeModeRow.addView(themeModeSubtitle)
 
@@ -472,9 +582,8 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
                 showThemeModePopup(view)
             }
         }
-        themeCard.addView(themeModeRow)
+        themeGroup.addView(themeModeRow)
 
-        // Row state updater
         fun updateRowState() {
             val enabled = !followSystem
             themeModeRow.isEnabled = enabled
@@ -489,23 +598,289 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
         }
         updateRowState()
 
-        // Switch listener
         followSwitch.setOnCheckedChangeListener { _, isChecked ->
             followSystem = isChecked
             prefs.edit().putBoolean("follow_system", followSystem).apply()
             updateRowState()
             applyThemeFromPrefs()
-            recreate()
+            followSwitch.postDelayed({
+                recreate()
+            }, 200)
         }
 
-        // Add card to settings
-        settingsContentLayout.addView(themeCard)
-        // -----------------------------------------
+        settingsContentLayout.addView(themeGroup)
+
+        // ================================================================
+        // EDITOR SETTINGS CARD
+        // ================================================================
+        val editorSectionTitle = TextView(this).apply {
+            text = getString(R.string.settings_editor_category)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(24f)
+                bottomMargin = dpToPx(8f)
+                marginStart = dpToPx(12f)
+            }
+        }
+
+        val editorSettingsCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                cornerRadius = dpToPx(16f).toFloat()
+                setColor(surfaceContainerHighestColor)
+            }
+            setPadding(dpToPx(16f), dpToPx(4f), dpToPx(16f), dpToPx(4f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val prefsNotes = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
+        val showLinesSwitch = LayoutInflater.from(this)
+            .inflate(R.layout.switch_material, null) as MaterialSwitch
+        showLinesSwitch.isChecked = prefsNotes.getBoolean("show_lines_under_text", false)
+        showLinesSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefsNotes.edit().putBoolean("show_lines_under_text", isChecked).apply()
+        }
+
+        val showLinesRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(4f), dpToPx(8f), dpToPx(4f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(48f))
+        }
+
+        val linesTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val linesLabel = TextView(this).apply {
+            text = getString(R.string.show_lines_under_text)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val linesSubtitle = TextView(this).apply {
+            text = getString(R.string.show_lines_under_text_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        linesTextContainer.addView(linesLabel)
+        linesTextContainer.addView(linesSubtitle)
+
+        showLinesSwitch.trackTintList = ColorStateList(trackStates, trackColors)
+        showLinesSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
+        showLinesSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
+        showLinesSwitch.trackDecorationTintList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(Color.TRANSPARENT, outlineColor)
+        )
+
+        showLinesRow.addView(linesTextContainer)
+        showLinesRow.addView(showLinesSwitch, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
+        editorSettingsCard.addView(showLinesRow)
+        settingsContentLayout.addView(editorSectionTitle)
+        settingsContentLayout.addView(editorSettingsCard)
+
+        // ================================================================
+        // NETWORK & ABOUT SETTINGS CARD
+        // ================================================================
+        val networkAboutSectionTitle = TextView(this).apply {
+            text = getString(R.string.settings_network_about_category)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(24f)
+                bottomMargin = dpToPx(8f)
+                marginStart = dpToPx(12f)
+            }
+        }
+
+        val networkAboutGroup = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // 1. App Network Connection Row
+        val appNetworkRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(outerRadiusPx, innerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(2f)
+            }
+            setMinimumHeight(dpToPx(56f))
+        }
+
+        val networkTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val networkLabel = TextView(this).apply {
+            text = getString(R.string.setting_app_network)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val networkSubtitle = TextView(this).apply {
+            text = getString(R.string.setting_app_network_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        networkTextContainer.addView(networkLabel)
+        networkTextContainer.addView(networkSubtitle)
+
+        val appNetworkSwitch = LayoutInflater.from(this)
+            .inflate(R.layout.switch_material, null) as MaterialSwitch
+
+        appNetworkSwitch.trackTintList = ColorStateList(trackStates, trackColors)
+        appNetworkSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
+        appNetworkSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
+        appNetworkSwitch.trackDecorationTintList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(Color.TRANSPARENT, outlineColor)
+        )
+
+        appNetworkSwitch.isChecked = prefsNotes.getBoolean("app_network_connection", true)
+        appNetworkSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefsNotes.edit().putBoolean("app_network_connection", isChecked).apply()
+        }
+
+        appNetworkRow.addView(networkTextContainer)
+        appNetworkRow.addView(appNetworkSwitch, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
+        // 2. Check for Updates & About App Row
+        val updatesAndAboutRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
+                startActivity(intent)
+            }
+        }
+
+        val updatesTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val updatesLabel = TextView(this).apply {
+            text = getString(R.string.setting_updates_and_about)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val updatesSubtitle = TextView(this).apply {
+            text = getString(R.string.setting_updates_and_about_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        updatesTextContainer.addView(updatesLabel)
+        updatesTextContainer.addView(updatesSubtitle)
+        updatesAndAboutRow.addView(updatesTextContainer)
+
+        networkAboutGroup.addView(appNetworkRow)
+        networkAboutGroup.addView(updatesAndAboutRow)
+
+        settingsContentLayout.addView(networkAboutSectionTitle)
+        settingsContentLayout.addView(networkAboutGroup)
 
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
-        // ... rest of the layout (unchanged) ...
+        // ---- Content holder ----
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -515,64 +890,7 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
         }
         rootFrame.addView(contentHolder)
 
-        topBarLayout = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-            setBackgroundColor(Color.TRANSPARENT)
-            setPadding(dpToPx(12f), dpToPx(8f), dpToPx(12f), dpToPx(8f))
-        }
-
-        appNamePill = TextView(this).apply {
-            text = if (isNotesActive) getString(R.string.nav_notes) else getString(R.string.nav_settings)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(22f), dpToPx(12f), dpToPx(22f), dpToPx(12f))
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.START or Gravity.CENTER_VERTICAL
-            )
-        }
-
-        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
-            drawable?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, color)
-                wrapped
-            }
-        }
-
-        val topBarRefreshContainer = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(surfaceContainerHighestColor)
-            }
-            layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { /* empty */ }
-            setOnTouchListener(pressScaleTouchListener)
-        }
-        val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (_: Exception) { null }
-        val topBarRefreshIcon = ImageView(this).apply {
-            setImageDrawable(tintDrawableFunc(menuDrawable, onSurfaceVariantColor))
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            layoutParams = FrameLayout.LayoutParams(dpToPx(26f), dpToPx(26f), Gravity.CENTER)
-        }
-        topBarRefreshContainer.addView(topBarRefreshIcon)
-        topBarLayout.addView(appNamePill)
-        topBarLayout.addView(topBarRefreshContainer)
-        rootFrame.addView(topBarLayout)
-
+        // ---- Dim overlay ----
         dimOverlay = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -587,6 +905,7 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
         }
         rootFrame.addView(dimOverlay)
 
+        // ---- Menu overlay (FAB popup) ----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -614,6 +933,15 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
             bottomMargin = dpToPx(12f)
             gravity = Gravity.END
         }
+
+        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+            drawable?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
+        }
+
         val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (_: Exception) { null }
         val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (_: Exception) { null }
         val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
@@ -653,13 +981,14 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 closeMenu()
-                Toast.makeText(this@NotesMainAct, getString(R.string.import_notes_toast), Toast.LENGTH_SHORT).show()
+                importNoteLauncher.launch(arrayOf("text/plain"))
             }
         }
         menuOverlayContainer.addView(createNotesItem)
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
+        // ---- Bottom bar ----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -824,7 +1153,7 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
             val currentProgress = if (x1 > x0) ((currentX - x0) / (x1 - x0)).coerceIn(0f, 1f) else 0f
             pillAnimator = ValueAnimator.ofFloat(currentProgress, targetProgress).apply {
                 duration = 250L
-                interpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+                interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
                 addUpdateListener { anim -> updatePillPosition(anim.animatedValue as Float) }
                 addListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) { onEnd() }
@@ -838,7 +1167,8 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
-                appNamePill.text = if (toNotes) getString(R.string.nav_notes) else getString(R.string.nav_settings)
+
+                contentHolder.setPadding(0, currentTopInset, 0, 0)
             }
         }
 
@@ -862,26 +1192,70 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
             slidingPillView.requestLayout()
         }
 
+        // ---- Window insets listener ----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
-            val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetTop
             }
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                insets.getInsets(WindowInsets.Type.navigationBars() or WindowInsets.Type.ime()).bottom
+                insets.getInsets(WindowInsets.Type.navigationBars()).bottom
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
-            topBarLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> { topMargin = topInset }
-            contentHolder.setPadding(0, topInset + dpToPx(66f), 0, 0)
-            (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
-            (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
+
+            currentTopInset = statusBarInset
+
+            contentHolder.setPadding(0, currentTopInset, 0, 0)
+
+            val totalBottomMargin = dpToPx(16f) + bottomInset
+            (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin
+            (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin + dpToPx(60f)
+
             insets
         }
     }
 
-    // ---- Theme application helper ----
+    private fun importNoteFromUri(uri: Uri) {
+        try {
+            var fileName = "imported_note"
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex != -1 && cursor.moveToFirst()) {
+                    fileName = cursor.getString(nameIndex)
+                }
+            }
+            
+            val title = fileName.substringBeforeLast(".")
+            val textContent = contentResolver.openInputStream(uri)?.use { stream ->
+                stream.bufferedReader().use { it.readText() }
+            } ?: ""
+
+            NoteRepository.saveNote(title, textContent, emptyList())
+            loadNotesList()
+            Toast.makeText(this, getString(R.string.import_notes_toast), Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to import file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getRelativeTimeSpan(context: Context, timestamp: Long): String {
+        val now = System.currentTimeMillis()
+        val diffMillis = (now - timestamp).coerceAtLeast(0)
+        val minutes = diffMillis / (1000 * 60)
+        val hours = minutes / 60
+        val days = hours / 24
+
+        val timeString = when {
+            minutes < 1 -> context.getString(R.string.time_now)
+            hours < 1 -> context.getString(R.string.time_minutes_ago, minutes)
+            days < 1 -> context.getString(R.string.time_hours_ago, hours)
+            else -> context.getString(R.string.time_days_ago, days)
+        }
+        return context.getString(R.string.last_edit_time, timeString)
+    }
+
     private fun applyThemeFromPrefs() {
         val mode = if (followSystem) {
             AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
@@ -891,7 +1265,6 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
-    // ---- Popup for Theme Mode (right-aligned, 16dp corners, no icons) ----
     private fun showThemeModePopup(anchor: View) {
         val popupView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -969,12 +1342,10 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
             isFocusable = true
             animationStyle = android.R.style.Animation_Dialog
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
-            // Right-aligned under anchor
             showAsDropDown(anchor, anchor.width - popupView.measuredWidth, dpToPx(8f))
         }
     }
 
-    // ---- Existing methods ----
     override fun onResume() {
         super.onResume()
         if (::notesAdapter.isInitialized) loadNotesList()
@@ -1010,7 +1381,7 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
             menuOverlayContainer.layoutParams = lp
         }
         plusBtnRef.animate().rotation(45f).setDuration(250)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
         dimOverlay.visibility = View.VISIBLE
         dimOverlay.animate().alpha(1f).setDuration(200).start()
         menuOverlayContainer.visibility = View.VISIBLE
@@ -1020,14 +1391,14 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
         menuOverlayContainer.translationY = dpToPx(16f).toFloat()
         menuOverlayContainer.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
             .setDuration(250)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
     }
 
     private fun closeMenu() {
         isMenuExpanded = false
         plusBtnRef.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
         plusBtnRef.animate().rotation(0f).setDuration(250)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
         dimOverlay.animate().alpha(0f).setDuration(200).withEndAction {
             dimOverlay.visibility = View.GONE
         }.start()
@@ -1057,12 +1428,115 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
     inner class NotesListAdapter(
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
-    ) : RecyclerView.Adapter<NotesListAdapter.ViewHolder>() {
-        private val expandedPositions = mutableSetOf<Int>()
-        inner class ViewHolder(val root: LinearLayout, val noteText: TextView, val actionContainer: LinearLayout) : RecyclerView.ViewHolder(root)
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val root = LinearLayout(parent.context).apply {
+        private var expandedPosition: Int = RecyclerView.NO_POSITION
+
+        inner class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view)
+
+        inner class ViewHolder(
+            val root: LinearLayout,
+            val cardContainer: LinearLayout,
+            val titleText: TextView,
+            val timeText: TextView,
+            val actionContainer: LinearLayout,
+            val deleteBtn: ImageView,
+            val cancelBtn: ImageView
+        ) : RecyclerView.ViewHolder(root) {
+
+            fun bind(note: Note, isExpanded: Boolean, animate: Boolean) {
+                titleText.text = note.title
+                timeText.text = getRelativeTimeSpan(root.context, note.lastModified)
+
+                cardContainer.setOnClickListener {
+                    if (expandedPosition != RecyclerView.NO_POSITION) {
+                        val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(expandedPosition) as? ViewHolder
+                        expandedPosition = RecyclerView.NO_POSITION
+                        prevHolder?.setExpandedState(false, animate = true)
+                    } else {
+                        onItemClick(note)
+                    }
+                }
+
+                cardContainer.setOnLongClickListener {
+                    cardContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    toggleExpansion(bindingAdapterPosition, this)
+                    true
+                }
+
+                deleteBtn.setOnClickListener {
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        NoteRepository.deleteNote(note.id)
+                        expandedPosition = RecyclerView.NO_POSITION
+                        loadNotesList()
+                    }
+                }
+
+                cancelBtn.setOnClickListener {
+                    toggleExpansion(bindingAdapterPosition, this@ViewHolder)
+                }
+
+                setExpandedState(isExpanded, animate)
+            }
+
+            fun setExpandedState(expanded: Boolean, animate: Boolean) {
+                if (animate) {
+                    val transition = TransitionSet().apply {
+                        addTransition(ChangeBounds())
+                        addTransition(android.transition.Fade())
+                        duration = if (expanded) 250L else 200L
+                        interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+                    }
+                    TransitionManager.beginDelayedTransition(root, transition)
+                }
+
+                actionContainer.visibility = if (expanded) View.VISIBLE else View.GONE
+                actionContainer.alpha = 1f
+                actionContainer.translationX = 0f
+            }
+        }
+
+        override fun getItemViewType(position: Int): Int {
+            return if (position == 0) TYPE_HEADER else TYPE_NOTE
+        }
+
+        override fun getItemCount() = items.size + 1
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val context = parent.context
+
+if (viewType == TYPE_HEADER) {
+    val headerView = FrameLayout(context).apply {
+        layoutParams = RecyclerView.LayoutParams(
+            RecyclerView.LayoutParams.MATCH_PARENT,
+            RecyclerView.LayoutParams.WRAP_CONTENT
+        )
+        // Updated top padding from dpToPx(16f) to dpToPx(64f)
+        setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
+
+        val appNamePill = TextView(context).apply {
+            text = context.getString(R.string.nav_notes)
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+                marginStart = dpToPx(8f)
+            }
+        }
+        addView(appNamePill)
+    }
+    return HeaderViewHolder(headerView)
+}
+
+
+            val root = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 layoutParams = RecyclerView.LayoutParams(
@@ -1070,97 +1544,151 @@ val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorP
                     RecyclerView.LayoutParams.WRAP_CONTENT
                 ).apply {
                     bottomMargin = dpToPx(8f)
-                    leftMargin = dpToPx(12f)
-                    rightMargin = dpToPx(12f)
+                    leftMargin = dpToPx(16f)
+                    rightMargin = dpToPx(16f)
                 }
             }
-            val noteText = TextView(parent.context).apply {
-                textSize = 16f
-                setTextColor(onPrimaryContainerColor)
-                setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(16f))
+
+            val cardContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
                 background = GradientDrawable().apply {
-                    cornerRadius = dpToPx(12f).toFloat()
+                    cornerRadius = dpToPx(16f).toFloat()
                     setColor(surfaceContainerHighestColor)
                 }
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+                setMinimumHeight(dpToPx(56f))
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
                 isClickable = true
                 isFocusable = true
                 isLongClickable = true
-                setGoogleSansFlexDefault(this, false)
+                setOnTouchListener(pressScaleTouchListener)
             }
-            val actionContainer = LinearLayout(parent.context).apply {
+
+            val titleText = TextView(context).apply {
+                textSize = 16f
+                setTextColor(onSurfaceVariantColor)
+                setGoogleSansFlexDefault(this, true)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val timeText = TextView(context).apply {
+                textSize = 14f
+                setTextColor(onSurfaceVariantColor)
+                alpha = 0.7f
+                setGoogleSansFlexDefault(this, false)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(2f)
+                }
+            }
+
+            cardContainer.addView(titleText)
+            cardContainer.addView(timeText)
+
+            val actionContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 visibility = View.GONE
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginStart = dpToPx(8f) }
-            }
-            val deleteBtn = ImageView(parent.context).apply {
-                setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.delete_24px))
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(redColor)
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    marginStart = dpToPx(8f)
                 }
-                setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
-                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply { marginEnd = dpToPx(8f) }
+            }
+
+            val deleteBtn = ImageView(context).apply {
+                val deleteIcon = ContextCompat.getDrawable(context, R.drawable.delete_24px)?.let {
+                    val wrapped = DrawableCompat.wrap(it).mutate()
+                    DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
+                    wrapped
+                }
+                setImageDrawable(deleteIcon)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(16f).toFloat()
+                    setColor(surfaceContainerHighestColor)
+                }
+                setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(48f),
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    marginEnd = dpToPx(8f)
+                }
                 isClickable = true
                 isFocusable = true
                 setOnTouchListener(pressScaleTouchListener)
             }
-            val cancelBtn = ImageView(parent.context).apply {
-                setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.close_24px))
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(surfaceContainerLowColor)
+
+            val cancelBtn = ImageView(context).apply {
+                val closeIcon = ContextCompat.getDrawable(context, R.drawable.close_24px)?.let {
+                    val wrapped = DrawableCompat.wrap(it).mutate()
+                    DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
+                    wrapped
                 }
-                setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
-                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f))
+                setImageDrawable(closeIcon)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(16f).toFloat()
+                    setColor(surfaceContainerHighestColor)
+                }
+                setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(48f),
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                )
                 isClickable = true
                 isFocusable = true
                 setOnTouchListener(pressScaleTouchListener)
             }
+
             actionContainer.addView(deleteBtn)
             actionContainer.addView(cancelBtn)
-            root.addView(noteText)
+
+            root.addView(cardContainer)
             root.addView(actionContainer)
-            return ViewHolder(root, noteText, actionContainer)
+
+            return ViewHolder(root, cardContainer, titleText, timeText, actionContainer, deleteBtn, cancelBtn)
         }
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val note = items[position]
-            holder.noteText.text = note.title
-            holder.noteText.setOnClickListener { onItemClick(note) }
-            holder.noteText.setOnLongClickListener {
-                toggleExpansion(position)
-                true
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (getItemViewType(position) == TYPE_NOTE) {
+                val noteHolder = holder as ViewHolder
+                val note = items[position - 1]
+                val isExpanded = position == expandedPosition
+                noteHolder.bind(note, isExpanded, animate = false)
             }
-            val deleteBtn = holder.actionContainer.getChildAt(0) as ImageView
-            deleteBtn.setOnClickListener {
-                NoteRepository.deleteNote(note.id)
-                expandedPositions.remove(position)
-                loadNotesList()
-            }
-            val cancelBtn = holder.actionContainer.getChildAt(1) as ImageView
-            cancelBtn.setOnClickListener {
-                expandedPositions.remove(position)
-                notifyItemChanged(position)
-            }
-            val isExpanded = expandedPositions.contains(position)
-            holder.actionContainer.visibility = if (isExpanded) View.VISIBLE else View.GONE
         }
 
-        private fun toggleExpansion(position: Int) {
-            if (expandedPositions.contains(position)) expandedPositions.remove(position)
-            else { expandedPositions.clear(); expandedPositions.add(position) }
-            notifyDataSetChanged()
+        private fun toggleExpansion(position: Int, holder: ViewHolder) {
+            if (position == RecyclerView.NO_POSITION || position == 0) return
+            val prevExpanded = expandedPosition
+            if (expandedPosition == position) {
+                expandedPosition = RecyclerView.NO_POSITION
+                holder.setExpandedState(false, animate = true)
+            } else {
+                expandedPosition = position
+                if (prevExpanded != RecyclerView.NO_POSITION) {
+                    val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(prevExpanded) as? ViewHolder
+                    prevHolder?.setExpandedState(false, animate = true)
+                }
+                holder.setExpandedState(true, animate = true)
+            }
         }
 
-        override fun getItemCount() = items.size
         fun updateItems(newItems: List<Note>) {
             items = newItems
-            expandedPositions.clear()
+            expandedPosition = RecyclerView.NO_POSITION
             notifyDataSetChanged()
         }
     }
