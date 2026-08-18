@@ -1435,8 +1435,9 @@ class NotesMainAct : AppCompatActivity() {
                     }
                 }
 
+                // FIX: Correctly reference the outer ViewHolder for smooth collapse animation
                 cancelBtn.setOnClickListener {
-                    toggleExpansion(bindingAdapterPosition, this)
+                    toggleExpansion(bindingAdapterPosition, this@ViewHolder)
                 }
 
                 setExpandedState(isExpanded, animate)
@@ -1551,26 +1552,37 @@ class NotesMainAct : AppCompatActivity() {
             cardContainer.addView(titleText)
             cardContainer.addView(timeText)
 
+            // ---- ACTION CONTAINER (Updated to MATCH_PARENT height) ----
             val actionContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 visibility = View.GONE
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
+                    LinearLayout.LayoutParams.MATCH_PARENT  // Fill the root height
                 ).apply {
                     marginStart = dpToPx(8f)
                 }
             }
 
+            // ---- DELETE BUTTON (Rounded rectangle, red background) ----
             val deleteBtn = ImageView(context).apply {
-                setImageDrawable(ContextCompat.getDrawable(context, R.drawable.delete_24px))
+                val deleteIcon = ContextCompat.getDrawable(context, R.drawable.delete_24px)?.let {
+                    val wrapped = DrawableCompat.wrap(it).mutate()
+                    DrawableCompat.setTint(wrapped, surfaceContainerHighestColor)
+                    wrapped
+                }
+                setImageDrawable(deleteIcon)
                 background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(16f).toFloat()
                     setColor(redColor)
                 }
-                setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
-                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply {
+                setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(48f),
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
                     marginEnd = dpToPx(8f)
                 }
                 isClickable = true
@@ -1578,14 +1590,24 @@ class NotesMainAct : AppCompatActivity() {
                 setOnTouchListener(pressScaleTouchListener)
             }
 
+            // ---- CANCEL / X BUTTON (Rounded rectangle, card background) ----
             val cancelBtn = ImageView(context).apply {
-                setImageDrawable(ContextCompat.getDrawable(context, R.drawable.close_24px))
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(surfaceContainerLowColor)
+                val closeIcon = ContextCompat.getDrawable(context, R.drawable.close_24px)?.let {
+                    val wrapped = DrawableCompat.wrap(it).mutate()
+                    DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
+                    wrapped
                 }
-                setPadding(dpToPx(10f), dpToPx(10f), dpToPx(10f), dpToPx(10f))
-                layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f))
+                setImageDrawable(closeIcon)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(16f).toFloat()
+                    setColor(surfaceContainerHighestColor)
+                }
+                setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(48f),
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                )
                 isClickable = true
                 isFocusable = true
                 setOnTouchListener(pressScaleTouchListener)
