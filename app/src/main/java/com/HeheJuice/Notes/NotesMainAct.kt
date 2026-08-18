@@ -195,6 +195,11 @@ object NoteRepository {
 
 class NotesMainAct : AppCompatActivity() {
 
+    companion object {
+        private const val TYPE_HEADER = 0
+        private const val TYPE_NOTE = 1
+    }
+
     private lateinit var slidingPillView: View
     private lateinit var notesTabBtn: TextView
     private lateinit var settingsTabBtn: TextView
@@ -327,28 +332,27 @@ class NotesMainAct : AppCompatActivity() {
 
         topBarLayout.addView(appNamePill)
 
-// ---- NOTES CONTAINER ----
-notesContainer = FrameLayout(this).apply {
-    layoutParams = FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.MATCH_PARENT,
-        FrameLayout.LayoutParams.MATCH_PARENT
-    )
-    visibility = if (isNotesActive) View.VISIBLE else View.GONE
+        // ---- NOTES CONTAINER ----
+        notesContainer = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            visibility = if (isNotesActive) View.VISIBLE else View.GONE
 
-    val rv = RecyclerView(this@NotesMainAct).apply {
-        layoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        )
-        layoutManager = LinearLayoutManager(this@NotesMainAct)
-        setPadding(0, 0, 0, dpToPx(100f)) // Reduced top padding since title is now inside RV
-        clipToPadding = false
-    }
-    notesRecyclerView = rv
+            val rv = RecyclerView(this@NotesMainAct).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                layoutManager = LinearLayoutManager(this@NotesMainAct)
+                setPadding(0, 0, 0, dpToPx(100f))
+                clipToPadding = false
+            }
+            notesRecyclerView = rv
 
-    addView(rv)
-}
-
+            addView(rv)
+        }
 
         settingsContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -1421,277 +1425,271 @@ notesContainer = FrameLayout(this).apply {
         }
     }
 
-inner class NotesListAdapter(
-    private var items: List<Note>,
-    private val onItemClick: (Note) -> Unit
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    inner class NotesListAdapter(
+        private var items: List<Note>,
+        private val onItemClick: (Note) -> Unit
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    companion object {
-        private const val TYPE_HEADER = 0
-        private const val TYPE_NOTE = 1
-    }
+        private var expandedPosition: Int = RecyclerView.NO_POSITION
 
-    private var expandedPosition: Int = RecyclerView.NO_POSITION
+        inner class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view)
 
-    inner class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view)
+        inner class ViewHolder(
+            val root: LinearLayout,
+            val cardContainer: LinearLayout,
+            val titleText: TextView,
+            val timeText: TextView,
+            val actionContainer: LinearLayout,
+            val deleteBtn: ImageView,
+            val cancelBtn: ImageView
+        ) : RecyclerView.ViewHolder(root) {
 
-    inner class ViewHolder(
-        val root: LinearLayout,
-        val cardContainer: LinearLayout,
-        val titleText: TextView,
-        val timeText: TextView,
-        val actionContainer: LinearLayout,
-        val deleteBtn: ImageView,
-        val cancelBtn: ImageView
-    ) : RecyclerView.ViewHolder(root) {
+            fun bind(note: Note, isExpanded: Boolean, animate: Boolean) {
+                titleText.text = note.title
+                timeText.text = getRelativeTimeSpan(root.context, note.lastModified)
 
-        fun bind(note: Note, isExpanded: Boolean, animate: Boolean) {
-            titleText.text = note.title
-            timeText.text = getRelativeTimeSpan(root.context, note.lastModified)
-
-            cardContainer.setOnClickListener {
-                if (expandedPosition != RecyclerView.NO_POSITION) {
-                    val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(expandedPosition) as? ViewHolder
-                    expandedPosition = RecyclerView.NO_POSITION
-                    prevHolder?.setExpandedState(false, animate = true)
-                } else {
-                    onItemClick(note)
+                cardContainer.setOnClickListener {
+                    if (expandedPosition != RecyclerView.NO_POSITION) {
+                        val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(expandedPosition) as? ViewHolder
+                        expandedPosition = RecyclerView.NO_POSITION
+                        prevHolder?.setExpandedState(false, animate = true)
+                    } else {
+                        onItemClick(note)
+                    }
                 }
-            }
 
-            cardContainer.setOnLongClickListener {
-                cardContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                toggleExpansion(bindingAdapterPosition, this)
-                true
-            }
-
-            deleteBtn.setOnClickListener {
-                val pos = bindingAdapterPosition
-                if (pos != RecyclerView.NO_POSITION) {
-                    NoteRepository.deleteNote(note.id)
-                    expandedPosition = RecyclerView.NO_POSITION
-                    loadNotesList()
+                cardContainer.setOnLongClickListener {
+                    cardContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    toggleExpansion(bindingAdapterPosition, this)
+                    true
                 }
+
+                deleteBtn.setOnClickListener {
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        NoteRepository.deleteNote(note.id)
+                        expandedPosition = RecyclerView.NO_POSITION
+                        loadNotesList()
+                    }
+                }
+
+                cancelBtn.setOnClickListener {
+                    toggleExpansion(bindingAdapterPosition, this@ViewHolder)
+                }
+
+                setExpandedState(isExpanded, animate)
             }
 
-            cancelBtn.setOnClickListener {
-                toggleExpansion(bindingAdapterPosition, this@ViewHolder)
-            }
+            fun setExpandedState(expanded: Boolean, animate: Boolean) {
+                if (animate) {
+                    val transition = TransitionSet().apply {
+                        addTransition(ChangeBounds())
+                        addTransition(android.transition.Fade())
+                        duration = if (expanded) 250L else 200L
+                        interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+                    }
+                    TransitionManager.beginDelayedTransition(root, transition)
+                }
 
-            setExpandedState(isExpanded, animate)
+                actionContainer.visibility = if (expanded) View.VISIBLE else View.GONE
+                actionContainer.alpha = 1f
+                actionContainer.translationX = 0f
+            }
         }
 
-        fun setExpandedState(expanded: Boolean, animate: Boolean) {
-            if (animate) {
-                val transition = TransitionSet().apply {
-                    addTransition(ChangeBounds())
-                    addTransition(android.transition.Fade())
-                    duration = if (expanded) 250L else 200L
-                    interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+        override fun getItemViewType(position: Int): Int {
+            return if (position == 0) TYPE_HEADER else TYPE_NOTE
+        }
+
+        override fun getItemCount() = items.size + 1
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val context = parent.context
+
+            if (viewType == TYPE_HEADER) {
+                val headerView = FrameLayout(context).apply {
+                    layoutParams = RecyclerView.LayoutParams(
+                        RecyclerView.LayoutParams.MATCH_PARENT,
+                        RecyclerView.LayoutParams.WRAP_CONTENT
+                    )
+                    setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(8f))
+
+                    val appNamePill = TextView(context).apply {
+                        text = context.getString(R.string.nav_notes)
+                        textSize = 32f
+                        setTextColor(onPrimaryContainerColor)
+                        setGoogleSansFlexDefault(this, true)
+                        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                        layoutParams = FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            topMargin = dpToPx(8f)
+                            bottomMargin = dpToPx(16f)
+                            marginStart = dpToPx(8f)
+                        }
+                    }
+                    addView(appNamePill)
                 }
-                TransitionManager.beginDelayedTransition(root, transition)
+                return HeaderViewHolder(headerView)
             }
 
-            actionContainer.visibility = if (expanded) View.VISIBLE else View.GONE
-            actionContainer.alpha = 1f
-            actionContainer.translationX = 0f
-        }
-    }
-
-    override fun getItemViewType(position: Int): Int {
-        return if (position == 0) TYPE_HEADER else TYPE_NOTE
-    }
-
-    override fun getItemCount() = items.size + 1
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val context = parent.context
-
-        if (viewType == TYPE_HEADER) {
-            val headerView = FrameLayout(context).apply {
+            val root = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
                 layoutParams = RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
-                )
-                setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(8f))
-
-                val appNamePill = TextView(context).apply {
-                    text = context.getString(R.string.nav_notes)
-                    textSize = 32f
-                    setTextColor(onPrimaryContainerColor)
-                    setGoogleSansFlexDefault(this, true)
-                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                    layoutParams = FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.WRAP_CONTENT,
-                        FrameLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        topMargin = dpToPx(8f)
-                        bottomMargin = dpToPx(16f)
-                        marginStart = dpToPx(8f)
-                    }
+                ).apply {
+                    bottomMargin = dpToPx(8f)
+                    leftMargin = dpToPx(16f)
+                    rightMargin = dpToPx(16f)
                 }
-                addView(appNamePill)
             }
-            return HeaderViewHolder(headerView)
+
+            val cardContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                background = GradientDrawable().apply {
+                    cornerRadius = dpToPx(16f).toFloat()
+                    setColor(surfaceContainerHighestColor)
+                }
+                setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+                setMinimumHeight(dpToPx(56f))
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+                isClickable = true
+                isFocusable = true
+                isLongClickable = true
+                setOnTouchListener(pressScaleTouchListener)
+            }
+
+            val titleText = TextView(context).apply {
+                textSize = 16f
+                setTextColor(onSurfaceVariantColor)
+                setGoogleSansFlexDefault(this, true)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val timeText = TextView(context).apply {
+                textSize = 14f
+                setTextColor(onSurfaceVariantColor)
+                alpha = 0.7f
+                setGoogleSansFlexDefault(this, false)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(2f)
+                }
+            }
+
+            cardContainer.addView(titleText)
+            cardContainer.addView(timeText)
+
+            val actionContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                visibility = View.GONE
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    marginStart = dpToPx(8f)
+                }
+            }
+
+            val deleteBtn = ImageView(context).apply {
+                val deleteIcon = ContextCompat.getDrawable(context, R.drawable.delete_24px)?.let {
+                    val wrapped = DrawableCompat.wrap(it).mutate()
+                    DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
+                    wrapped
+                }
+                setImageDrawable(deleteIcon)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(16f).toFloat()
+                    setColor(surfaceContainerHighestColor)
+                }
+                setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(48f),
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    marginEnd = dpToPx(8f)
+                }
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+            }
+
+            val cancelBtn = ImageView(context).apply {
+                val closeIcon = ContextCompat.getDrawable(context, R.drawable.close_24px)?.let {
+                    val wrapped = DrawableCompat.wrap(it).mutate()
+                    DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
+                    wrapped
+                }
+                setImageDrawable(closeIcon)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(16f).toFloat()
+                    setColor(surfaceContainerHighestColor)
+                }
+                setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(48f),
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                )
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+            }
+
+            actionContainer.addView(deleteBtn)
+            actionContainer.addView(cancelBtn)
+
+            root.addView(cardContainer)
+            root.addView(actionContainer)
+
+            return ViewHolder(root, cardContainer, titleText, timeText, actionContainer, deleteBtn, cancelBtn)
         }
 
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = RecyclerView.LayoutParams(
-                RecyclerView.LayoutParams.MATCH_PARENT,
-                RecyclerView.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = dpToPx(8f)
-                leftMargin = dpToPx(16f)
-                rightMargin = dpToPx(16f)
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (getItemViewType(position) == TYPE_NOTE) {
+                val noteHolder = holder as ViewHolder
+                val note = items[position - 1]
+                val isExpanded = position == expandedPosition
+                noteHolder.bind(note, isExpanded, animate = false)
             }
         }
 
-        val cardContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(16f).toFloat()
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
-            setMinimumHeight(dpToPx(56f))
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-            isClickable = true
-            isFocusable = true
-            isLongClickable = true
-            setOnTouchListener(pressScaleTouchListener)
-        }
-
-        val titleText = TextView(context).apply {
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        val timeText = TextView(context).apply {
-            textSize = 14f
-            setTextColor(onSurfaceVariantColor)
-            alpha = 0.7f
-            setGoogleSansFlexDefault(this, false)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(2f)
+        private fun toggleExpansion(position: Int, holder: ViewHolder) {
+            if (position == RecyclerView.NO_POSITION || position == 0) return
+            val prevExpanded = expandedPosition
+            if (expandedPosition == position) {
+                expandedPosition = RecyclerView.NO_POSITION
+                holder.setExpandedState(false, animate = true)
+            } else {
+                expandedPosition = position
+                if (prevExpanded != RecyclerView.NO_POSITION) {
+                    val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(prevExpanded) as? ViewHolder
+                    prevHolder?.setExpandedState(false, animate = true)
+                }
+                holder.setExpandedState(true, animate = true)
             }
         }
 
-        cardContainer.addView(titleText)
-        cardContainer.addView(timeText)
-
-        val actionContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            ).apply {
-                marginStart = dpToPx(8f)
-            }
-        }
-
-        val deleteBtn = ImageView(context).apply {
-            val deleteIcon = ContextCompat.getDrawable(context, R.drawable.delete_24px)?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
-                wrapped
-            }
-            setImageDrawable(deleteIcon)
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(16f).toFloat()
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
-            layoutParams = LinearLayout.LayoutParams(
-                dpToPx(48f),
-                LinearLayout.LayoutParams.MATCH_PARENT
-            ).apply {
-                marginEnd = dpToPx(8f)
-            }
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
-        }
-
-        val cancelBtn = ImageView(context).apply {
-            val closeIcon = ContextCompat.getDrawable(context, R.drawable.close_24px)?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
-                wrapped
-            }
-            setImageDrawable(closeIcon)
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(16f).toFloat()
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
-            layoutParams = LinearLayout.LayoutParams(
-                dpToPx(48f),
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
-        }
-
-        actionContainer.addView(deleteBtn)
-        actionContainer.addView(cancelBtn)
-
-        root.addView(cardContainer)
-        root.addView(actionContainer)
-
-        return ViewHolder(root, cardContainer, titleText, timeText, actionContainer, deleteBtn, cancelBtn)
-    }
-
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        if (getItemViewType(position) == TYPE_NOTE) {
-            val noteHolder = holder as ViewHolder
-            val note = items[position - 1]
-            val isExpanded = position == expandedPosition
-            noteHolder.bind(note, isExpanded, animate = false)
-        }
-    }
-
-    private fun toggleExpansion(position: Int, holder: ViewHolder) {
-        if (position == RecyclerView.NO_POSITION || position == 0) return
-        val prevExpanded = expandedPosition
-        if (expandedPosition == position) {
+        fun updateItems(newItems: List<Note>) {
+            items = newItems
             expandedPosition = RecyclerView.NO_POSITION
-            holder.setExpandedState(false, animate = true)
-        } else {
-            expandedPosition = position
-            if (prevExpanded != RecyclerView.NO_POSITION) {
-                val prevHolder = notesRecyclerView.findViewHolderForAdapterPosition(prevExpanded) as? ViewHolder
-                prevHolder?.setExpandedState(false, animate = true)
-            }
-            holder.setExpandedState(true, animate = true)
+            notifyDataSetChanged()
         }
     }
-
-    fun updateItems(newItems: List<Note>) {
-        items = newItems
-        expandedPosition = RecyclerView.NO_POSITION
-        notifyDataSetChanged()
-    }
-}
-
 
     private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
