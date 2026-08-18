@@ -646,20 +646,20 @@ class NotesMainAct : AppCompatActivity() {
                 marginStart = dpToPx(12f)
             }
         }
+// Editor settings card container
+val editorSettingsCard = LinearLayout(this).apply {
+    orientation = LinearLayout.VERTICAL
+    background = GradientDrawable().apply {
+        cornerRadius = dpToPx(16f).toFloat()
+        setColor(surfaceContainerHighestColor) // <-- Changed from surfaceContainerLowColor
+    }
+    setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    )
+}
 
-        // Editor settings card container
-        val editorSettingsCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(16f).toFloat()
-                setColor(surfaceContainerLowColor)
-            }
-            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
 
         // Load preference for lines
         val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
