@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 1. Changed to standard Material3 (Tonal Spot) instead of Expressive -->
     <style name="Theme.NoteApp" parent="Theme.Material3Expressive.DayNight.NoActionBar">
-        <!-- 清理重复项，只保留一份 -->
+        
+        <!-- 2. Fallback colors (used if Dynamic Colors are disabled/unavailable) -->
         <item name="colorPrimary">@color/primary</item>
-        <item name="colorPrimaryVariant">@color/primary_variant</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         
-        <!-- 显式声明表面色（继承动态色，或直接使用系统默认） -->
-        <item name="colorSurface">?attr/colorSurface</item>   <!-- 实际上默认就是，但明确一下 -->
-        <item name="colorSurfaceContainerHighest">?attr/colorSurfaceContainerHighest</item>
+        <!-- Note: colorPrimaryVariant and circular ?attr/ references were removed -->
+
+        <!-- 3. To support your edge-to-edge UI in Kotlin, it's best to set these to transparent -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         
-        <!-- 状态栏和导航栏使用表面色（可选） -->
-        <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:navigationBarColor">?attr/colorSurface</item>
     </style>
 </resources>

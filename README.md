@@ -1,6 +1,8 @@
 <div align="center">
 
-# Material-Notes (Simplify as "Notes")
+# Material-Notes 
+
+###(Simplify as "Notes")
 
 > A Simple / Light-Weight Android Notes App
 
