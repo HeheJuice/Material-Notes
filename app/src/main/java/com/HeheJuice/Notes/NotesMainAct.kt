@@ -900,38 +900,49 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
-        // ---- Menu overlay (FAB popup) ----
-        menuOverlayContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            clipChildren = false
-            clipToPadding = false
-            visibility = View.GONE
-            alpha = 0f
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM or Gravity.END
-            )
-        }
+// ---- Menu overlay (FAB popup) ----
+menuOverlayContainer = LinearLayout(this).apply {
+    orientation = LinearLayout.VERTICAL
+    clipChildren = false
+    clipToPadding = false
+    visibility = View.GONE
+    alpha = 0f
+    layoutParams = FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.WRAP_CONTENT,
+        FrameLayout.LayoutParams.WRAP_CONTENT,
+        Gravity.BOTTOM or Gravity.END
+    )
+}
 
-        val createPillBackground = {
-            GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(primaryContainerColor)
-            }
-        }
-        val menuItemParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            bottomMargin = dpToPx(12f)
-            gravity = Gravity.END
-        }
-        val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (_: Exception) { null }
-        val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (_: Exception) { null }
-        val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
-        val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
+val createPillBackground = {
+    GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = dpToPx(100f).toFloat()
+        setColor(primaryContainerColor)
+    }
+}
+val menuItemParams = LinearLayout.LayoutParams(
+    LinearLayout.LayoutParams.WRAP_CONTENT,
+    LinearLayout.LayoutParams.WRAP_CONTENT
+).apply {
+    bottomMargin = dpToPx(12f)
+    gravity = Gravity.END
+}
+
+// Add tintDrawableFunc definition here
+val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+    drawable?.let {
+        val wrapped = DrawableCompat.wrap(it).mutate()
+        DrawableCompat.setTint(wrapped, color)
+        wrapped
+    }
+}
+
+val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (_: Exception) { null }
+val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (_: Exception) { null }
+val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
+val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
+
 
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
