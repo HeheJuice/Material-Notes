@@ -31,7 +31,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -285,7 +287,7 @@ class NotesMainAct : AppCompatActivity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
-        // ---- TOP BAR (moved into notesContainer later) ----
+        // ---- TOP BAR (moved into notesContainer) ----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -358,6 +360,9 @@ class NotesMainAct : AppCompatActivity() {
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
+                // Add top padding to avoid overlapping with topBarLayout
+                setPadding(0, dpToPx(58f), 0, dpToPx(100f))
+                clipToPadding = false
             }
             notesRecyclerView = rv
 
@@ -656,7 +661,6 @@ class NotesMainAct : AppCompatActivity() {
 
         // ---- NOTE: topBarLayout is NOT added to rootFrame anymore ----
         // It was added directly to notesContainer above.
-        // rootFrame.addView(topBarLayout)  // REMOVED
 
         // ---- Dim overlay ----
         dimOverlay = View(this).apply {
@@ -922,20 +926,15 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ========== MODIFIED: switchTab (no manual topBarLayout visibility) ==========
+        // ========== MODIFIED: switchTab (clean padding) ==========
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
 
-                // Reset top padding cleanly
-                val topPad = if (toNotes) {
-                    currentTopInset + dpToPx(66f)
-                } else {
-                    currentTopInset + dpToPx(8f) // Reduced padding for better balance
-                }
-                contentHolder.setPadding(0, topPad, 0, 0)
+                // Only keep status bar inset, no extra padding
+                contentHolder.setPadding(0, currentTopInset, 0, 0)
 
                 // Update app name pill text
                 appNamePill.text = if (toNotes) getString(R.string.nav_notes) else getString(R.string.nav_settings)
@@ -963,9 +962,9 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
-        // ---- Window insets listener ----
+        // ---- Window insets listener (fixed) ----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
-            val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetTop
@@ -976,22 +975,19 @@ class NotesMainAct : AppCompatActivity() {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
 
-            currentTopInset = topInset
+            currentTopInset = statusBarInset
 
-            // topBarLayout is now inside notesContainer, so its margin should be set
-            // via the container's padding or directly
-            topBarLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> { topMargin = topInset }
+            // contentHolder only needs the status bar inset
+            contentHolder.setPadding(0, currentTopInset, 0, 0)
 
-            // Apply padding based on current tab state
-            val topPad = if (isNotesActive) {
-                topInset + dpToPx(66f)
-            } else {
-                topInset + dpToPx(8f)
-            }
-            contentHolder.setPadding(0, topPad, 0, 0)
+            // topBarLayout is inside notesContainer, so we don't set its topMargin here
+            // (it's already positioned correctly via contentHolder padding)
 
-            (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
-            (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
+            // Bottom bar and menu overlay margins
+            val totalBottomMargin = dpToPx(16f) + bottomInset
+            (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin
+            (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin + dpToPx(60f)
+
             insets
         }
     }
