@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">笔记</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">笔记</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Settings Page -->
+    <string name="setting_app_theme">应用主题</string>
+    <string name="theme_light">浅色模式</string>
+    <string name="theme_dark">深色模式</string>
+    <string name="themerestart">应用所选主题</string>
+    <string name="setting_follow_system">跟随系统主题</string>
+    <string name="setting_theme_mode">主题模式</string>
+    <string name="theme_system">系统默认</string>
+    <string name="category_general">通用</string>
+    <string name="setting_follow_system_subtitle">自动调整外观</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">新建笔记</string>
+    <string name="import_notes">导入笔记</string>
+    <string name="import_notes_toast">导入笔记（即将推出）</string>
+
+    <!-- Note Editor -->
+    <string name="save">保存</string>
+    <string name="title">标题</string>
+    <string name="content">内容</string>
+    <string name="new_note">新建笔记</string>
+    <string name="edit_note">编辑笔记</string>
+    <string name="enter_title_hint">请输入标题...</string>
+    <string name="write_content_hint">在此输入内容...</string>
+    <string name="note_cannot_be_empty">笔记不能为空</string>
+    <string name="back_content_desc">返回</string>
+    <string name="title_required">请输入标题</string>
+    <string name="capture_notes_to_image">生成笔记图片</string>
+    <string name="more_options">更多选项</string>
+    <string name="copied">已复制</string>
+    <string name="select_text_first">请先选择文本</string>
+    <string name="nothing_to_paste">没有可粘贴的内容</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">添加</string>
+</resources>

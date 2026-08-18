@@ -346,16 +346,29 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Material 3 list grouping style: 28dp outer corners, 4dp inner corners
-        val outerRadiusPx = dpToPx(28f).toFloat()
+        // REDUCED RADIUS: Changed from 28dp to 16dp to match Image 2
+        val outerRadiusPx = dpToPx(16f).toFloat()
         val innerRadiusPx = dpToPx(4f).toFloat()
+
+        // NEW: Category Header (Like the circled "一般" in the second image)
+        val categoryHeader = TextView(this).apply {
+            text = getString(R.string.category_general)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        themeGroup.addView(categoryHeader)
 
         // 1. Follow system switch row
         val followSystemRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = createGroupItemBg(outerRadiusPx, innerRadiusPx)
-            // Padding is applied directly to the item now, instead of the container
             setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -363,20 +376,48 @@ class NotesMainAct : AppCompatActivity() {
             ).apply {
                 bottomMargin = dpToPx(2f) // This creates the thin physical gap
             }
-            setMinimumHeight(dpToPx(56f)) // Slightly taller for modern style
+            setMinimumHeight(dpToPx(56f))
         }
 
-        val followLabel = TextView(this).apply {
-            text = getString(R.string.setting_follow_system)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
+        // NEW: Text container to stack Title and Subtitle vertically
+        val followTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 1f
             )
         }
+
+        val followLabel = TextView(this).apply {
+            text = getString(R.string.setting_follow_system)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            // THINNER TEXT: Switched bold parameter to false
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // NEW: Subtitle Item
+        val followSubtitle = TextView(this).apply {
+            text = getString(R.string.setting_follow_system_subtitle)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f // Dim the subtitle slightly
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        followTextContainer.addView(followLabel)
+        followTextContainer.addView(followSubtitle)
 
         val accentColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, Color.parseColor("#E8DEF8"))
         val trackOnColor = accentColor
@@ -399,21 +440,40 @@ class NotesMainAct : AppCompatActivity() {
         val followSwitch = LayoutInflater.from(this)
             .inflate(R.layout.switch_material, null) as MaterialSwitch
 
+        // 1. Track Tint State List
         val trackStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val trackColors = intArrayOf(trackOnColor, trackOffColor)
         followSwitch.trackTintList = ColorStateList(trackStates, trackColors)
 
+        // 2. Thumb Tint State List
         val thumbStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val thumbColors = intArrayOf(thumbOnColor, thumbOffColor)
         followSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
 
+        // 3. Thumb Icon Tint State List
         val iconStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val iconColors = intArrayOf(accentColor, trackOffColor)
         followSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
 
+        // ========== NEW: Explicit trackDecorationTintList for border transition ==========
+        // This ensures the border fades in/out at the same pace as the track fill
+        val outlineColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.GRAY)
+        followSwitch.trackDecorationTintList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                Color.TRANSPARENT, // Border hidden when ON
+                outlineColor       // Border visible when OFF
+            )
+        )
+        // ================================================================
+
         followSwitch.isChecked = followSystem
 
-        followSystemRow.addView(followLabel)
+        // Add the text container (instead of just the label)
+        followSystemRow.addView(followTextContainer)
         followSystemRow.addView(followSwitch, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
@@ -484,7 +544,8 @@ class NotesMainAct : AppCompatActivity() {
         }
         updateRowState()
 
-        // Switch listener with animation delay fix
+        // ========== Switch listener with increased delay ==========
+        // Increased from 300ms to 450ms to allow full border fade-in animation
         followSwitch.setOnCheckedChangeListener { _, isChecked ->
             followSystem = isChecked
             prefs.edit().putBoolean("follow_system", followSystem).apply()
@@ -493,8 +554,9 @@ class NotesMainAct : AppCompatActivity() {
             followSwitch.postDelayed({
                 applyThemeFromPrefs()
                 recreate()
-            }, 300)
+            }, 450) // Was 300, now 450 for complete border animation
         }
+        // =========================================================
 
         // Add the grouped container to settings
         settingsContentLayout.addView(themeGroup)

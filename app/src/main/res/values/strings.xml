@@ -14,6 +14,8 @@
 <string name="setting_follow_system">Follow system theme</string>
 <string name="setting_theme_mode">Theme Mode</string>
 <string name="theme_system">System</string>
+<string name="category_general">General</string>
+<string name="setting_follow_system_subtitle">Automatically adjust appearance</string>
 <!-- Menu Actions -->
 <string name="create_notes">Create Notes</string>
 <string name="import_notes">Import Notes</string>

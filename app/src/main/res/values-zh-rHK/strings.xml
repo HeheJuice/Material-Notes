@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">備忘錄</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">備忘錄</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- Settings Page -->
+    <string name="setting_app_theme">應用程式主題</string>
+    <string name="theme_light">淺色模式</string>
+    <string name="theme_dark">深色模式</string>
+    <string name="themerestart">套用所選主題</string>
+    <string name="setting_follow_system">跟隨系統主題</string>
+    <string name="setting_theme_mode">主題模式</string>
+    <string name="theme_system">系統預設</string>
+    <string name="category_general">一般</string>
+    <string name="setting_follow_system_subtitle">自動調整外觀</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">新增備忘錄</string>
+    <string name="import_notes">匯入備忘錄</string>
+    <string name="import_notes_toast">匯入備忘錄（即將推出）</string>
+
+    <!-- Note Editor -->
+    <string name="save">儲存</string>
+    <string name="title">標題</string>
+    <string name="content">內容</string>
+    <string name="new_note">新增備忘錄</string>
+    <string name="edit_note">編輯備忘錄</string>
+    <string name="enter_title_hint">輸入標題...</string>
+    <string name="write_content_hint">在此輸入內容...</string>
+    <string name="note_cannot_be_empty">備忘錄不能為空</string>
+    <string name="back_content_desc">返回</string>
+    <string name="title_required">請輸入標題</string>
+    <string name="capture_notes_to_image">將備忘錄擷取為圖片</string>
+    <string name="more_options">更多選項</string>
+    <string name="copied">已複製</string>
+    <string name="select_text_first">請先選取文字</string>
+    <string name="nothing_to_paste">沒有可貼上的內容</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">新增</string>
+</resources>

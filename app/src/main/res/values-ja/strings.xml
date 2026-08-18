@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ノート</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_notes">ノート</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- Settings Page -->
+    <string name="setting_app_theme">アプリのテーマ</string>
+    <string name="theme_light">ライトモード</string>
+    <string name="theme_dark">ダークモード</string>
+    <string name="themerestart">選択したテーマを適用</string>
+    <string name="setting_follow_system">システムのテーマに従う</string>
+    <string name="setting_theme_mode">テーマモード</string>
+    <string name="theme_system">システム</string>
+    <string name="category_general">一般</string>
+    <string name="setting_follow_system_subtitle">外観を自動的に調整します</string>
+
+    <!-- Menu Actions -->
+    <string name="create_notes">ノートを作成</string>
+    <string name="import_notes">ノートをインポート</string>
+    <string name="import_notes_toast">ノートをインポート（近日公開予定）</string>
+
+    <!-- Note Editor -->
+    <string name="save">保存</string>
+    <string name="title">タイトル</string>
+    <string name="content">内容</string>
+    <string name="new_note">新規ノート</string>
+    <string name="edit_note">ノートを編集</string>
+    <string name="enter_title_hint">タイトルを入力...</string>
+    <string name="write_content_hint">ここにノートを入力...</string>
+    <string name="note_cannot_be_empty">ノートを空にすることはできません</string>
+    <string name="back_content_desc">戻る</string>
+    <string name="title_required">タイトルは必須です</string>
+    <string name="capture_notes_to_image">ノートを画像として保存</string>
+    <string name="more_options">その他のオプション</string>
+    <string name="copied">コピーしました</string>
+    <string name="select_text_first">最初にテキストを選択してください</string>
+    <string name="nothing_to_paste">貼り付ける項目がありません</string>
+
+    <!-- Misc -->
+    <string name="add_button_content_desc">追加</string>
+</resources>
