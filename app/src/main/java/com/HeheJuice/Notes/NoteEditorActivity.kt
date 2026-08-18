@@ -786,7 +786,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 val spanStart = spannable.getSpanStart(span)
                 val spanEnd = spannable.getSpanEnd(span)
                 if (spanStart >= 0 && spanEnd >= 0) {
-                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = span.size))
+                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = span.sizeChange))
                 }
             }
         }
@@ -1030,8 +1030,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val editableText = contentEdit.text
 
         val sizeSpans = editableText.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
-        val isSameScale = sizeSpans.any { it.size == scaleFactor }
-
+        val isSameScale = sizeSpans.any { it.sizeChange == scaleFactor }
         for (span in sizeSpans) {
             editableText.removeSpan(span)
         }
