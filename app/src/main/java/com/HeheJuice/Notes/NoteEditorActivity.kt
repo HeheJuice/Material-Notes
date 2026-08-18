@@ -24,7 +24,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
-import android.util.AttributeSet          // <-- 修复 1：添加缺失导入
+import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -55,7 +55,6 @@ import java.util.*
 
 /**
  * Custom EditText that draws ruled notebook lines below each text line.
- * 修复：重写 getText() 返回非空 Editable，消除 .text 可空类型错误
  */
 class LinedEditText @JvmOverloads constructor(
     context: Context,
@@ -80,7 +79,6 @@ class LinedEditText @JvmOverloads constructor(
         invalidate()
     }
 
-    // 修复 2：重写 getText() 返回非空 Editable，解决所有 .text 可空错误
     override fun getText(): Editable {
         return super.getText() ?: SpannableStringBuilder("")
     }
@@ -616,7 +614,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- 其余功能函数（不变） ----
+    // ---- 其余功能函数 ----
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
@@ -755,13 +753,13 @@ class NoteEditorActivity : AppCompatActivity() {
         val contentSpannable = contentEdit.text
 
         if (title.isEmpty() && contentSpannable.isEmpty()) {
-            Toast.makeText(this, "Nothing to capture", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.nothing_to_capture), Toast.LENGTH_SHORT).show()
             return
         }
 
         val bitmap = generateHighResNoteBitmap(title, contentSpannable)
         if (bitmap == null) {
-            Toast.makeText(this, "Failed to generate image", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.failed_to_generate_image), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -871,11 +869,11 @@ class NoteEditorActivity : AppCompatActivity() {
                 try {
                     contentResolver.openOutputStream(uri)?.use { outputStream ->
                         lastGeneratedBitmap?.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-                        Toast.makeText(this, "Image saved successfully", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.image_saved_successfully), Toast.LENGTH_SHORT).show()
                         lastGeneratedBitmap = null
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.failed_to_save_image, e.message), Toast.LENGTH_SHORT).show()
                 }
             }
         } else {

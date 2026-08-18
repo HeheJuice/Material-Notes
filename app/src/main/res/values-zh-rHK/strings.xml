@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App & Time -->
     <string name="app_name">備忘錄</string>
     <string name="last_edit_time">上次編輯：%1$s</string>
-<string name="time_now">剛剛</string>
-<string name="time_minutes_ago">%1$d 分鐘前</string>
-<string name="time_hours_ago">%1$d 小時前</string>
-<string name="time_days_ago">%1$d 天前</string>
-
+    <string name="time_now">剛剛</string>
+    <string name="time_minutes_ago">%1$d 分鐘前</string>
+    <string name="time_hours_ago">%1$d 小時前</string>
+    <string name="time_days_ago">%1$d 天前</string>
 
     <!-- Navigation Tabs -->
     <string name="nav_notes">備忘錄</string>
     <string name="nav_settings">設定</string>
 
     <!-- Settings Page -->
+    <string name="category_general">一般</string>
     <string name="setting_app_theme">應用程式主題</string>
+    <string name="setting_theme_mode">主題模式</string>
     <string name="theme_light">淺色模式</string>
     <string name="theme_dark">深色模式</string>
+    <string name="theme_system">系統預設</string>
     <string name="themerestart">套用所選主題</string>
     <string name="setting_follow_system">跟隨系統主題</string>
-    <string name="setting_theme_mode">主題模式</string>
-    <string name="theme_system">系統預設</string>
-    <string name="category_general">一般</string>
     <string name="setting_follow_system_subtitle">自動調整外觀</string>
-    <string name="settings_editor_category">編輯器</string>
-    
-    <string name="show_lines_under_text">顯示文字下方橫線</string>
-<string name="show_lines_under_text_desc">在編輯器內的筆記文字下方顯示橫線</string>
 
+    <!-- Editor Settings -->
+    <string name="settings_editor_category">編輯器</string>
+    <string name="show_lines_under_text">顯示文字下方橫線</string>
+    <string name="show_lines_under_text_desc">在編輯器內的筆記文字下方顯示橫線</string>
 
     <!-- Menu Actions -->
     <string name="create_notes">新增備忘錄</string>
@@ -49,35 +49,43 @@
     <string name="copied">已複製</string>
     <string name="select_text_first">請先選取文字</string>
     <string name="nothing_to_paste">沒有可貼上的內容</string>
+
     <!-- Network & About Settings -->
-<string name="settings_network_about_category">網絡與關於</string>
-<string name="setting_app_network">應用程式網絡連接</string>
-<string name="setting_app_network_desc">允許應用程式存取網絡功能</string>
-<string name="setting_updates_and_about">檢查更新與關於應用程式</string>
-<string name="setting_updates_and_about_desc">應用程式版本、詳細資料及軟件更新</string>
-<string name="version_format">版本 %1$s</string>
-<string name="zero_percent">0%</string>
-<string name="progress_format">%1$d%%</string>
-<string name="action_download">下載</string>
-<string name="action_install">安裝</string>
-<string name="view_source_code">檢視原始碼</string>
-<string name="view_license">檢視授權條款</string>
-<string name="download_failed">下載失敗</string>
-<string name="allow_unknown_sources">請允許安裝來自未知來源的應用程式</string>
-<string name="no_app_found_install">找不到用於安裝 APK 的應用程式</string>
-<string name="install_error">安裝錯誤：%1$s</string>
+    <string name="settings_network_about_category">網絡與關於</string>
+    <string name="setting_app_network">應用程式網絡連接</string>
+    <string name="setting_app_network_desc">允許應用程式存取網絡功能</string>
+    <string name="setting_updates_and_about">檢查更新與關於應用程式</string>
+    <string name="setting_updates_and_about_desc">應用程式版本、詳細資料及軟件更新</string>
+    <string name="version_format">版本 %1$s</string>
+    <string name="zero_percent">0%</string>
+    <string name="progress_format">%1$d%%</string>
+    <string name="action_download">下載</string>
+    <string name="action_install">安裝</string>
+    <string name="view_source_code">檢視原始碼</string>
+    <string name="view_license">檢視授權條款</string>
+    <string name="download_failed">下載失敗</string>
+    <string name="allow_unknown_sources">請允許安裝來自未知來源的應用程式</string>
+    <string name="no_app_found_install">找不到用於安裝 APK 的應用程式</string>
+    <string name="install_error">安裝錯誤：%1$s</string>
 
+    <!-- Update Checker -->
+    <string name="update_checking">正在檢查更新…</string>
+    <string name="update_new_version">有新版本可用：%s</string>
+    <string name="update_download">從 GitHub 下載</string>
+    <string name="update_latest">已是最新版本 (%s)</string>
+    <string name="update_server_error">檢查更新失敗（伺服器錯誤）</string>
+    <string name="update_connection_error">無法連接至 GitHub</string>
+    <string name="update_disabled_debug">偵錯版本已停用更新檢查</string>
 
+    <!-- Toast & Messages -->
+    <string name="nothing_to_capture">沒有可擷取的內容</string>
+    <string name="failed_to_save_image">儲存圖片失敗：%s</string>
+    <string name="failed_to_generate_image">生成圖片失敗</string>
+    <string name="image_saved_successfully">圖片已成功儲存</string>
+    <string name="theme_already_applied">已套用所選主題</string>
+    <string name="please_allow_unknown_sources">請允許安裝來自未知來源的應用程式</string>
+    <string name="please_enable_network_permission">請在設定中開啟網絡權限</string>
 
     <!-- Misc -->
     <string name="add_button_content_desc">新增</string>
-    <!-- Update checker -->
-<string name="update_checking">正在檢查更新…</string>
-<string name="update_new_version">有新版本可用：%s</string>
-<string name="update_download">從 GitHub 下載</string>
-<string name="update_latest">已是最新版本 (%s)</string>
-<string name="update_server_error">檢查更新失敗（伺服器錯誤）</string>
-<string name="update_connection_error">無法連接至 GitHub</string>
-<string name="update_disabled_debug">偵錯版本已停用更新檢查</string>
-
 </resources>

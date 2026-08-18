@@ -76,4 +76,12 @@
 <string name="update_server_error">Failed to check updates (server error)</string>
 <string name="update_connection_error">Could not connect to GitHub</string>
 <string name="update_disabled_debug">Update Checker Disabled for Debug Version</string>
+<!-- NoteEditorActivity -->
+<string name="nothing_to_capture">Nothing to capture</string>
+<string name="failed_to_save_image">Failed to save image: %s</string>
+<string name="failed_to_generate_image">Failed to generate image</string>
+<string name="image_saved_successfully">Image saved successfully</string>
+<string name="theme_already_applied">Selected theme is already applied</string>
+<string name="please_allow_unknown_sources">Please allow installation from unknown sources</string>
+<string name="please_enable_network_permission">Please enable network permission in Settings</string>
 </resources>
