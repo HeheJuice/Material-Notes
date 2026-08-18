@@ -1,5 +1,6 @@
 package com.HeheJuice.Notes
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -17,8 +18,10 @@ import android.text.style.StyleSpan
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.Window
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -48,6 +51,23 @@ class NotesUpdate : AppCompatActivity() {
     private var downloadTask: DownloadApkTask? = null
     private var downloadedApkFile: File? = null
 
+    private val pressScaleTouchListener = View.OnTouchListener { v, event ->
+        val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                v.animate().cancel()
+                v.animate().scaleX(0.95f).scaleY(0.95f).alpha(0.88f)
+                    .setDuration(120).setInterpolator(DecelerateInterpolator(1.5f)).start()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                v.animate().cancel()
+                v.animate().scaleX(1.0f).scaleY(1.0f).alpha(1.0f)
+                    .setDuration(350).setInterpolator(springBackInterpolator).start()
+            }
+        }
+        false
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
@@ -71,6 +91,7 @@ class NotesUpdate : AppCompatActivity() {
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
         val surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
         val onPrimaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B"))
+        val onSurfaceVariantColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.parseColor("#49454F"))
         val primaryColor = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4"))
 
         // Monet Gradient Colors
@@ -275,65 +296,114 @@ class NotesUpdate : AppCompatActivity() {
         updateCard.addView(updateActionView)
         root.addView(updateCard)
 
-        // ---- Info Card (Source Code & License) ----
-        val infoCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
+        // ---- Info Card (Source Code & License matching Follows System Theme Card) ----
+        fun createGroupItemBg(topRadius: Float, bottomRadius: Float): GradientDrawable {
+            return GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
                 setColor(surfaceContainerHighestColor)
-                cornerRadius = dpToPx(16f).toFloat()
+                cornerRadii = floatArrayOf(
+                    topRadius, topRadius,
+                    topRadius, topRadius,
+                    bottomRadius, bottomRadius,
+                    bottomRadius, bottomRadius
+                )
             }
-            setPadding(dpToPx(20f), dpToPx(20f), dpToPx(20f), dpToPx(20f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(16f) }
         }
 
-        val sourceBtn = TextView(this).apply {
-            text = getString(R.string.view_source_code)
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(primaryColor)
-                cornerRadius = dpToPx(100f).toFloat()
-            }
-            setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+        val outerRadiusPx = dpToPx(16f).toFloat()
+        val innerRadiusPx = dpToPx(4f).toFloat()
+
+        val infoGroup = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(8f) }
+            ).apply {
+                bottomMargin = dpToPx(16f)
+            }
+        }
+
+        // 1. Source Code Row
+        val sourceRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(outerRadiusPx, innerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(2f)
+            }
+            setMinimumHeight(dpToPx(56f))
             isClickable = true
             isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Crash-Logs-Browser")))
             }
         }
 
-        val licenseBtn = TextView(this).apply {
-            text = getString(R.string.view_license)
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(primaryColor)
-                cornerRadius = dpToPx(100f).toFloat()
-            }
-            setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+        val sourceTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val sourceLabel = TextView(this).apply {
+            text = getString(R.string.view_source_code)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        sourceTextContainer.addView(sourceLabel)
+        sourceRow.addView(sourceTextContainer)
+
+        // 2. License Row
+        val licenseRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dpToPx(8f) }
+            )
+            setMinimumHeight(dpToPx(56f))
             isClickable = true
             isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Crash-Logs-Browser/blob/main/LICENSE")))
             }
         }
 
-        infoCard.addView(sourceBtn)
-        infoCard.addView(licenseBtn)
-        root.addView(infoCard)
+        val licenseTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val licenseLabel = TextView(this).apply {
+            text = getString(R.string.view_license)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        licenseTextContainer.addView(licenseLabel)
+        licenseRow.addView(licenseTextContainer)
+
+        infoGroup.addView(sourceRow)
+        infoGroup.addView(licenseRow)
+        root.addView(infoGroup)
 
         scrollView.addView(root)
         setContentView(scrollView)
@@ -356,13 +426,21 @@ class NotesUpdate : AppCompatActivity() {
             }
         }
 
+        val prefsNotes = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
+        val isNetworkAllowed = prefsNotes.getBoolean("app_network_connection", true)
         val versionName = getVersionName()
+
         if (versionName.contains("Debug", ignoreCase = true)) {
             updateStatusView.text = getString(R.string.update_disabled_debug)
             updateActionView.visibility = View.GONE
             releaseNotesView.visibility = View.GONE
             downloadProgressText.visibility = View.GONE
             deleteCachedApk()
+        } else if (!isNetworkAllowed) {
+            updateStatusView.text = getString(R.string.please_enable_network_permission)
+            updateActionView.visibility = View.GONE
+            releaseNotesView.visibility = View.GONE
+            downloadProgressText.visibility = View.GONE
         } else {
             checkForUpdates()
         }

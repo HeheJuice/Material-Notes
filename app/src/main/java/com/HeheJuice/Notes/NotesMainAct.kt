@@ -294,7 +294,6 @@ class NotesMainAct : AppCompatActivity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
             setBackgroundColor(Color.TRANSPARENT)
-            // Match settingsContentLayout top padding (64dp)
             setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
         }
 
@@ -308,16 +307,13 @@ class NotesMainAct : AppCompatActivity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                // Match bigSettingsTitle margins
                 topMargin = dpToPx(8f)
                 bottomMargin = dpToPx(16f)
                 marginStart = dpToPx(8f)
             }
         }
 
-        // Removed topBarRefreshContainer (more button)
         topBarLayout.addView(appNamePill)
-        // ------------------------------------------
 
         // ---- NOTES CONTAINER ----
         notesContainer = FrameLayout(this).apply {
@@ -333,7 +329,6 @@ class NotesMainAct : AppCompatActivity() {
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
-                // Increased top padding to clear the taller title area
                 setPadding(0, dpToPx(130f), 0, dpToPx(100f))
                 clipToPadding = false
             }
@@ -342,7 +337,6 @@ class NotesMainAct : AppCompatActivity() {
             addView(rv)
             addView(topBarLayout)
         }
-        // ------------------------------------------
 
         settingsContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -384,7 +378,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
         settingsContentLayout.addView(bigSettingsTitle)
-        // ---------------------------------
 
         // ================================================================
         // THEME SETTINGS CARD (General group)
@@ -600,7 +593,6 @@ class NotesMainAct : AppCompatActivity() {
         }
 
         settingsContentLayout.addView(themeGroup)
-        // ================================================================
 
         // ================================================================
         // EDITOR SETTINGS CARD
@@ -620,7 +612,6 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // Compact Editor settings card container
         val editorSettingsCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -710,7 +701,6 @@ class NotesMainAct : AppCompatActivity() {
         editorSettingsCard.addView(showLinesRow)
         settingsContentLayout.addView(editorSectionTitle)
         settingsContentLayout.addView(editorSettingsCard)
-        // ================================================================
 
         // ================================================================
         // NETWORK & ABOUT SETTINGS CARD
@@ -811,35 +801,25 @@ class NotesMainAct : AppCompatActivity() {
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
 
-// 2. Check for Updates & About App Row (In the same row)
-val updatesAndAboutRow = LinearLayout(this).apply {
-    orientation = LinearLayout.HORIZONTAL
-    gravity = Gravity.CENTER_VERTICAL
-    background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
-    setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
-    layoutParams = LinearLayout.LayoutParams(
-        LinearLayout.LayoutParams.MATCH_PARENT,
-        LinearLayout.LayoutParams.WRAP_CONTENT
-    )
-    setMinimumHeight(dpToPx(56f))
-    isClickable = true
-    isFocusable = true
-    setOnTouchListener(pressScaleTouchListener)
-    setOnClickListener {
-        val isNetworkAllowed = prefsNotes.getBoolean("app_network_connection", true)
-        if (isNetworkAllowed) {
-            val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
-            startActivity(intent)
-        } else {
-            Toast.makeText(
-                this@NotesMainAct,
-                "Please enable network connection in settings first",
-                Toast.LENGTH_SHORT
-            ).show()
+        // 2. Check for Updates & About App Row
+        val updatesAndAboutRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
+                startActivity(intent)
+            }
         }
-    }
-}
-
 
         val updatesTextContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -880,7 +860,6 @@ val updatesAndAboutRow = LinearLayout(this).apply {
 
         settingsContentLayout.addView(networkAboutSectionTitle)
         settingsContentLayout.addView(networkAboutGroup)
-        // ================================================================
 
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
@@ -910,49 +889,47 @@ val updatesAndAboutRow = LinearLayout(this).apply {
         }
         rootFrame.addView(dimOverlay)
 
-// ---- Menu overlay (FAB popup) ----
-menuOverlayContainer = LinearLayout(this).apply {
-    orientation = LinearLayout.VERTICAL
-    clipChildren = false
-    clipToPadding = false
-    visibility = View.GONE
-    alpha = 0f
-    layoutParams = FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.WRAP_CONTENT,
-        FrameLayout.LayoutParams.WRAP_CONTENT,
-        Gravity.BOTTOM or Gravity.END
-    )
-}
+        // ---- Menu overlay (FAB popup) ----
+        menuOverlayContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            visibility = View.GONE
+            alpha = 0f
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM or Gravity.END
+            )
+        }
 
-val createPillBackground = {
-    GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = dpToPx(100f).toFloat()
-        setColor(primaryContainerColor)
-    }
-}
-val menuItemParams = LinearLayout.LayoutParams(
-    LinearLayout.LayoutParams.WRAP_CONTENT,
-    LinearLayout.LayoutParams.WRAP_CONTENT
-).apply {
-    bottomMargin = dpToPx(12f)
-    gravity = Gravity.END
-}
+        val createPillBackground = {
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(primaryContainerColor)
+            }
+        }
+        val menuItemParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            bottomMargin = dpToPx(12f)
+            gravity = Gravity.END
+        }
 
-// Add tintDrawableFunc definition here
-val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
-    drawable?.let {
-        val wrapped = DrawableCompat.wrap(it).mutate()
-        DrawableCompat.setTint(wrapped, color)
-        wrapped
-    }
-}
+        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
+            drawable?.let {
+                val wrapped = DrawableCompat.wrap(it).mutate()
+                DrawableCompat.setTint(wrapped, color)
+                wrapped
+            }
+        }
 
-val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (_: Exception) { null }
-val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (_: Exception) { null }
-val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
-val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
-
+        val editNoteDrawable = try { ContextCompat.getDrawable(this, R.drawable.edit_note_24px) } catch (_: Exception) { null }
+        val boxAddDrawable = try { ContextCompat.getDrawable(this, R.drawable.box_add_24px) } catch (_: Exception) { null }
+        val createIcon = tintDrawableFunc(editNoteDrawable, onPrimaryContainerColor)
+        val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
 
         val createNotesItem = TextView(this).apply {
             text = getString(R.string.create_notes)
@@ -1223,7 +1200,6 @@ val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
         }
     }
 
-    // ---- Relative time formatter ----
     private fun getRelativeTimeSpan(context: Context, timestamp: Long): String {
         val now = System.currentTimeMillis()
         val diffMillis = (now - timestamp).coerceAtLeast(0)
@@ -1240,7 +1216,6 @@ val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
         return context.getString(R.string.last_edit_time, timeString)
     }
 
-    // ---- Theme application helper ----
     private fun applyThemeFromPrefs() {
         val mode = if (followSystem) {
             AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
@@ -1250,7 +1225,6 @@ val importIcon = tintDrawableFunc(boxAddDrawable, onPrimaryContainerColor)
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
-    // ---- Popup for Theme Mode ----
     private fun showThemeModePopup(anchor: View) {
         val popupView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
