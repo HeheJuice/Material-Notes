@@ -47,6 +47,10 @@ class NotesUpdate : AppCompatActivity() {
         val surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
         val onPrimaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B"))
 
+        // Monet Gradient Colors
+        val primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.parseColor("#E8DEF8"))
+        val tertiaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorTertiaryContainer, Color.parseColor("#FFD8E4"))
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(surfaceColor)
@@ -100,6 +104,83 @@ class NotesUpdate : AppCompatActivity() {
             }
         }
         root.addView(bigTitle)
+
+        // ---- Monet Gradient App Info Card ----
+        val monetGradientBg = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(primaryContainerColor, tertiaryContainerColor)
+        ).apply {
+            cornerRadius = dpToPx(28f).toFloat()
+        }
+
+        val appInfoCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = monetGradientBg
+            setPadding(dpToPx(24f), dpToPx(28f), dpToPx(24f), dpToPx(28f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+            }
+        }
+
+        // App Icon
+        val appIconDrawable = try {
+            packageManager.getApplicationIcon(packageName)
+        } catch (_: Exception) { null }
+
+        if (appIconDrawable != null) {
+            val appIconView = ImageView(this).apply {
+                setImageDrawable(appIconDrawable)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(64f), dpToPx(64f)).apply {
+                    bottomMargin = dpToPx(12f)
+                }
+            }
+            appInfoCard.addView(appIconView)
+        }
+
+        // App Name
+        val appNameText = TextView(this).apply {
+            text = getString(R.string.app_name)
+            textSize = 20f
+            setTextColor(onPrimaryContainerColor)
+            gravity = Gravity.CENTER
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        appInfoCard.addView(appNameText)
+
+        // App Version
+        val versionName = try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            pInfo.versionName ?: "1.0.0"
+        } catch (_: Exception) {
+            "1.0.0"
+        }
+
+        val appVersionText = TextView(this).apply {
+            text = "Version $versionName"
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            alpha = 0.8f
+            gravity = Gravity.CENTER
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(4f)
+            }
+        }
+        appInfoCard.addView(appVersionText)
+
+        root.addView(appInfoCard)
 
         setContentView(root)
 

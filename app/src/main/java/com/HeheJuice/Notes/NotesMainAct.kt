@@ -287,14 +287,15 @@ class NotesMainAct : AppCompatActivity() {
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
-        // ---- TOP BAR (Big Title + More Button for Notes Page) ----
+        // ---- TOP BAR (Big Title for Notes Page, without "more" button) ----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
             setBackgroundColor(Color.TRANSPARENT)
-            setPadding(dpToPx(16f), dpToPx(8f), dpToPx(16f), dpToPx(8f))
+            // Match settingsContentLayout top padding (64dp)
+            setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
         }
 
         appNamePill = TextView(this).apply {
@@ -305,41 +306,17 @@ class NotesMainAct : AppCompatActivity() {
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.START or Gravity.CENTER_VERTICAL
+                FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
+                // Match bigSettingsTitle margins
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
                 marginStart = dpToPx(8f)
             }
         }
 
-        val tintDrawableFunc: (android.graphics.drawable.Drawable?, Int) -> android.graphics.drawable.Drawable? = { drawable, color ->
-            drawable?.let {
-                val wrapped = DrawableCompat.wrap(it).mutate()
-                DrawableCompat.setTint(wrapped, color)
-                wrapped
-            }
-        }
-
-        val topBarRefreshContainer = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(surfaceContainerHighestColor)
-            }
-            layoutParams = FrameLayout.LayoutParams(dpToPx(50f), dpToPx(50f), Gravity.END or Gravity.CENTER_VERTICAL)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { /* empty */ }
-            setOnTouchListener(pressScaleTouchListener)
-        }
-        val menuDrawable = try { ContextCompat.getDrawable(this, R.drawable.menu_24px) } catch (_: Exception) { null }
-        val topBarRefreshIcon = ImageView(this).apply {
-            setImageDrawable(tintDrawableFunc(menuDrawable, onSurfaceVariantColor))
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            layoutParams = FrameLayout.LayoutParams(dpToPx(26f), dpToPx(26f), Gravity.CENTER)
-        }
-        topBarRefreshContainer.addView(topBarRefreshIcon)
+        // Removed topBarRefreshContainer (more button)
         topBarLayout.addView(appNamePill)
-        topBarLayout.addView(topBarRefreshContainer)
         // ------------------------------------------
 
         // ---- NOTES CONTAINER ----
@@ -356,7 +333,8 @@ class NotesMainAct : AppCompatActivity() {
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
-                setPadding(0, dpToPx(84f), 0, dpToPx(100f))
+                // Increased top padding to clear the taller title area
+                setPadding(0, dpToPx(130f), 0, dpToPx(100f))
                 clipToPadding = false
             }
             notesRecyclerView = rv
@@ -735,7 +713,7 @@ class NotesMainAct : AppCompatActivity() {
         // ================================================================
 
         // ================================================================
-        // NEW NETWORK & ABOUT SETTINGS CARD
+        // NETWORK & ABOUT SETTINGS CARD
         // ================================================================
         val networkAboutSectionTitle = TextView(this).apply {
             text = getString(R.string.settings_network_about_category)
@@ -848,10 +826,9 @@ class NotesMainAct : AppCompatActivity() {
             isFocusable = true
             setOnTouchListener(pressScaleTouchListener)
             setOnClickListener {
-        val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
-        startActivity(intent)
-    }
-
+                val intent = Intent(this@NotesMainAct, NotesUpdate::class.java)
+                startActivity(intent)
+            }
         }
 
         val updatesTextContainer = LinearLayout(this).apply {
