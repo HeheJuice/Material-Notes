@@ -68,4 +68,12 @@
 
 <!-- Misc -->
 <string name="add_button_content_desc">Add</string>
+<!-- Update checker -->
+<string name="update_checking">Checking for updates…</string>
+<string name="update_new_version">New version available: %s</string>
+<string name="update_download">Download from GitHub</string>
+<string name="update_latest">You are on the latest version (%s)</string>
+<string name="update_server_error">Failed to check updates (server error)</string>
+<string name="update_connection_error">Could not connect to GitHub</string>
+<string name="update_disabled_debug">Update Checker Disabled for Debug Version</string>
 </resources>

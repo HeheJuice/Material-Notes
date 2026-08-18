@@ -71,4 +71,13 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">添加</string>
+    <!-- Update checker -->
+<string name="update_checking">正在检查更新…</string>
+<string name="update_new_version">有新版本可用：%s</string>
+<string name="update_download">从 GitHub 下载</string>
+<string name="update_latest">已是最新版本 (%s)</string>
+<string name="update_server_error">检查更新失败（服务器错误）</string>
+<string name="update_connection_error">无法连接至 GitHub</string>
+<string name="update_disabled_debug">调试版本已禁用更新检查</string>
+
 </resources>
