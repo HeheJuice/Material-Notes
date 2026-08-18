@@ -222,6 +222,9 @@ class NotesMainAct : AppCompatActivity() {
     private var followSystem: Boolean = true
     private var themeMode: Int = 0  // 0 = Light, 1 = Dark
 
+    // Store top inset for dynamic padding adjustment
+    private var currentTopInset = 0
+
     private val pressScaleTouchListener = View.OnTouchListener { v, event ->
         val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
         when (event.action) {
@@ -321,8 +324,26 @@ class NotesMainAct : AppCompatActivity() {
             setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
         }
 
+        // ---- ADD LARGE SETTINGS TITLE ----
+        val bigSettingsTitle = TextView(this).apply {
+            text = getString(R.string.nav_settings) // "Settings"
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(12f)
+                bottomMargin = dpToPx(20f)
+                marginStart = dpToPx(4f)
+            }
+        }
+        settingsContentLayout.addView(bigSettingsTitle)
+        // ---------------------------------
+
         // ================================================================
-        // NEW: Material Design 3 grouped list style
+        // Material Design 3 grouped list style
         // ================================================================
         val themeGroup = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -346,11 +367,11 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // REDUCED RADIUS: Changed from 28dp to 16dp to match Image 2
+        // Outer 16dp, inner 4dp
         val outerRadiusPx = dpToPx(16f).toFloat()
         val innerRadiusPx = dpToPx(4f).toFloat()
 
-        // NEW: Category Header (Like the circled "一般" in the second image)
+        // Category Header
         val categoryHeader = TextView(this).apply {
             text = getString(R.string.category_general)
             textSize = 14f
@@ -374,12 +395,12 @@ class NotesMainAct : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = dpToPx(2f) // This creates the thin physical gap
+                bottomMargin = dpToPx(2f)
             }
             setMinimumHeight(dpToPx(56f))
         }
 
-        // NEW: Text container to stack Title and Subtitle vertically
+        // Text container for title + subtitle
         val followTextContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -393,20 +414,19 @@ class NotesMainAct : AppCompatActivity() {
             text = getString(R.string.setting_follow_system)
             textSize = 16f
             setTextColor(onSurfaceVariantColor)
-            // THINNER TEXT: Switched bold parameter to false
-            setGoogleSansFlexDefault(this, false)
+            // BOLD ROUND restored (true)
+            setGoogleSansFlexDefault(this, true)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
-        // NEW: Subtitle Item
         val followSubtitle = TextView(this).apply {
             text = getString(R.string.setting_follow_system_subtitle)
             textSize = 14f
             setTextColor(onSurfaceVariantColor)
-            alpha = 0.7f // Dim the subtitle slightly
+            alpha = 0.7f
             setGoogleSansFlexDefault(this, false)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -436,27 +456,25 @@ class NotesMainAct : AppCompatActivity() {
 
         val thumbOffColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.parseColor("#79747E"))
 
-        // Inflate switch
         val followSwitch = LayoutInflater.from(this)
             .inflate(R.layout.switch_material, null) as MaterialSwitch
 
-        // 1. Track Tint State List
+        // Track tint
         val trackStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val trackColors = intArrayOf(trackOnColor, trackOffColor)
         followSwitch.trackTintList = ColorStateList(trackStates, trackColors)
 
-        // 2. Thumb Tint State List
+        // Thumb tint
         val thumbStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val thumbColors = intArrayOf(thumbOnColor, thumbOffColor)
         followSwitch.thumbTintList = ColorStateList(thumbStates, thumbColors)
 
-        // 3. Thumb Icon Tint State List
+        // Thumb icon tint
         val iconStates = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
         val iconColors = intArrayOf(accentColor, trackOffColor)
         followSwitch.thumbIconTintList = ColorStateList(iconStates, iconColors)
 
-        // ========== NEW: Explicit trackDecorationTintList for border transition ==========
-        // This ensures the border fades in/out at the same pace as the track fill
+        // Border transition (explicit)
         val outlineColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, Color.GRAY)
         followSwitch.trackDecorationTintList = ColorStateList(
             arrayOf(
@@ -464,15 +482,13 @@ class NotesMainAct : AppCompatActivity() {
                 intArrayOf(-android.R.attr.state_checked)
             ),
             intArrayOf(
-                Color.TRANSPARENT, // Border hidden when ON
-                outlineColor       // Border visible when OFF
+                Color.TRANSPARENT,
+                outlineColor
             )
         )
-        // ================================================================
 
         followSwitch.isChecked = followSystem
 
-        // Add the text container (instead of just the label)
         followSystemRow.addView(followTextContainer)
         followSystemRow.addView(followSwitch, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -480,7 +496,7 @@ class NotesMainAct : AppCompatActivity() {
         ))
         themeGroup.addView(followSystemRow)
 
-        // 2. Theme Mode row (no divider)
+        // 2. Theme Mode row
         val themeModeRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -529,7 +545,6 @@ class NotesMainAct : AppCompatActivity() {
         }
         themeGroup.addView(themeModeRow)
 
-        // Row state updater
         fun updateRowState() {
             val enabled = !followSystem
             themeModeRow.isEnabled = enabled
@@ -544,28 +559,23 @@ class NotesMainAct : AppCompatActivity() {
         }
         updateRowState()
 
-        // ========== Switch listener with increased delay ==========
-        // Increased from 300ms to 450ms to allow full border fade-in animation
+        // ========== SWITCH LISTENER (No timer, direct apply) ==========
         followSwitch.setOnCheckedChangeListener { _, isChecked ->
             followSystem = isChecked
             prefs.edit().putBoolean("follow_system", followSystem).apply()
             updateRowState()
-            followSwitch.isEnabled = false
-            followSwitch.postDelayed({
-                applyThemeFromPrefs()
-                recreate()
-            }, 450) // Was 300, now 450 for complete border animation
+            // Apply theme and recreate immediately – switch animation still plays smoothly
+            applyThemeFromPrefs()
+            recreate()
         }
-        // =========================================================
+        // ===============================================================
 
-        // Add the grouped container to settings
         settingsContentLayout.addView(themeGroup)
-        // ================================================================
 
         settingsScrollView.addView(settingsContentLayout)
         settingsContainer.addView(settingsScrollView)
 
-        // ... rest of the layout (unchanged) ...
+        // ---- Content holder ----
         contentHolder = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -575,6 +585,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(contentHolder)
 
+        // ---- Top bar (pill + menu) ----
         topBarLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -633,6 +644,7 @@ class NotesMainAct : AppCompatActivity() {
         topBarLayout.addView(topBarRefreshContainer)
         rootFrame.addView(topBarLayout)
 
+        // ---- Dim overlay ----
         dimOverlay = View(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -647,6 +659,7 @@ class NotesMainAct : AppCompatActivity() {
         }
         rootFrame.addView(dimOverlay)
 
+        // ---- Menu overlay (FAB popup) ----
         menuOverlayContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -720,6 +733,7 @@ class NotesMainAct : AppCompatActivity() {
         menuOverlayContainer.addView(importNotesItem)
         rootFrame.addView(menuOverlayContainer)
 
+        // ---- Bottom bar ----
         bottomBarLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -835,6 +849,7 @@ class NotesMainAct : AppCompatActivity() {
         notesRecyclerView.adapter = notesAdapter
         loadNotesList()
 
+        // ---- Tint helpers ----
         val tintDrawableColor: (TextView, Int) -> Unit = { textView, color ->
             val drawables = textView.compoundDrawables
             val left = drawables[0]?.let {
@@ -893,14 +908,29 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // ========== MODIFIED: switchTab with top bar visibility + padding ==========
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
                 notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
                 settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
+
+                // Show/hide top bar pill + menu button
+                topBarLayout.visibility = if (toNotes) View.VISIBLE else View.GONE
+
+                // Adjust content padding dynamically
+                val topPad = if (toNotes) {
+                    currentTopInset + dpToPx(66f)
+                } else {
+                    currentTopInset + dpToPx(16f)
+                }
+                contentHolder.setPadding(0, topPad, 0, 0)
+
+                // Update app name pill text
                 appNamePill.text = if (toNotes) getString(R.string.nav_notes) else getString(R.string.nav_settings)
             }
         }
+        // =====================================================
 
         notesTabBtn.setOnClickListener {
             if (!isNotesActive) {
@@ -922,6 +952,7 @@ class NotesMainAct : AppCompatActivity() {
             slidingPillView.requestLayout()
         }
 
+        // ---- Window insets listener ----
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
             val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.statusBars()).top
@@ -933,8 +964,19 @@ class NotesMainAct : AppCompatActivity() {
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
+
+            currentTopInset = topInset
+
             topBarLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> { topMargin = topInset }
-            contentHolder.setPadding(0, topInset + dpToPx(66f), 0, 0)
+
+            // Apply padding based on current tab state
+            val topPad = if (isNotesActive) {
+                topInset + dpToPx(66f)
+            } else {
+                topInset + dpToPx(16f)
+            }
+            contentHolder.setPadding(0, topPad, 0, 0)
+
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(16f) + bottomInset
             (menuOverlayContainer.layoutParams as FrameLayout.LayoutParams).bottomMargin = dpToPx(88f) + bottomInset
             insets
@@ -951,7 +993,7 @@ class NotesMainAct : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
-    // ---- Popup for Theme Mode (right-aligned, 16dp corners, no icons) ----
+    // ---- Popup for Theme Mode ----
     private fun showThemeModePopup(anchor: View) {
         val popupView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1029,7 +1071,6 @@ class NotesMainAct : AppCompatActivity() {
             isFocusable = true
             animationStyle = android.R.style.Animation_Dialog
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
-            // Right-aligned under anchor
             showAsDropDown(anchor, anchor.width - popupView.measuredWidth, dpToPx(8f))
         }
     }
