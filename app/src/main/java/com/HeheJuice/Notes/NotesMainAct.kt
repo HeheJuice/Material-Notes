@@ -388,13 +388,14 @@ class NotesMainAct : AppCompatActivity() {
             clipToPadding = false
         }
         val settingsContentLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-            setPadding(dpToPx(16f), dpToPx(16f), dpToPx(16f), dpToPx(100f))
-        }
+    orientation = LinearLayout.VERTICAL
+    layoutParams = LinearLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.WRAP_CONTENT
+    )
+    // Change top padding from dpToPx(16f) to dpToPx(64f)
+    setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(100f))
+}
 
         // ---- ADD LARGE SETTINGS TITLE (balanced margins) ----
         val bigSettingsTitle = TextView(this).apply {
