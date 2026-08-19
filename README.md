@@ -35,6 +35,11 @@
 
 > Share this repository link to support us
 
+## Help Us Improve!
+> The DEV of this app isn't professional and may have some bugs
+
+> Feel free to report or we would like help from other developers 🩷
+
 ## Acknowledgements
 
 > This project uses codes from the following projects 
