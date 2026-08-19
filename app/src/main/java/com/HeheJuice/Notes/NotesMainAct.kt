@@ -13,7 +13,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.transition.ChangeBounds
+import android.transition.Fade
 import android.transition.TransitionManager
 import android.transition.TransitionSet
 import android.util.TypedValue
@@ -42,16 +44,15 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
-import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import android.provider.Settings
 
 data class Note(
     val id: String,
@@ -584,8 +585,8 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
         themeGroup.addView(themeModeRow)
-        
-                // 3. Language Settings Row (Android 13+ only)
+
+        // 3. Language Settings Row (Android 13+ only)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Update themeModeRow to act as a middle item in the card group
             themeModeRow.background = createGroupItemBg(innerRadiusPx, innerRadiusPx)
@@ -652,7 +653,6 @@ class NotesMainAct : AppCompatActivity() {
 
             themeGroup.addView(langSettingsRow)
         }
-
 
         fun updateRowState() {
             val enabled = !followSystem
@@ -839,7 +839,6 @@ class NotesMainAct : AppCompatActivity() {
         editorGroup.addView(helperRow)
 
         settingsContentLayout.addView(editorGroup)
-
 
         // ================================================================
         // NETWORK & ABOUT SETTINGS CARD
@@ -1285,12 +1284,47 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
+        // ------------------------------------------------------------
+        //  MODIFIED: switchTab with crossfade + horizontal slide
+        // ------------------------------------------------------------
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
-                notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
-                settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
 
+                val incomingView = if (toNotes) notesContainer else settingsContainer
+                val outgoingView = if (toNotes) settingsContainer else notesContainer
+
+                // Offset for slide effect (24dp)
+                val offsetPx = dpToPx(24f).toFloat()
+
+                // Prepare incoming view: start off-screen and invisible
+                incomingView.translationX = if (toNotes) -offsetPx else offsetPx
+                incomingView.alpha = 0f
+                incomingView.visibility = View.VISIBLE
+
+                // Animate incoming: fade in + slide to center
+                incomingView.animate()
+                    .alpha(1f)
+                    .translationX(0f)
+                    .setDuration(250L)
+                    .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f))
+                    .start()
+
+                // Animate outgoing: fade out + slide out
+                outgoingView.animate()
+                    .alpha(0f)
+                    .translationX(if (toNotes) offsetPx else -offsetPx)
+                    .setDuration(200L)
+                    .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f))
+                    .setListener(object : AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: Animator) {
+                            outgoingView.visibility = View.GONE
+                            outgoingView.translationX = 0f   // reset for next time
+                        }
+                    })
+                    .start()
+
+                // Maintain padding for status bar
                 contentHolder.setPadding(0, currentTopInset, 0, 0)
             }
         }
@@ -1349,7 +1383,7 @@ class NotesMainAct : AppCompatActivity() {
                     fileName = cursor.getString(nameIndex)
                 }
             }
-            
+
             val title = fileName.substringBeforeLast(".")
             val textContent = contentResolver.openInputStream(uri)?.use { stream ->
                 stream.bufferedReader().use { it.readText() }
@@ -1588,23 +1622,22 @@ class NotesMainAct : AppCompatActivity() {
                 }
 
                 deleteBtn.setOnClickListener {
-    val pos = bindingAdapterPosition
-    if (pos != RecyclerView.NO_POSITION) {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
-            .setTitle(R.string.title_delete_action)
-            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
-                NoteRepository.deleteNote(note.id)
-                expandedPosition = RecyclerView.NO_POSITION
-                loadNotesList()
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-}
-
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        MaterialAlertDialogBuilder(root.context)
+                            .setTitle(R.string.title_delete_action)
+                            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
+                                NoteRepository.deleteNote(note.id)
+                                expandedPosition = RecyclerView.NO_POSITION
+                                loadNotesList()
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
+                                dialog.dismiss()
+                            }
+                            .show()
+                    }
+                }
 
                 cancelBtn.setOnClickListener {
                     toggleExpansion(bindingAdapterPosition, this@ViewHolder)
@@ -1617,7 +1650,7 @@ class NotesMainAct : AppCompatActivity() {
                 if (animate) {
                     val transition = TransitionSet().apply {
                         addTransition(ChangeBounds())
-                        addTransition(android.transition.Fade())
+                        addTransition(Fade())
                         duration = if (expanded) 250L else 200L
                         interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
                     }

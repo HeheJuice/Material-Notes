@@ -28,6 +28,11 @@
   <a href="Banner/SS4.png"><img src="Banner/SS4.png" width="22%" alt="Screenshot 4"></a>
 </p>
 
+## Support Us
+> This app is completely FREE 
+
+> Share this repository link to support us
+
 ## Acknowledgements
 
 > This project uses codes from the following projects 
