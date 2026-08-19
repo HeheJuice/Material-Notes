@@ -109,6 +109,9 @@
 <string name="bold_desc">对所选文本应用或取消加粗</string>
 <string name="landscape_title">关于生成笔记图片</string>
 <string name="landscape_desc">你知道在横屏模式下可以生成更宽的笔记图片吗？</string>
+<string name="help_sub_buttom">工具栏快捷方式</string>
+<string name="help_tips">提示</string>
+
 <!-- Back -->
 <string name="warning_save_title">当前修改尚未保存</string>
 <string name="save_and_exit">保存并退出</string>

@@ -108,6 +108,9 @@
 <string name="bold_desc">Bật hoặc hủy in đậm cho văn bản đã chọn</string>
 <string name="landscape_title">Về Lưu ghi chú thành hình ảnh</string>
 <string name="landscape_desc">Bạn có biết mình có thể chụp ảnh ghi chú rộng hơn ở chế độ xoay ngang không?</string>
+<string name="help_sub_buttom">Phím tắt thanh công cụ</string>
+<string name="help_tips">Mẹo</string>
+
 <!-- Back -->
 <string name="warning_save_title">Các chỉnh sửa hiện tại chưa được lưu</string>
 <string name="save_and_exit">Lưu và thoát</string>

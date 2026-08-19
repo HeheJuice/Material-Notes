@@ -23,7 +23,6 @@ import android.text.Selection
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.TextWatcher
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.AttributeSet
@@ -121,144 +120,15 @@ class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text
     }
 }
 
-class TextUndoHelper(private val editText: EditText, private val onStateChanged: () -> Unit) {
-
-    private data class TextState(
-        val content: SpannableStringBuilder,
-        val selectionStart: Int,
-        val selectionEnd: Int
-    )
-
-    private val undoStack = java.util.ArrayDeque<TextState>()
-    private val redoStack = java.util.ArrayDeque<TextState>()
-    private var isUndoOrRedo = false
-    private var isBatchMode = false
-
-    init {
-        editText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                if (!isUndoOrRedo && !isBatchMode && s != null) {
-                    pushState()
-                }
-            }
-        })
-    }
-
-    fun beginBatch() {
-        isBatchMode = true
-    }
-
-    fun endBatch() {
-        isBatchMode = false
-        pushState()
-    }
-
-    private fun pushState() {
-        val currentEditable = editText.text ?: return
-        val start = minOf(editText.selectionStart.coerceAtLeast(0), currentEditable.length)
-        val end = minOf(editText.selectionEnd.coerceAtLeast(0), currentEditable.length)
-        val newState = TextState(SpannableStringBuilder(currentEditable), start, end)
-
-        if (undoStack.isNotEmpty()) {
-            val lastState = undoStack.peek()
-            if (lastState.content.toString() == newState.content.toString() &&
-                lastState.content.getSpans(0, lastState.content.length, Any::class.java)
-                    .contentEquals(newState.content.getSpans(0, newState.content.length, Any::class.java))
-            ) {
-                return
-            }
-        }
-
-        undoStack.push(newState)
-        redoStack.clear()
-        if (undoStack.size > 50) {
-            undoStack.removeLast()
-        }
-        onStateChanged()
-    }
-
-    fun canUndo(): Boolean = undoStack.size > 1
-
-    fun canRedo(): Boolean = redoStack.isNotEmpty()
-
-    fun undo() {
-        if (!canUndo()) return
-        isUndoOrRedo = true
-
-        val currentState = undoStack.pop()
-        redoStack.push(currentState)
-
-        val previousState = undoStack.peek()
-        applyState(previousState)
-
-        isUndoOrRedo = false
-        onStateChanged()
-    }
-
-    fun redo() {
-        if (!canRedo()) return
-        isUndoOrRedo = true
-
-        val nextState = redoStack.pop()
-        undoStack.push(nextState)
-        applyState(nextState)
-
-        isUndoOrRedo = false
-        onStateChanged()
-    }
-
-    private fun applyState(state: TextState) {
-        val editable = editText.text ?: return
-        
-        // Mutate current editable buffer in-place to preserve layout structure
-        editable.replace(0, editable.length, state.content)
-
-        val targetStart = state.selectionStart.coerceIn(0, editable.length)
-        val targetEnd = state.selectionEnd.coerceIn(0, editable.length)
-
-        Selection.setSelection(editable, targetStart, targetEnd)
-
-        // Scroll view directly to the restored cursor position
-        editText.post {
-            val layout = editText.layout ?: return@post
-            val activeOffset = targetEnd.coerceIn(0, layout.text.length)
-            
-            val line = layout.getLineForOffset(activeOffset)
-            val lineTop = layout.getLineTop(line)
-            val lineBottom = layout.getLineBottom(line)
-
-            // Compute precise bounding box for line inside EditText
-            val rect = android.graphics.Rect(
-                0,
-                lineTop + editText.paddingTop,
-                editText.width,
-                lineBottom + editText.paddingTop
-            )
-
-            // Request the parent ScrollView to bring line into viewport
-            editText.requestRectangleOnScreen(rect, false)
-        }
-    }
-
-    fun initInitialState() {
-        undoStack.clear()
-        redoStack.clear()
-        pushState()
-        onStateChanged()
-    }
-}
-
 class NoteEditorActivity : AppCompatActivity() {
 
     private lateinit var titleEdit: EditText
     private lateinit var contentEdit: LinedEditText
-    private lateinit var undoHelper: TextUndoHelper
     private var noteId: String = ""
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
 
+    // Tracking initial state to detect unsaved edits (including text formatting)
     private var initialTitle: String = ""
     private var initialContent: String = ""
     private var initialSpans: List<SpanData> = emptyList()
@@ -267,8 +137,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var pasteBtn: ImageView
     private lateinit var boldBtn: ImageView
     private lateinit var biggerBtn: ImageView
-    private lateinit var undoBtn: ImageView
-    private lateinit var redoBtn: ImageView
     private lateinit var toolbarContainer: LinearLayout
 
     private lateinit var splitButton: LinearLayout
@@ -320,6 +188,7 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
+        // ---- 颜色解析 ----
         surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF"))
         surfaceLow = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7"))
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
@@ -340,6 +209,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
+        // ---- 顶部栏 ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -485,6 +355,7 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(splitButton)
         root.addView(topBar)
 
+        // ---- 标题 ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -522,6 +393,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
+        // ---- 内容 ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -573,13 +445,10 @@ class NoteEditorActivity : AppCompatActivity() {
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
-        undoHelper = TextUndoHelper(contentEdit) {
-            updateToolbarButtons()
-        }
-
+        // ---- 工具栏 ----
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -588,7 +457,7 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        val leftToolPill = FrameLayout(this).apply {
+        val toolPill = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setCornerRadius(dpToPx(100f).toFloat())
@@ -655,6 +524,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 Toast.makeText(this@NoteEditorActivity, getString(R.string.nothing_to_paste), Toast.LENGTH_SHORT).show()
             }
         }
+        updateButtonState(pasteBtn, true)
 
         boldBtn = createToolButton(R.drawable.format_bold_24px) {
             applyBoldRoundToSelection()
@@ -668,51 +538,12 @@ class NoteEditorActivity : AppCompatActivity() {
         buttonRow.addView(pasteBtn)
         buttonRow.addView(boldBtn)
         buttonRow.addView(biggerBtn)
-        leftToolPill.addView(buttonRow)
 
-        val toolbarSpacer = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-        }
-
-        val rightToolPill = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                setCornerRadius(dpToPx(100f).toFloat())
-                setColor(surfaceContainerLowColor)
-            }
-            setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        val rightButtonRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        undoBtn = createToolButton(R.drawable.undo_24px) {
-            undoHelper.undo()
-        }
-
-        redoBtn = createToolButton(R.drawable.redo_24px) {
-            undoHelper.redo()
-        }
-
-        rightButtonRow.addView(undoBtn)
-        rightButtonRow.addView(redoBtn)
-        rightToolPill.addView(rightButtonRow)
-
-        toolbarContainer.addView(leftToolPill)
-        toolbarContainer.addView(toolbarSpacer)
-        toolbarContainer.addView(rightToolPill)
+        toolPill.addView(buttonRow)
+        toolbarContainer.addView(toolPill)
         root.addView(toolbarContainer)
 
+        // ---- 加载已有笔记 ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -741,20 +572,28 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
+        // Cache initial values (title, content, and formatting spans) to check for changes
         initialTitle = titleEdit.text.toString()
         initialContent = contentEdit.text.toString()
         initialSpans = getCurrentSpans()
 
-        undoHelper.initInitialState()
-
         setContentView(root)
 
+        // Register system back button callback
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 handleBackNavigation()
             }
         })
 
+        // ---- 监听器 ----
+        contentEdit.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                updateToolbarButtons()
+            }
+        })
         contentEdit.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_UP) {
                 updateToolbarButtons()
@@ -764,6 +603,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         updateToolbarButtons()
 
+        // ---- 窗口边距 ----
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -784,6 +624,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // Helper to extract active spans in the content
     private fun getCurrentSpans(): List<SpanData> {
         val spans = mutableListOf<SpanData>()
         val spannable = contentEdit.text as? Spannable ?: return spans
@@ -817,16 +658,19 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
+        // Sort to ensure canonical order when comparing equality
         spans.sortWith(compareBy({ it.start }, { it.end }, { it.type }))
         return spans
     }
 
+    // Check if the user has unsaved edits (title, content, or formatting)
     private fun hasUnsavedChanges(): Boolean {
         return titleEdit.text.toString() != initialTitle ||
                 contentEdit.text.toString() != initialContent ||
                 getCurrentSpans() != initialSpans
     }
 
+    // Intercept back navigation
     private fun handleBackNavigation() {
         if (hasUnsavedChanges()) {
             showUnsavedChangesDialog()
@@ -835,6 +679,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // Material 3 style unsaved changes dialog matching screenshot design
     private fun showUnsavedChangesDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -901,9 +746,17 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        val btnSave = createOptionButton(R.string.save_and_exit) { saveNote() }
-        val btnExit = createOptionButton(R.string.exit_directly) { finish() }
-        val btnBack = createOptionButton(R.string.back_to_editor) { }
+        val btnSave = createOptionButton(R.string.save_and_exit) {
+            saveNote()
+        }
+
+        val btnExit = createOptionButton(R.string.exit_directly) {
+            finish()
+        }
+
+        val btnBack = createOptionButton(R.string.back_to_editor) {
+            // Dismiss dialog and stay in editor
+        }
 
         (btnBack.layoutParams as LinearLayout.LayoutParams).bottomMargin = 0
 
@@ -921,6 +774,8 @@ class NoteEditorActivity : AppCompatActivity() {
 
         dialog.show()
     }
+
+    // ---- 其余功能函数 ----
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
@@ -1169,6 +1024,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // ---- 隐藏键盘 ----
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
         currentFocus?.let { view ->
@@ -1189,26 +1045,16 @@ class NoteEditorActivity : AppCompatActivity() {
         updateButtonState(pasteBtn, false)
         updateButtonState(boldBtn, false)
         updateButtonState(biggerBtn, false)
-        updateButtonState(undoBtn, false)
-        updateButtonState(redoBtn, false)
     }
 
     private fun updateToolbarButtons() {
         val hasFocus = contentEdit.hasFocus()
         val hasSelection = contentEdit.selectionStart != contentEdit.selectionEnd
-
-        updateButtonState(copyBtn, hasFocus && hasSelection)
-        updateButtonState(boldBtn, hasFocus && hasSelection)
-        updateButtonState(biggerBtn, hasFocus && hasSelection)
+        val enabled = hasFocus && hasSelection
+        updateButtonState(copyBtn, enabled)
+        updateButtonState(boldBtn, enabled)
+        updateButtonState(biggerBtn, enabled)
         updateButtonState(pasteBtn, hasFocus)
-
-        if (!hasFocus) {
-            updateButtonState(undoBtn, false)
-            updateButtonState(redoBtn, false)
-        } else {
-            updateButtonState(undoBtn, undoHelper.canUndo())
-            updateButtonState(redoBtn, undoHelper.canRedo())
-        }
     }
 
     private fun getSelectedText(): String {
@@ -1235,31 +1081,26 @@ class NoteEditorActivity : AppCompatActivity() {
         val selStart = minOf(rawStart, rawEnd)
         val selEnd = maxOf(rawStart, rawEnd)
 
-        val editable = contentEdit.text
-
-        undoHelper.beginBatch()
-
+        val spannable = contentEdit.text as Spannable
         val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
-        val spans = editable.getSpans(selStart, selEnd, spanClass)
+        val spans = spannable.getSpans(selStart, selEnd, spanClass)
         if (spans.isNotEmpty()) {
             for (span in spans) {
-                editable.removeSpan(span)
+                spannable.removeSpan(span)
             }
         } else {
             val font = googleSansFlex
             if (font != null) {
-                editable.setSpan(
+                spannable.setSpan(
                     GoogleSansFlexBoldRoundSpan(font),
                     selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                editable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-
-        undoHelper.endBatch()
-
-        Selection.setSelection(editable, selStart, selEnd)
+        contentEdit.setText(spannable)
+        Selection.setSelection(contentEdit.text, selStart, selEnd)
         updateToolbarButtons()
     }
 
@@ -1270,35 +1111,31 @@ class NoteEditorActivity : AppCompatActivity() {
         val selStart = minOf(rawStart, rawEnd)
         val selEnd = maxOf(rawStart, rawEnd)
 
-        val editable = contentEdit.text
+        val editableText = contentEdit.text
 
-        undoHelper.beginBatch()
-
-        val sizeSpans = editable.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
+        val sizeSpans = editableText.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
         if (sizeSpans.isNotEmpty()) {
             for (span in sizeSpans) {
-                editable.removeSpan(span)
+                editableText.removeSpan(span)
             }
-            val boldSpans = editable.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
+            val boldSpans = editableText.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
-                editable.removeSpan(span)
+                editableText.removeSpan(span)
             }
         } else {
             val font = googleSansFlex
             if (font != null) {
-                editable.setSpan(
+                editableText.setSpan(
                     GoogleSansFlexBoldRoundSpan(font),
                     selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                editable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editableText.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            editable.setSpan(RelativeSizeSpan(1.85f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            editableText.setSpan(RelativeSizeSpan(1.85f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-
-        undoHelper.endBatch()
-
-        Selection.setSelection(editable, selStart, selEnd)
+        contentEdit.setText(editableText)
+        Selection.setSelection(contentEdit.text, selStart, selEnd)
         updateToolbarButtons()
     }
 

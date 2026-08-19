@@ -176,6 +176,19 @@ class NotesEditorHelp : AppCompatActivity() {
             }
         }
 
+        val optionsHeader = TextView(this).apply {
+            text = getString(R.string.help_sub_buttom)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            setPadding(dpToPx(8f), dpToPx(12f), dpToPx(8f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        optionsGroup.addView(optionsHeader)
+
         val optionsList = listOf(
             Triple(R.drawable.content_copy_24px, R.string.copy_title, R.string.copy_desc),
             Triple(R.drawable.content_paste_24px, R.string.paste_title, R.string.paste_desc),
@@ -261,6 +274,19 @@ class NotesEditorHelp : AppCompatActivity() {
                 bottomMargin = dpToPx(16f)
             }
         }
+
+        val landscapeHeader = TextView(this).apply {
+            text = getString(R.string.help_tips)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            setPadding(dpToPx(8f), dpToPx(12f), dpToPx(8f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        landscapeGroup.addView(landscapeHeader)
 
         val landscapeRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL

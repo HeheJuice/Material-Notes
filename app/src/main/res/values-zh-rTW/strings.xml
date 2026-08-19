@@ -108,6 +108,9 @@
 <string name="bold_desc">套用或取消所選文字的粗體效果</string>
 <string name="landscape_title">關於將記事擷取為圖片</string>
 <string name="landscape_desc">你知道在橫向模式下可以擷取更寬的記事圖片嗎？</string>
+<string name="help_sub_buttom">工具列快速鍵</string>
+<string name="help_tips">提示</string>
+
 <!-- Back -->
 <string name="warning_save_title">目前的修改尚未儲存</string>
 <string name="save_and_exit">儲存並離開</string>

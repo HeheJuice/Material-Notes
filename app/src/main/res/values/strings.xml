@@ -104,6 +104,8 @@
 <string name="bold_desc">Bold or Cancel Bold for selected texts</string>
 <string name="landscape_title">About Capture Notes to Image</string>
 <string name="landscape_desc">Do you know you can capture a wider note image in landscape mode?</string>
+<string name="help_sub_buttom">Toolbar Shortcuts</string>
+<string name="help_tips">Tips</string>
 <!-- Back -->
 <string name="warning_save_title">Current edits are not saved</string>
 <string name="save_and_exit">Save and Exit</string>

@@ -109,6 +109,9 @@
 <string name="bold_desc">選択したテキストの太字を設定または解除</string>
 <string name="landscape_title">ノートを画像として保存 について</string>
 <string name="landscape_desc">横画面モードにすると、より広いノート画像をキャプチャできることをご存知ですか？</string>
+<string name="help_sub_buttom">ツールバーのショートカット</string>
+<string name="help_tips">ヒント</string>
+
 <!-- Back -->
 <string name="warning_save_title">現在の編集内容は保存されていません</string>
 <string name="save_and_exit">保存して終了</string>
