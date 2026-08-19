@@ -123,5 +123,6 @@
 <string name="title_delete_action">Xóa ghi chú này?</string>
 <string name="option_delete_y">Tiếp tục</string>
 <string name="option_cancel">Hủy</string>
+<string name="website_pill">Thêm thẻ xem trước trang web</string>
 
 </resources>

@@ -123,5 +123,6 @@
 <string name="title_delete_action">¿Eliminar la nota?</string>
 <string name="option_delete_y">Continuar</string>
 <string name="option_cancel">Cancelar</string>
+<string name="website_pill">Añadir una tarjeta de vista previa de sitio web</string>
 
 </resources>

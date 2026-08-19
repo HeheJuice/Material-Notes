@@ -123,5 +123,6 @@
 <string name="title_delete_action">노트를 삭제하시겠습니까?</string>
 <string name="option_delete_y">계속</string>
 <string name="option_cancel">취소</string>
+<string name="website_pill">웹사이트 미리보기 카드 추가</string>
 
 </resources>

@@ -124,5 +124,6 @@
 <string name="title_delete_action">删除此笔记？</string>
 <string name="option_delete_y">继续</string>
 <string name="option_cancel">取消</string>
+<string name="website_pill">添加网站预览卡片</string>
 
 </resources>

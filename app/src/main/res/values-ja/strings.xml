@@ -124,5 +124,6 @@
 <string name="title_delete_action">ノートを削除しますか？</string>
 <string name="option_delete_y">続行</string>
 <string name="option_cancel">キャンセル</string>
+<string name="website_pill">ウェブサイトのプレビューカードを追加</string>
 
 </resources>
