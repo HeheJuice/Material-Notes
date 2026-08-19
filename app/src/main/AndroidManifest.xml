@@ -9,7 +9,7 @@
 <!-- Allows checking if Wi-Fi or Cellular is actively connected -->
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@drawable/ic_hehe"
         android:label="@string/app_name"
         android:theme="@style/Theme.NoteApp"
