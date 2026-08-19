@@ -232,7 +232,6 @@ val appVersionText = TextView(this).apply {
     gravity = Gravity.CENTER
     // Safe zone padding to prevent text glyph clipping in various languages
     setPadding(dpToPx(16f), dpToPx(2f), dpToPx(16f), dpToPx(2f))
-    clipToPadding = false
     setGoogleSansFlexDefault(this, false)
     layoutParams = LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -242,6 +241,7 @@ val appVersionText = TextView(this).apply {
     }
 }
 appInfoCard.addView(appVersionText)
+
 
 
         root.addView(appInfoCard)
