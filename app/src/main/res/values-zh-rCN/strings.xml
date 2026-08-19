@@ -24,6 +24,12 @@
     <string name="setting_follow_system_subtitle">自动调整外观</string>
     <string name="helper_title">编辑器帮助</string>
 <string name="helper_desc">了解技巧与快捷方式</string>
+<string name="lang_settings">应用语言</string>
+<string name="lang_settings_desc">点击此处选择</string>
+<string name="title_report">发现 Bug 或遇到问题？</string>
+<string name="desc_report">点击此处向开发者反馈</string>
+
+
 
 
     <!-- Editor Settings -->
@@ -34,7 +40,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">新建笔记</string>
     <string name="import_notes">导入TXT笔记</string>
-    <string name="import_notes_toast">导入笔记（即将推出）</string>
+<string name="import_notes_toast">已导入</string>
 
     <!-- Note Editor -->
     <string name="save">保存</string>
@@ -107,5 +113,19 @@
 <string name="title_desc">将所选文本放大至 1.8 倍并加粗</string>
 <string name="bold_title">加粗</string>
 <string name="bold_desc">对所选文本应用或取消加粗</string>
+<string name="landscape_title">关于生成笔记图片</string>
+<string name="landscape_desc">你知道在横屏模式下可以生成更宽的笔记图片吗？</string>
+<string name="help_sub_buttom">工具栏快捷方式</string>
+<string name="help_tips">提示</string>
+
+<!-- Back -->
+<string name="warning_save_title">当前修改尚未保存</string>
+<string name="save_and_exit">保存并退出</string>
+<string name="exit_directly">直接退出</string>
+<string name="back_to_editor">继续编辑</string>
+<!-- Action -->
+<string name="title_delete_action">删除此笔记？</string>
+<string name="option_delete_y">继续</string>
+<string name="option_cancel">取消</string>
 
 </resources>

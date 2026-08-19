@@ -34,7 +34,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">إنشاء ملاحظات</string>
     <string name="import_notes">استيراد ملاحظات TXT</string>
-    <string name="import_notes_toast">استيراد الملاحظات (قريباً)</string>
+<string name="import_notes_toast">تم الاستيراد</string>
 
     <!-- Note Editor -->
     <string name="save">حفظ</string>
@@ -76,6 +76,12 @@
     <string name="credit_google_sans_flex_desc">الخطوط المستخدمة في هذا التطبيق</string>
     <string name="desc_source">اطّلع على الشفرة المصدرية لهذا التطبيق على GitHub</string>
     <string name="desc_license">عرض استخدامات الطرف الثالث والتراخيص الخاصة بها وبالمكتبات</string>
+    <string name="title_report">هل وجدت خطأً أو تواجه مشاكل؟</string>
+<string name="desc_report">اضغط هنا للإبلاغ والمراسلة مع المطورين</string>
+
+    <string name="lang_settings">اللغة المستخدمة في التطبيق</string>
+<string name="lang_settings_desc">انقر هنا للاختيار</string>
+
 
     <!-- Update Checker -->
     <string name="update_checking">جاري التحقق من وجود تحديثات…</string>
@@ -106,5 +112,19 @@
 <string name="title_desc">جعل النصوص المحددة بحجم 1.8X وتغليظها</string>
 <string name="bold_title">عريض</string>
 <string name="bold_desc">تطبيق الخط العريض أو إلغاؤه للنصوص المحددة</string>
+<string name="landscape_title">حول تحويل الملاحظة إلى صورة</string>
+<string name="landscape_desc">هل تعلم أنه يمكنك التقاط صورة ملاحظة أوسع في الوضع الأفقي؟</string>
+<string name="help_sub_buttom">اختصارات شريط الأدوات</string>
+<string name="help_tips">تلميحات</string>
+
+<!-- Back -->
+<string name="warning_save_title">لم يتم حفظ التعديلات الحالية</string>
+<string name="save_and_exit">حفظ وخروج</string>
+<string name="exit_directly">الخروج دون حفظ</string>
+<string name="back_to_editor">متابعة التعديل</string>
+<!-- Action -->
+<string name="title_delete_action">حذف الملاحظة؟</string>
+<string name="option_delete_y">متابعة</string>
+<string name="option_cancel">إلغاء</string>
 
 </resources>

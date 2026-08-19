@@ -24,6 +24,12 @@
     <string name="setting_follow_system_subtitle">Tự động điều chỉnh giao diện</string>
     <string name="helper_title">Trợ giúp trình chỉnh sửa</string>
 <string name="helper_desc">Tìm hiểu mẹo và phím tắt</string>
+<string name="lang_settings">Ngôn ngữ sử dụng trong ứng dụng</string>
+<string name="lang_settings_desc">Nhấn vào đây để chọn</string>
+<string name="title_report">Gặp lỗi hoặc sự cố?</string>
+<string name="desc_report">Nhấn vào đây để báo cáo cho nhà phát triển</string>
+
+
 
 
     <!-- Editor Settings -->
@@ -34,7 +40,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">Tạo ghi chú</string>
     <string name="import_notes">Nhập ghi chú TXT</string>
-    <string name="import_notes_toast">Nhập ghi chú (sắp ra mắt)</string>
+<string name="import_notes_toast">Đã nhập</string>
 
     <!-- Note Editor -->
     <string name="save">Lưu</string>
@@ -106,5 +112,19 @@
 <string name="title_desc">Phóng to văn bản đã chọn lên 1.8X và in đậm</string>
 <string name="bold_title">In đậm</string>
 <string name="bold_desc">Bật hoặc hủy in đậm cho văn bản đã chọn</string>
+<string name="landscape_title">Về Lưu ghi chú thành hình ảnh</string>
+<string name="landscape_desc">Bạn có biết mình có thể chụp ảnh ghi chú rộng hơn ở chế độ xoay ngang không?</string>
+<string name="help_sub_buttom">Phím tắt thanh công cụ</string>
+<string name="help_tips">Mẹo</string>
+
+<!-- Back -->
+<string name="warning_save_title">Các chỉnh sửa hiện tại chưa được lưu</string>
+<string name="save_and_exit">Lưu và thoát</string>
+<string name="exit_directly">Thoát mà không lưu</string>
+<string name="back_to_editor">Tiếp tục chỉnh sửa</string>
+<!-- Action -->
+<string name="title_delete_action">Xóa ghi chú này?</string>
+<string name="option_delete_y">Tiếp tục</string>
+<string name="option_cancel">Hủy</string>
 
 </resources>

@@ -34,7 +34,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">새 노트 작성</string>
     <string name="import_notes">TXT 노트 가져오기</string>
-    <string name="import_notes_toast">노트 가져오기 (출시 예정)</string>
+<string name="import_notes_toast">가져왔습니다</string>
 
     <!-- Note Editor -->
     <string name="save">저장</string>
@@ -76,6 +76,12 @@
     <string name="credit_google_sans_flex_desc">앱에 사용된 폰트</string>
     <string name="desc_source">GitHub에서 이 앱의 소스 코드를 확인하세요</string>
     <string name="desc_license">이 앱 및 서드파티 라이브러리의 사용권 및 라이선스를 확인합니다</string>
+    <string name="lang_settings">앱 사용 언어</string>
+<string name="lang_settings_desc">선택하려면 여기를 누르세요</string>
+<string name="title_report">버그를 발견하셨거나 문제가 있으신가요?</string>
+<string name="desc_report">개발자에게 제보하려면 여기를 누르세요</string>
+
+
 
     <!-- Update Checker -->
     <string name="update_checking">업데이트 확인 중…</string>
@@ -106,5 +112,19 @@
 <string name="title_desc">선택한 텍스트 굵게 및 1.8배 확대</string>
 <string name="bold_title">굵게</string>
 <string name="bold_desc">선택한 텍스트 굵게 설정 또는 해제</string>
+<string name="landscape_title">노트를 이미지로 저장 정보</string>
+<string name="landscape_desc">가로 모드에서는 더 넓은 노트 이미지를 캡처할 수 있다는 사실을 알고 계셨나요?</string>
+<string name="help_sub_buttom">툴바 단축키</string>
+<string name="help_tips">팁</string>
+
+<!-- Back -->
+<string name="warning_save_title">현재 수정 사항이 저장되지 않았습니다</string>
+<string name="save_and_exit">저장 후 나가기</string>
+<string name="exit_directly">저장하지 않고 나가기</string>
+<string name="back_to_editor">계속 편집하기</string>
+<!-- Action -->
+<string name="title_delete_action">노트를 삭제하시겠습니까?</string>
+<string name="option_delete_y">계속</string>
+<string name="option_cancel">취소</string>
 
 </resources>

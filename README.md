@@ -8,7 +8,7 @@
 
 ## Badges
 
-[![Android](https://img.shields.io/badge/Android-12_and_up-50f270?logo=android&logoColor=white&style=for-the-badge)](https://www.android.com/intl/zh-HK_hk)[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white&style=for-the-badge)](https://kotlinlang.org)[![LICENSE](https://img.shields.io/badge/View-LICENCE-87CEEB?style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/blob/main/LICENSE)[![GitHub Downloads](https://img.shields.io/github/downloads/HeheJuice/Material-Notes/total?color=blue&label=Downloads+from+GitHub&style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/releases)
+[![Android](https://img.shields.io/badge/Android-12L_and_up-50f270?logo=android&logoColor=white&style=for-the-badge)](https://www.android.com/intl/zh-HK_hk)[![LICENSE](https://img.shields.io/badge/View_LICENCE-Check_before_reposting-87CEEB?style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/blob/main/LICENSE)[![GitHub Downloads](https://img.shields.io/github/downloads/HeheJuice/Material-Notes/total?color=blue&label=Downloads+from+GitHub&style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/releases)
 
 
 ## Features 
@@ -19,6 +19,8 @@
 
 > Material Design Expressive 
 
+> More...
+
 ## Screenshots
 
 <p align="center">
@@ -27,6 +29,11 @@
   <a href="Banner/SS3.png"><img src="Banner/SS3.png" width="22%" alt="Screenshot 3"></a>
   <a href="Banner/SS4.png"><img src="Banner/SS4.png" width="22%" alt="Screenshot 4"></a>
 </p>
+
+## Support Us
+> This app is completely FREE 
+
+> Share this repository link to support us
 
 ## Acknowledgements
 

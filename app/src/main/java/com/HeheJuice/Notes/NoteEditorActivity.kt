@@ -2,6 +2,7 @@ package com.HeheJuice.Notes
 
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.app.Dialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -39,6 +40,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.content.ContextCompat
@@ -50,8 +52,6 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Custom EditText that draws ruled notebook lines below each text line.
@@ -74,7 +74,6 @@ class LinedEditText @JvmOverloads constructor(
         }
 
     fun setLineColor(color: Int) {
-        // 透明度 20% 左右
         linePaint.color = ColorUtils.setAlphaComponent(color, 50)
         invalidate()
     }
@@ -84,13 +83,11 @@ class LinedEditText @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        // 先画线（在文字下方）
         if (showLines && lineCount > 0) {
             val count = lineCount
             val rect = Rect()
             for (i in 0 until count) {
                 val baseline = getLineBounds(i, rect)
-                // 在基线下方 8px 处画线
                 canvas.drawLine(
                     paddingLeft.toFloat(),
                     (baseline + 8).toFloat(),
@@ -100,7 +97,6 @@ class LinedEditText @JvmOverloads constructor(
                 )
             }
         }
-        // 再绘制文字（和背景）在上层
         super.onDraw(canvas)
     }
 }
@@ -131,6 +127,11 @@ class NoteEditorActivity : AppCompatActivity() {
     private var noteId: String = ""
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
+
+    // Tracking initial state to detect unsaved edits (including text formatting)
+    private var initialTitle: String = ""
+    private var initialContent: String = ""
+    private var initialSpans: List<SpanData> = emptyList()
 
     private lateinit var copyBtn: ImageView
     private lateinit var pasteBtn: ImageView
@@ -198,9 +199,7 @@ class NoteEditorActivity : AppCompatActivity() {
         cardBorderColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA"))
 
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, if (isDark) Color.parseColor("#141218") else Color.parseColor("#FEF7FF"))
-        // -------------------------------------------------
 
-        // 读取 “显示横线” 偏好
         val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
         val isShowLinesEnabled = prefs.getBoolean("show_lines_under_text", false)
 
@@ -234,7 +233,7 @@ class NoteEditorActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             contentDescription = getString(R.string.back_content_desc)
-            setOnClickListener { finish() }
+            setOnClickListener { handleBackNavigation() }
         }
         topBar.addView(backBtn)
 
@@ -440,7 +439,6 @@ class NoteEditorActivity : AppCompatActivity() {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
 
-            // 应用横线设置
             showLines = isShowLinesEnabled
             setLineColor(onSurfaceVariantColor)
         }
@@ -574,7 +572,19 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
+        // Cache initial values (title, content, and formatting spans) to check for changes
+        initialTitle = titleEdit.text.toString()
+        initialContent = contentEdit.text.toString()
+        initialSpans = getCurrentSpans()
+
         setContentView(root)
+
+        // Register system back button callback
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                handleBackNavigation()
+            }
+        })
 
         // ---- 监听器 ----
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
@@ -612,6 +622,157 @@ class NoteEditorActivity : AppCompatActivity() {
 
             insets
         }
+    }
+
+    // Helper to extract active spans in the content
+    private fun getCurrentSpans(): List<SpanData> {
+        val spans = mutableListOf<SpanData>()
+        val spannable = contentEdit.text as? Spannable ?: return spans
+
+        val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
+        for (span in boldSpans) {
+            val spanStart = spannable.getSpanStart(span)
+            val spanEnd = spannable.getSpanEnd(span)
+            if (spanStart >= 0 && spanEnd >= 0) {
+                spans.add(SpanData(start = spanStart, end = spanEnd, type = "bold"))
+            }
+        }
+
+        val styleSpans = spannable.getSpans(0, spannable.length, StyleSpan::class.java)
+        for (span in styleSpans) {
+            if (span.style == Typeface.BOLD) {
+                val spanStart = spannable.getSpanStart(span)
+                val spanEnd = spannable.getSpanEnd(span)
+                if (spanStart >= 0 && spanEnd >= 0) {
+                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bold"))
+                }
+            }
+        }
+
+        val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
+        for (span in sizeSpans) {
+            val spanStart = spannable.getSpanStart(span)
+            val spanEnd = spannable.getSpanEnd(span)
+            if (spanStart >= 0 && spanEnd >= 0) {
+                spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 1.85f))
+            }
+        }
+
+        // Sort to ensure canonical order when comparing equality
+        spans.sortWith(compareBy({ it.start }, { it.end }, { it.type }))
+        return spans
+    }
+
+    // Check if the user has unsaved edits (title, content, or formatting)
+    private fun hasUnsavedChanges(): Boolean {
+        return titleEdit.text.toString() != initialTitle ||
+                contentEdit.text.toString() != initialContent ||
+                getCurrentSpans() != initialSpans
+    }
+
+    // Intercept back navigation
+    private fun handleBackNavigation() {
+        if (hasUnsavedChanges()) {
+            showUnsavedChangesDialog()
+        } else {
+            finish()
+        }
+    }
+
+    // Material 3 style unsaved changes dialog matching screenshot design
+    private fun showUnsavedChangesDialog() {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+        val dialogBgColor = MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorSurfaceContainerHigh,
+            if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
+        )
+
+        val dialogView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dpToPx(24f), dpToPx(28f), dpToPx(24f), dpToPx(28f))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setCornerRadius(dpToPx(28f).toFloat())
+                setColor(dialogBgColor)
+            }
+        }
+
+        val titleView = TextView(this).apply {
+            text = getString(R.string.warning_save_title)
+            textSize = 20f
+            setTextColor(MaterialColors.getColor(this@NoteEditorActivity, com.google.android.material.R.attr.colorOnSurface, Color.BLACK))
+            gravity = Gravity.CENTER
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(24f)
+            }
+        }
+        dialogView.addView(titleView)
+
+        fun createOptionButton(textRes: Int, onClick: () -> Unit): MaterialButton {
+            return MaterialButton(
+                ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
+            ).apply {
+                text = getString(textRes)
+                setTextColor(onPrimaryContainerColor)
+                setTypeface(googleSansFlex, Typeface.BOLD)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
+                gravity = Gravity.CENTER
+                insetTop = 0
+                insetBottom = 0
+                shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                    .setAllCornerSizes(dpToPx(100f).toFloat())
+                    .build()
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dpToPx(52f)
+                ).apply {
+                    bottomMargin = dpToPx(10f)
+                }
+                setOnClickListener {
+                    onClick()
+                    dialog.dismiss()
+                }
+            }
+        }
+
+        val btnSave = createOptionButton(R.string.save_and_exit) {
+            saveNote()
+        }
+
+        val btnExit = createOptionButton(R.string.exit_directly) {
+            finish()
+        }
+
+        val btnBack = createOptionButton(R.string.back_to_editor) {
+            // Dismiss dialog and stay in editor
+        }
+
+        (btnBack.layoutParams as LinearLayout.LayoutParams).bottomMargin = 0
+
+        dialogView.addView(btnSave)
+        dialogView.addView(btnExit)
+        dialogView.addView(btnBack)
+
+        dialog.setContentView(dialogView)
+
+        dialog.window?.let { window ->
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            val width = (resources.displayMetrics.widthPixels * 0.88).toInt()
+            window.setLayout(width, FrameLayout.LayoutParams.WRAP_CONTENT)
+        }
+
+        dialog.show()
     }
 
     // ---- 其余功能函数 ----
@@ -711,26 +872,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private fun saveNoteData(): Boolean {
         val title = titleEdit.text.toString().trim()
         val plainText = contentEdit.text.toString()
-        val spans = mutableListOf<SpanData>()
-        val spannable = contentEdit.text as? Spannable
-        if (spannable != null) {
-            val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
-            for (span in boldSpans) {
-                val spanStart = spannable.getSpanStart(span)
-                val spanEnd = spannable.getSpanEnd(span)
-                if (spanStart >= 0 && spanEnd >= 0) {
-                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bold"))
-                }
-            }
-            val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
-            for (span in sizeSpans) {
-                val spanStart = spannable.getSpanStart(span)
-                val spanEnd = spannable.getSpanEnd(span)
-                if (spanStart >= 0 && spanEnd >= 0) {
-                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 1.85f))
-                }
-            }
-        }
+        val spans = getCurrentSpans()
 
         if (title.isEmpty()) {
             Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()

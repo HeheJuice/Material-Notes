@@ -46,6 +46,7 @@ class NotesEditorHelp : AppCompatActivity() {
 
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
         val surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
+        val onPrimaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, if (isDark) Color.parseColor("#EADDFF") else Color.parseColor("#4F378B"))
         val onSurfaceVariantColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.parseColor("#49454F"))
 
         val primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.parseColor("#E8DEF8"))
@@ -112,6 +113,23 @@ class NotesEditorHelp : AppCompatActivity() {
         }
         topBar.addView(backBtn)
 
+        // Big Title matching NotesUpdate
+        val bigTitle = TextView(this).apply {
+            text = getString(R.string.helper_title)
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+                marginStart = dpToPx(8f)
+                marginEnd = dpToPx(8f)
+            }
+        }
+
         // Gradient Card with centered drawable
         val monetGradientBg = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
@@ -147,7 +165,7 @@ class NotesEditorHelp : AppCompatActivity() {
         }
         gradientCard.addView(headerImage)
 
-        // Options Group
+        // Options Group 1 (Main Editor Options)
         val optionsGroup = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -157,6 +175,19 @@ class NotesEditorHelp : AppCompatActivity() {
                 bottomMargin = dpToPx(16f)
             }
         }
+
+        val optionsHeader = TextView(this).apply {
+            text = getString(R.string.help_sub_buttom)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            setPadding(dpToPx(8f), dpToPx(12f), dpToPx(8f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        optionsGroup.addView(optionsHeader)
 
         val optionsList = listOf(
             Triple(R.drawable.content_copy_24px, R.string.copy_title, R.string.copy_desc),
@@ -233,8 +264,93 @@ class NotesEditorHelp : AppCompatActivity() {
             optionsGroup.addView(optionRow)
         }
 
+        // Separate Landscape Group
+        val landscapeGroup = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(16f)
+            }
+        }
+
+        val landscapeHeader = TextView(this).apply {
+            text = getString(R.string.help_tips)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            setPadding(dpToPx(8f), dpToPx(12f), dpToPx(8f), dpToPx(8f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        landscapeGroup.addView(landscapeHeader)
+
+        val landscapeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(outerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
+        }
+
+        val landscapeIcon = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@NotesEditorHelp, R.drawable.mobile_landscape_24px))
+            setColorFilter(onSurfaceVariantColor)
+            layoutParams = LinearLayout.LayoutParams(dpToPx(24f), dpToPx(24f)).apply {
+                marginEnd = dpToPx(16f)
+            }
+        }
+
+        val landscapeTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val landscapeTitleTv = TextView(this).apply {
+            text = getString(R.string.landscape_title)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val landscapeDescTv = TextView(this).apply {
+            text = getString(R.string.landscape_desc)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        landscapeTextContainer.addView(landscapeTitleTv)
+        landscapeTextContainer.addView(landscapeDescTv)
+
+        landscapeRow.addView(landscapeIcon)
+        landscapeRow.addView(landscapeTextContainer)
+
+        landscapeGroup.addView(landscapeRow)
+
+        root.addView(bigTitle)
         root.addView(gradientCard)
         root.addView(optionsGroup)
+        root.addView(landscapeGroup)
+
         scrollView.addView(root)
         mainContainer.addView(scrollView)
         mainContainer.addView(topBar)

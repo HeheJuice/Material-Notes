@@ -2,6 +2,8 @@ package com.HeheJuice.Notes
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -230,6 +232,8 @@ class NotesUpdate : AppCompatActivity() {
             setTextColor(onPrimaryContainerColor)
             alpha = 0.8f
             gravity = Gravity.CENTER
+            includeFontPadding = false
+            setPadding(dpToPx(16f), dpToPx(6f), dpToPx(16f), dpToPx(10f))
             setGoogleSansFlexDefault(this, false)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -312,7 +316,7 @@ class NotesUpdate : AppCompatActivity() {
         updateCard.addView(updateActionView)
         root.addView(updateCard)
 
-        // ---- Info Card (Source Code & License) ----
+        // ---- Info Card (Source Code, License & Report Bug) ----
         fun createGroupItemBg(topRadius: Float, bottomRadius: Float): GradientDrawable {
             return GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -394,16 +398,18 @@ class NotesUpdate : AppCompatActivity() {
         sourceTextContainer.addView(sourceSubtitle)
         sourceRow.addView(sourceTextContainer)
 
-        // 2. License Row
+        // 2. License Row (Updated with inner radius on bottom and margin)
         val licenseRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            background = createGroupItemBg(innerRadiusPx, innerRadiusPx)
             setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply {
+                bottomMargin = dpToPx(2f)
+            }
             setMinimumHeight(dpToPx(56f))
             isClickable = true
             isFocusable = true
@@ -447,8 +453,62 @@ class NotesUpdate : AppCompatActivity() {
         licenseTextContainer.addView(licenseSubtitle)
         licenseRow.addView(licenseTextContainer)
 
+        // 3. Report Bug / Issue Row
+        val reportRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Material-Notes/issues")))
+            }
+        }
+
+        val reportTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val reportLabel = TextView(this).apply {
+            text = getString(R.string.title_report)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val reportSubtitle = TextView(this).apply {
+            text = getString(R.string.desc_report)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        reportTextContainer.addView(reportLabel)
+        reportTextContainer.addView(reportSubtitle)
+        reportRow.addView(reportTextContainer)
+
         infoGroup.addView(sourceRow)
         infoGroup.addView(licenseRow)
+        infoGroup.addView(reportRow)
         root.addView(infoGroup)
 
         // ---- ACKNOWLEDGMENTS CARD ----
@@ -490,47 +550,19 @@ class NotesUpdate : AppCompatActivity() {
             }
         }
 
-        val hehejuiceAvatarRes = resources.getIdentifier("hehejuice", "drawable", packageName)
         val hehejuiceAvatar = ImageView(this).apply {
             layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                 marginEnd = dpToPx(16f)
             }
-            if (hehejuiceAvatarRes != 0) {
-                setImageResource(hehejuiceAvatarRes)
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(Color.TRANSPARENT)
-                }
-                clipToOutline = true
-            } else {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(primaryColor)
-                }
+            setImageResource(R.drawable.hehejuice)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.TRANSPARENT)
             }
+            clipToOutline = true
         }
-
-        if (hehejuiceAvatarRes == 0) {
-            val initialTv = TextView(this).apply {
-                text = "H"
-                textSize = 20f
-                setTextColor(Color.WHITE)
-                setGoogleSansFlexDefault(this, true)
-                gravity = Gravity.CENTER
-                layoutParams = FrameLayout.LayoutParams(dpToPx(44f), dpToPx(44f))
-            }
-            val avatarContainer = FrameLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
-                    marginEnd = dpToPx(16f)
-                }
-                addView(hehejuiceAvatar)
-                addView(initialTv)
-            }
-            rowHehejuice.addView(avatarContainer)
-        } else {
-            rowHehejuice.addView(hehejuiceAvatar)
-        }
+        rowHehejuice.addView(hehejuiceAvatar)
 
         val textContainer1 = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -574,47 +606,19 @@ class NotesUpdate : AppCompatActivity() {
             }
         }
 
-        val materialAvatarRes = resources.getIdentifier("androidcredit", "drawable", packageName)
         val materialAvatar = ImageView(this).apply {
             layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                 marginEnd = dpToPx(16f)
             }
-            if (materialAvatarRes != 0) {
-                setImageResource(materialAvatarRes)
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(Color.TRANSPARENT)
-                }
-                clipToOutline = true
-            } else {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(primaryColor)
-                }
+            setImageResource(R.drawable.androidcredit)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.TRANSPARENT)
             }
+            clipToOutline = true
         }
-
-        if (materialAvatarRes == 0) {
-            val initialTv = TextView(this).apply {
-                text = "M"
-                textSize = 20f
-                setTextColor(Color.WHITE)
-                setGoogleSansFlexDefault(this, true)
-                gravity = Gravity.CENTER
-                layoutParams = FrameLayout.LayoutParams(dpToPx(44f), dpToPx(44f))
-            }
-            val avatarContainer = FrameLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
-                    marginEnd = dpToPx(16f)
-                }
-                addView(materialAvatar)
-                addView(initialTv)
-            }
-            rowMaterial.addView(avatarContainer)
-        } else {
-            rowMaterial.addView(materialAvatar)
-        }
+        rowMaterial.addView(materialAvatar)
 
         val textContainer2 = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -661,30 +665,18 @@ class NotesUpdate : AppCompatActivity() {
         }
 
         val fontAvatar = ImageView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(primaryColor)
-            }
-        }
-
-        val fontInitialTv = TextView(this).apply {
-            text = "G"
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            setGoogleSansFlexDefault(this, true)
-            gravity = Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(dpToPx(44f), dpToPx(44f))
-        }
-
-        val fontAvatarContainer = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                 marginEnd = dpToPx(16f)
             }
-            addView(fontAvatar)
-            addView(fontInitialTv)
+            setImageResource(R.drawable.googlesansflex)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.TRANSPARENT)
+            }
+            clipToOutline = true
         }
-        rowFont.addView(fontAvatarContainer)
+        rowFont.addView(fontAvatar)
 
         val textContainer3 = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -715,7 +707,6 @@ class NotesUpdate : AppCompatActivity() {
         textContainer3.addView(descView3)
         rowFont.addView(textContainer3)
         creditsCard.addView(rowFont)
-
         root.addView(creditsCard)
 
         // Restore cached downloaded APK state if present
@@ -740,6 +731,9 @@ class NotesUpdate : AppCompatActivity() {
         val isNetworkAllowed = prefsNotes.getBoolean("app_network_connection", true)
         val versionName = getVersionName()
 
+        // Always load cached avatar first regardless of network permission state
+        loadHeheJuiceAvatar(hehejuiceAvatar)
+
         if (versionName.contains("Debug", ignoreCase = true)) {
             updateStatusView.text = getString(R.string.update_disabled_debug)
             updateActionView.visibility = View.GONE
@@ -760,7 +754,6 @@ class NotesUpdate : AppCompatActivity() {
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val navBarBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
 
-            // Position topBar relative to status bar
             topBar.setPadding(
                 dpToPx(16f),
                 statusBarTop + dpToPx(8f),
@@ -768,10 +761,8 @@ class NotesUpdate : AppCompatActivity() {
                 dpToPx(8f)
             )
 
-            // Calculate total height occupied by top bar (padding + 50dp button + bottom padding)
             val totalTopBarHeight = statusBarTop + dpToPx(8f + 50f + 8f)
 
-            // Set initial content padding so title sits right below the back button
             root.setPadding(
                 dpToPx(16f),
                 totalTopBarHeight,
@@ -780,6 +771,65 @@ class NotesUpdate : AppCompatActivity() {
             )
             insets
         }
+    }
+
+    private fun loadHeheJuiceAvatar(avatarView: ImageView) {
+        val localAvatarFile = File(cacheDir, "hehejuice_avatar.png")
+
+        // 1. Instantly load locally cached avatar if present
+        if (localAvatarFile.exists()) {
+            val cachedBitmap = BitmapFactory.decodeFile(localAvatarFile.absolutePath)
+            if (cachedBitmap != null) {
+                avatarView.setImageBitmap(cachedBitmap)
+            }
+        }
+
+        // 2. Stop here if network permission is disabled by the user
+        val prefsNotes = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
+        val isNetworkAllowed = prefsNotes.getBoolean("app_network_connection", true)
+        if (!isNetworkAllowed) return
+
+        // 3. Fetch from network in background & verify if changed
+        Thread {
+            try {
+                val url = URL("https://github.com/HeheJuice.png")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.connect()
+
+                if (connection.responseCode == HttpsURLConnection.HTTP_OK) {
+                    val downloadedBitmap = BitmapFactory.decodeStream(connection.inputStream)
+                    connection.disconnect()
+
+                    if (downloadedBitmap != null) {
+                        val localBitmap = if (localAvatarFile.exists()) {
+                            BitmapFactory.decodeFile(localAvatarFile.absolutePath)
+                        } else null
+
+                        // Check if network picture is identical to cached picture
+                        val isIdentical = localBitmap != null && downloadedBitmap.sameAs(localBitmap)
+
+                        if (!isIdentical) {
+                            // Save new avatar to internal app cache
+                            FileOutputStream(localAvatarFile).use { out ->
+                                downloadedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                            }
+
+                            // Update UI only if the image changed or wasn't cached
+                            runOnUiThread {
+                                avatarView.setImageBitmap(downloadedBitmap)
+                            }
+                        }
+                    }
+                } else {
+                    connection.disconnect()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
     }
 
     // ========== Check For Updates Logic ==========

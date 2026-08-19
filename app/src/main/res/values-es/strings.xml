@@ -34,7 +34,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">Crear notas</string>
     <string name="import_notes">Importar notas TXT</string>
-    <string name="import_notes_toast">Importar notas (próximamente)</string>
+<string name="import_notes_toast">Importado</string>
 
     <!-- Note Editor -->
     <string name="save">Guardar</string>
@@ -76,6 +76,12 @@
     <string name="credit_google_sans_flex_desc">Tipografías usadas en esta aplicación</string>
     <string name="desc_source">Ver el código fuente de esta aplicación en GitHub</string>
     <string name="desc_license">Ver uso de terceros y licencias para esta aplicación</string>
+    <string name="lang_settings">Idioma usado en la aplicación</string>
+<string name="lang_settings_desc">Haz clic aquí para seleccionar</string>
+<string name="title_report">¿Encontraste un error o tienes problemas?</string>
+<string name="desc_report">Presiona aquí para informar a los desarrolladores</string>
+
+
 
     <!-- Update Checker -->
     <string name="update_checking">Buscando actualizaciones…</string>
@@ -106,5 +112,19 @@
 <string name="title_desc">Aumentar textos seleccionados a 1,8X y poner en negrita</string>
 <string name="bold_title">Negrita</string>
 <string name="bold_desc">Aplicar o quitar negrita a los textos seleccionados</string>
+<string name="landscape_title">Acerca de Guardar nota como imagen</string>
+<string name="landscape_desc">¿Sabías que puedes capturar una imagen de nota más ancha en modo horizontal?</string>
+<string name="help_sub_buttom">Atajos de la barra de herramientas</string>
+<string name="help_tips">Consejos</string>
+
+<!-- Back -->
+<string name="warning_save_title">Los cambios actuales no se han guardado</string>
+<string name="save_and_exit">Guardar y salir</string>
+<string name="exit_directly">Salir sin guardar</string>
+<string name="back_to_editor">Continuar editando</string>
+<!-- Action -->
+<string name="title_delete_action">¿Eliminar la nota?</string>
+<string name="option_delete_y">Continuar</string>
+<string name="option_cancel">Cancelar</string>
 
 </resources>

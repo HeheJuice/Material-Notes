@@ -26,10 +26,12 @@
 <!-- Menu Actions -->
 <string name="create_notes">Create Notes</string>
 <string name="import_notes">Import TXT Notes</string>
-<string name="import_notes_toast">Import Notes (coming soon)</string>
+<string name="import_notes_toast">Imported</string>
     <string name="settings_editor_category">Editor</string>
 <string name="show_lines_under_text">Show Lines Under Texts</string>
 <string name="show_lines_under_text_desc">Display ruled lines under note text inside editor</string>
+<string name="lang_settings">Language uses in app</string>
+<string name="lang_settings_desc">Click here to select</string>
 
 
 <!-- Note Editor -->
@@ -72,6 +74,8 @@
 <string name="credit_google_sans_flex_desc">Fonts Uses in this app</string>
 <string name="desc_source">Check for source code of this app on GitHub</string>
 <string name="desc_license">View 3rd Party Usage and License for them and this app</string>
+<string name="title_report">Found a Bug or Facing Issues?</string>
+<string name="desc_report">Press here to report to Developers</string>
 
 
 
@@ -102,5 +106,18 @@
 <string name="title_desc">Make selected texts 1.8X and bold</string>
 <string name="bold_title">Bold</string>
 <string name="bold_desc">Bold or Cancel Bold for selected texts</string>
+<string name="landscape_title">About Capture Notes to Image</string>
+<string name="landscape_desc">Do you know you can capture a wider note image in landscape mode?</string>
+<string name="help_sub_buttom">Toolbar Shortcuts</string>
+<string name="help_tips">Tips</string>
+<!-- Back -->
+<string name="warning_save_title">Current edits are not saved</string>
+<string name="save_and_exit">Save and Exit</string>
+<string name="exit_directly">Exit without save</string>
+<string name="back_to_editor">Continue Editing</string>
+<!-- Action -->
+<string name="title_delete_action">Delete the note?</string>
+<string name="option_delete_y">Continue</string>
+<string name="option_cancel">Cancel</string>
 
 </resources>

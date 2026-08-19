@@ -51,6 +51,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import android.provider.Settings
 
 data class Note(
     val id: String,
@@ -583,6 +584,75 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
         themeGroup.addView(themeModeRow)
+        
+                // 3. Language Settings Row (Android 13+ only)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Update themeModeRow to act as a middle item in the card group
+            themeModeRow.background = createGroupItemBg(innerRadiusPx, innerRadiusPx)
+            (themeModeRow.layoutParams as LinearLayout.LayoutParams).bottomMargin = dpToPx(2f)
+
+            val langSettingsRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+                setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                setMinimumHeight(dpToPx(56f))
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+                setOnClickListener {
+                    try {
+                        val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this@NotesMainAct, "Unable to open language settings", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            val langTextContainer = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            val langLabel = TextView(this).apply {
+                text = getString(R.string.lang_settings)
+                textSize = 16f
+                setTextColor(onSurfaceVariantColor)
+                setGoogleSansFlexDefault(this, true)
+            }
+
+            val langSubtitle = TextView(this).apply {
+                text = getString(R.string.lang_settings_desc)
+                textSize = 14f
+                setTextColor(onSurfaceVariantColor)
+                alpha = 0.7f
+                setGoogleSansFlexDefault(this, false)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(2f)
+                }
+            }
+
+            langTextContainer.addView(langLabel)
+            langTextContainer.addView(langSubtitle)
+            langSettingsRow.addView(langTextContainer)
+
+            themeGroup.addView(langSettingsRow)
+        }
+
 
         fun updateRowState() {
             val enabled = !followSystem
@@ -1518,13 +1588,23 @@ class NotesMainAct : AppCompatActivity() {
                 }
 
                 deleteBtn.setOnClickListener {
-                    val pos = bindingAdapterPosition
-                    if (pos != RecyclerView.NO_POSITION) {
-                        NoteRepository.deleteNote(note.id)
-                        expandedPosition = RecyclerView.NO_POSITION
-                        loadNotesList()
-                    }
-                }
+    val pos = bindingAdapterPosition
+    if (pos != RecyclerView.NO_POSITION) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
+            .setTitle(R.string.title_delete_action)
+            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
+                NoteRepository.deleteNote(note.id)
+                expandedPosition = RecyclerView.NO_POSITION
+                loadNotesList()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+}
+
 
                 cancelBtn.setOnClickListener {
                     toggleExpansion(bindingAdapterPosition, this@ViewHolder)
