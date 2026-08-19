@@ -714,31 +714,60 @@ class NotesUpdate : AppCompatActivity() {
         }
     }
 
-    // ========== Load HeheJuice Profile Picture Logic ==========
-    private fun loadHeheJuiceAvatar(avatarView: ImageView) {
-        Thread {
-            try {
-                val url = URL("https://github.com/HeheJuice.png")
-                val connection = url.openConnection() as HttpsURLConnection
-                connection.instanceFollowRedirects = true
-                connection.connectTimeout = 5000
-                connection.readTimeout = 5000
-                connection.connect()
+private fun loadHeheJuiceAvatar(avatarView: ImageView) {
+    val localAvatarFile = File(cacheDir, "hehejuice_avatar.png")
 
-                if (connection.responseCode == HttpsURLConnection.HTTP_OK) {
-                    val bitmap = BitmapFactory.decodeStream(connection.inputStream)
-                    if (bitmap != null) {
+    // 1. Instantly load locally cached avatar if present
+    if (localAvatarFile.exists()) {
+        val cachedBitmap = BitmapFactory.decodeFile(localAvatarFile.absolutePath)
+        if (cachedBitmap != null) {
+            avatarView.setImageBitmap(cachedBitmap)
+        }
+    }
+
+    // 2. Fetch from network in background & verify if changed
+    Thread {
+        try {
+            val url = URL("https://github.com/HeheJuice.png")
+            val connection = url.openConnection() as HttpsURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.connect()
+
+            if (connection.responseCode == HttpsURLConnection.HTTP_OK) {
+                val downloadedBitmap = BitmapFactory.decodeStream(connection.inputStream)
+                connection.disconnect()
+
+                if (downloadedBitmap != null) {
+                    val localBitmap = if (localAvatarFile.exists()) {
+                        BitmapFactory.decodeFile(localAvatarFile.absolutePath)
+                    } else null
+
+                    // Check if network picture is identical to cached picture
+                    val isIdentical = localBitmap != null && downloadedBitmap.sameAs(localBitmap)
+
+                    if (!isIdentical) {
+                        // Save new avatar to internal app cache
+                        FileOutputStream(localAvatarFile).use { out ->
+                            downloadedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        }
+
+                        // Update UI only if the image changed or wasn't cached
                         runOnUiThread {
-                            avatarView.setImageBitmap(bitmap)
+                            avatarView.setImageBitmap(downloadedBitmap)
                         }
                     }
                 }
+            } else {
                 connection.disconnect()
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-        }.start()
-    }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }.start()
+}
+
 
     // ========== Check For Updates Logic ==========
     private fun checkForUpdates() {
