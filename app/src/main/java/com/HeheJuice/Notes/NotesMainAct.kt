@@ -51,6 +51,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import android.provider.Settings
 
 data class Note(
     val id: String,
