@@ -630,7 +630,7 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         })
 
-        // ---- 监听器 ----
+        // Listener to keep toolbar & Undo/Redo button visual states updated
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -643,6 +643,14 @@ class NoteEditorActivity : AppCompatActivity() {
                 updateToolbarButtons()
             }
             false
+        }
+
+        // Real-time listener for Android UndoManager state changes
+        contentEdit.accessibilityDelegate = object : View.AccessibilityDelegate() {
+            override fun sendAccessibilityEvent(host: View, eventType: Int) {
+                super.sendAccessibilityEvent(host, eventType)
+                updateToolbarButtons()
+            }
         }
 
         updateToolbarButtons()
@@ -668,7 +676,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Helper to extract active spans in the content
     private fun getCurrentSpans(): List<SpanData> {
         val spans = mutableListOf<SpanData>()
         val spannable = contentEdit.text as? Spannable ?: return spans
@@ -702,19 +709,16 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        // Sort to ensure canonical order when comparing equality
         spans.sortWith(compareBy({ it.start }, { it.end }, { it.type }))
         return spans
     }
 
-    // Check if the user has unsaved edits (title, content, or formatting)
     private fun hasUnsavedChanges(): Boolean {
         return titleEdit.text.toString() != initialTitle ||
                 contentEdit.text.toString() != initialContent ||
                 getCurrentSpans() != initialSpans
     }
 
-    // Intercept back navigation
     private fun handleBackNavigation() {
         if (hasUnsavedChanges()) {
             showUnsavedChangesDialog()
@@ -723,7 +727,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Material 3 style unsaved changes dialog matching screenshot design
     private fun showUnsavedChangesDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -790,17 +793,9 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        val btnSave = createOptionButton(R.string.save_and_exit) {
-            saveNote()
-        }
-
-        val btnExit = createOptionButton(R.string.exit_directly) {
-            finish()
-        }
-
-        val btnBack = createOptionButton(R.string.back_to_editor) {
-            // Dismiss dialog and stay in editor
-        }
+        val btnSave = createOptionButton(R.string.save_and_exit) { saveNote() }
+        val btnExit = createOptionButton(R.string.exit_directly) { finish() }
+        val btnBack = createOptionButton(R.string.back_to_editor) { }
 
         (btnBack.layoutParams as LinearLayout.LayoutParams).bottomMargin = 0
 
@@ -818,8 +813,6 @@ class NoteEditorActivity : AppCompatActivity() {
 
         dialog.show()
     }
-
-    // ---- 其余功能函数 ----
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
@@ -1068,7 +1061,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- 隐藏键盘 ----
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
         currentFocus?.let { view ->
@@ -1096,13 +1088,28 @@ class NoteEditorActivity : AppCompatActivity() {
     private fun updateToolbarButtons() {
         val hasFocus = contentEdit.hasFocus()
         val hasSelection = contentEdit.selectionStart != contentEdit.selectionEnd
-        val enabled = hasFocus && hasSelection
-        updateButtonState(copyBtn, enabled)
-        updateButtonState(boldBtn, enabled)
-        updateButtonState(biggerBtn, enabled)
+
+        updateButtonState(copyBtn, hasFocus && hasSelection)
+        updateButtonState(boldBtn, hasFocus && hasSelection)
+        updateButtonState(biggerBtn, hasFocus && hasSelection)
         updateButtonState(pasteBtn, hasFocus)
-        updateButtonState(undoBtn, hasFocus)
-        updateButtonState(redoBtn, hasFocus)
+
+        if (!hasFocus) {
+            updateButtonState(undoBtn, false)
+            updateButtonState(redoBtn, false)
+        } else {
+            // Evaluates Android system UndoManager state for precise active/disabled state
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val undoManager = contentEdit.undoManager
+                val canUndo = undoManager?.canUndo() ?: false
+                val canRedo = undoManager?.canRedo() ?: false
+                updateButtonState(undoBtn, canUndo)
+                updateButtonState(redoBtn, canRedo)
+            } else {
+                updateButtonState(undoBtn, true)
+                updateButtonState(redoBtn, true)
+            }
+        }
     }
 
     private fun getSelectedText(): String {
@@ -1129,26 +1136,37 @@ class NoteEditorActivity : AppCompatActivity() {
         val selStart = minOf(rawStart, rawEnd)
         val selEnd = maxOf(rawStart, rawEnd)
 
-        val spannable = contentEdit.text as Spannable
+        val editable = contentEdit.text
+
+        // Begin Undo batch edit so UndoManager tracks span changes
+        editable.clearSpans() // Ensures clean state triggering edit history update
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            contentEdit.undoManager?.beginUpdate("bold")
+        }
+
         val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
-        val spans = spannable.getSpans(selStart, selEnd, spanClass)
+        val spans = editable.getSpans(selStart, selEnd, spanClass)
         if (spans.isNotEmpty()) {
             for (span in spans) {
-                spannable.removeSpan(span)
+                editable.removeSpan(span)
             }
         } else {
             val font = googleSansFlex
             if (font != null) {
-                spannable.setSpan(
+                editable.setSpan(
                     GoogleSansFlexBoldRoundSpan(font),
                     selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                spannable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        contentEdit.setText(spannable)
-        Selection.setSelection(contentEdit.text, selStart, selEnd)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            contentEdit.undoManager?.endUpdate()
+        }
+
+        Selection.setSelection(editable, selStart, selEnd)
         updateToolbarButtons()
     }
 
@@ -1159,31 +1177,40 @@ class NoteEditorActivity : AppCompatActivity() {
         val selStart = minOf(rawStart, rawEnd)
         val selEnd = maxOf(rawStart, rawEnd)
 
-        val editableText = contentEdit.text
+        val editable = contentEdit.text
 
-        val sizeSpans = editableText.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
+        // Begin Undo batch edit so UndoManager tracks span changes
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            contentEdit.undoManager?.beginUpdate("bigger")
+        }
+
+        val sizeSpans = editable.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
         if (sizeSpans.isNotEmpty()) {
             for (span in sizeSpans) {
-                editableText.removeSpan(span)
+                editable.removeSpan(span)
             }
-            val boldSpans = editableText.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
+            val boldSpans = editable.getSpans(selStart, selEnd, GoogleSansFlexBoldRoundSpan::class.java)
             for (span in boldSpans) {
-                editableText.removeSpan(span)
+                editable.removeSpan(span)
             }
         } else {
             val font = googleSansFlex
             if (font != null) {
-                editableText.setSpan(
+                editable.setSpan(
                     GoogleSansFlexBoldRoundSpan(font),
                     selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                editableText.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            editableText.setSpan(RelativeSizeSpan(1.85f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            editable.setSpan(RelativeSizeSpan(1.85f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        contentEdit.setText(editableText)
-        Selection.setSelection(contentEdit.text, selStart, selEnd)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            contentEdit.undoManager?.endUpdate()
+        }
+
+        Selection.setSelection(editable, selStart, selEnd)
         updateToolbarButtons()
     }
 
