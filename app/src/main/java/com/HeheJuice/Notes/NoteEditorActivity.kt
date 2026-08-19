@@ -23,6 +23,7 @@ import android.text.Selection
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextWatcher
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.AttributeSet
@@ -120,15 +121,95 @@ class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text
     }
 }
 
+class TextUndoHelper(private val editText: EditText, private val onStateChanged: () -> Unit) {
+    private val undoStack = java.util.ArrayDeque<SpannableStringBuilder>()
+    private val redoStack = java.util.ArrayDeque<SpannableStringBuilder>()
+    private var isUndoOrRedo = false
+    private var isBatchMode = false
+
+    init {
+        editText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (!isUndoOrRedo && !isBatchMode && s != null) {
+                    pushState(SpannableStringBuilder(s))
+                }
+            }
+        })
+    }
+
+    fun beginBatch() {
+        isBatchMode = true
+    }
+
+    fun endBatch() {
+        isBatchMode = false
+        val currentText = editText.text
+        if (currentText != null) {
+            pushState(SpannableStringBuilder(currentText))
+        }
+    }
+
+    private fun pushState(state: SpannableStringBuilder) {
+        if (undoStack.isNotEmpty() && undoStack.peek().toString() == state.toString() &&
+            undoStack.peek().getSpans(0, undoStack.peek().length, Any::class.java).contentEquals(state.getSpans(0, state.length, Any::class.java))) {
+            return
+        }
+        undoStack.push(state)
+        redoStack.clear()
+        if (undoStack.size > 50) {
+            undoStack.removeLast()
+        }
+        onStateChanged()
+    }
+
+    fun canUndo(): Boolean = undoStack.size > 1
+
+    fun canRedo(): Boolean = redoStack.isNotEmpty()
+
+    fun undo() {
+        if (!canUndo()) return
+        isUndoOrRedo = true
+        val currentState = undoStack.pop()
+        redoStack.push(currentState)
+        val previousState = undoStack.peek()
+        editText.text = SpannableStringBuilder(previousState)
+        Selection.setSelection(editText.text, editText.text.length)
+        isUndoOrRedo = false
+        onStateChanged()
+    }
+
+    fun redo() {
+        if (!canRedo()) return
+        isUndoOrRedo = true
+        val nextState = redoStack.pop()
+        undoStack.push(nextState)
+        editText.text = SpannableStringBuilder(nextState)
+        Selection.setSelection(editText.text, editText.text.length)
+        isUndoOrRedo = false
+        onStateChanged()
+    }
+
+    fun initInitialState() {
+        undoStack.clear()
+        redoStack.clear()
+        editText.text?.let {
+            undoStack.push(SpannableStringBuilder(it))
+        }
+        onStateChanged()
+    }
+}
+
 class NoteEditorActivity : AppCompatActivity() {
 
     private lateinit var titleEdit: EditText
     private lateinit var contentEdit: LinedEditText
+    private lateinit var undoHelper: TextUndoHelper
     private var noteId: String = ""
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
 
-    // Tracking initial state to detect unsaved edits (including text formatting)
     private var initialTitle: String = ""
     private var initialContent: String = ""
     private var initialSpans: List<SpanData> = emptyList()
@@ -190,7 +271,6 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // ---- 颜色解析 ----
         surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF"))
         surfaceLow = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7"))
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
@@ -211,7 +291,6 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
-        // ---- 顶部栏 ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -357,7 +436,6 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(splitButton)
         root.addView(topBar)
 
-        // ---- 标题 ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -395,7 +473,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
-        // ---- 内容 ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -447,7 +524,10 @@ class NoteEditorActivity : AppCompatActivity() {
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
-        // ---- 工具栏 ----
+        undoHelper = TextUndoHelper(contentEdit) {
+            updateToolbarButtons()
+        }
+
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -459,7 +539,6 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        // Left Tool Pill (Copy, Paste, Bold, Bigger)
         val leftToolPill = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -542,12 +621,10 @@ class NoteEditorActivity : AppCompatActivity() {
         buttonRow.addView(biggerBtn)
         leftToolPill.addView(buttonRow)
 
-        // Spacer pushing right pill to the far right
         val toolbarSpacer = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
         }
 
-        // Right Tool Pill (Undo, Redo)
         val rightToolPill = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -571,11 +648,11 @@ class NoteEditorActivity : AppCompatActivity() {
         }
 
         undoBtn = createToolButton(R.drawable.undo_24px) {
-            contentEdit.onTextContextMenuItem(android.R.id.undo)
+            undoHelper.undo()
         }
 
         redoBtn = createToolButton(R.drawable.redo_24px) {
-            contentEdit.onTextContextMenuItem(android.R.id.redo)
+            undoHelper.redo()
         }
 
         rightButtonRow.addView(undoBtn)
@@ -587,7 +664,6 @@ class NoteEditorActivity : AppCompatActivity() {
         toolbarContainer.addView(rightToolPill)
         root.addView(toolbarContainer)
 
-        // ---- 加载已有笔记 ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -616,28 +692,20 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        // Cache initial values (title, content, and formatting spans) to check for changes
         initialTitle = titleEdit.text.toString()
         initialContent = contentEdit.text.toString()
         initialSpans = getCurrentSpans()
 
+        undoHelper.initInitialState()
+
         setContentView(root)
 
-        // Register system back button callback
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 handleBackNavigation()
             }
         })
 
-        // Listener to keep toolbar & Undo/Redo button visual states updated
-        contentEdit.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                updateToolbarButtons()
-            }
-        })
         contentEdit.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_UP) {
                 updateToolbarButtons()
@@ -645,17 +713,8 @@ class NoteEditorActivity : AppCompatActivity() {
             false
         }
 
-        // Real-time listener for Android UndoManager state changes
-        contentEdit.accessibilityDelegate = object : View.AccessibilityDelegate() {
-            override fun sendAccessibilityEvent(host: View, eventType: Int) {
-                super.sendAccessibilityEvent(host, eventType)
-                updateToolbarButtons()
-            }
-        }
-
         updateToolbarButtons()
 
-        // ---- 窗口边距 ----
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -1098,17 +1157,8 @@ class NoteEditorActivity : AppCompatActivity() {
             updateButtonState(undoBtn, false)
             updateButtonState(redoBtn, false)
         } else {
-            // Evaluates Android system UndoManager state for precise active/disabled state
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val undoManager = contentEdit.undoManager
-                val canUndo = undoManager?.canUndo() ?: false
-                val canRedo = undoManager?.canRedo() ?: false
-                updateButtonState(undoBtn, canUndo)
-                updateButtonState(redoBtn, canRedo)
-            } else {
-                updateButtonState(undoBtn, true)
-                updateButtonState(redoBtn, true)
-            }
+            updateButtonState(undoBtn, undoHelper.canUndo())
+            updateButtonState(redoBtn, undoHelper.canRedo())
         }
     }
 
@@ -1138,11 +1188,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         val editable = contentEdit.text
 
-        // Begin Undo batch edit so UndoManager tracks span changes
-        editable.clearSpans() // Ensures clean state triggering edit history update
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            contentEdit.undoManager?.beginUpdate("bold")
-        }
+        undoHelper.beginBatch()
 
         val spanClass = if (googleSansFlex != null) GoogleSansFlexBoldRoundSpan::class.java else StyleSpan::class.java
         val spans = editable.getSpans(selStart, selEnd, spanClass)
@@ -1162,9 +1208,7 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            contentEdit.undoManager?.endUpdate()
-        }
+        undoHelper.endBatch()
 
         Selection.setSelection(editable, selStart, selEnd)
         updateToolbarButtons()
@@ -1179,10 +1223,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         val editable = contentEdit.text
 
-        // Begin Undo batch edit so UndoManager tracks span changes
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            contentEdit.undoManager?.beginUpdate("bigger")
-        }
+        undoHelper.beginBatch()
 
         val sizeSpans = editable.getSpans(selStart, selEnd, RelativeSizeSpan::class.java)
         if (sizeSpans.isNotEmpty()) {
@@ -1206,9 +1247,7 @@ class NoteEditorActivity : AppCompatActivity() {
             editable.setSpan(RelativeSizeSpan(1.85f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            contentEdit.undoManager?.endUpdate()
-        }
+        undoHelper.endBatch()
 
         Selection.setSelection(editable, selStart, selEnd)
         updateToolbarButtons()
