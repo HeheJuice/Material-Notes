@@ -1,6 +1,6 @@
 ## License
 
-Copyright (c) [2026] [HeheJuice]. All rights reserved.
+Copyright (c) 2026 HeheJuice. All rights reserved.
 
 This repository and its source code are provided strictly for **personal, non-commercial use**.
 
@@ -19,26 +19,31 @@ Without explicit, prior written permission from the copyright holder, you are st
 
 This project includes or utilizes third-party assets subject to their own open-source licenses. These licenses apply only to their respective components and do not grant broader rights to the rest of this repository.
 
-### 1. Material Design Icons (MDI)
-* **Copyright:** Copyright (c) 2020 Austin Andrews (SIL Open Font License / Apache 2.0)
-* **License:** Material Design Icons are licensed under the **Apache License 2.0** or the **SIL Open Font License (OFL) 1.1**. 
+### 1. Google Sans Flex (Typography)
+* **Copyright:** Copyright (c) Google LLC. All rights reserved.
+* **License:** Licensed under the **SIL Open Font License (OFL) 1.1**.
+
+> This Font Software is licensed under the SIL Open Font License, Version 1.1.
+> Full license text is available at: https://scripts.sil.org/OFL
+
+### 2. Material Design Library (Components)
+* **Copyright:** Copyright (c) Google LLC. All rights reserved.
+* **License:** Licensed under the **Apache License 2.0**.
 
 > Licensed under the Apache License, Version 2.0 (the "License");
 > you may not use this file except in compliance with the License.
 > You may obtain a copy of the License at:
 > http://www.apache.org/licenses/LICENSE-2.0
 > 
-> Unless required by applicable law.writing, software
+> Unless required by applicable law or agreed to in writing, software
 > distributed under the License is distributed on an "AS IS" BASIS,
 > WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 > See the License for the specific language governing permissions and
 > limitations under the License.
 
-### 2. Google Sans Flex (Typography)
-* **Copyright:** Copyright (c) Google LLC. All rights reserved.
-* **License:** Google fonts and proprietary font files (such as Google Sans variants) are generally governed by the **SIL Open Font License 1.1** or specific Google Terms of Service depending on how they were acquired. 
+### 3. Material Design Icons / Symbols
+* **Copyright:** Copyright (c) Google LLC / Material Design Authors.
+* **License:** Licensed under the **Apache License 2.0** (and **SIL OFL 1.1** for font-based icon variants).
 
-> Copyright (c) Google LLC. 
-> This Font Software is licensed under the SIL Open Font License, Version 1.1.
-> This license is copied below, and is also available with a FAQ at:
-> https://scripts.sil.org/OFL
+> Licensed under the Apache License, Version 2.0 or SIL Open Font License 1.1.
+> Source code and license details available at: https://github.com/google/material-design-icons

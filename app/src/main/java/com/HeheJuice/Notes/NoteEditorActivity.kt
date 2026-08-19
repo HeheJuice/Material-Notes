@@ -564,7 +564,7 @@ class NoteEditorActivity : AppCompatActivity() {
                             }
                         }
                         "bigger" -> {
-                            val size = spanData.size ?: 2.0f
+                            val size = spanData.size ?: 1.85f
                             spannable.setSpan(RelativeSizeSpan(size), spanData.start, spanData.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                         }
                     }
@@ -727,7 +727,7 @@ class NoteEditorActivity : AppCompatActivity() {
                 val spanStart = spannable.getSpanStart(span)
                 val spanEnd = spannable.getSpanEnd(span)
                 if (spanStart >= 0 && spanEnd >= 0) {
-                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 2.0f))
+                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 1.85f))
                 }
             }
         }
@@ -776,7 +776,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
     private fun generateHighResNoteBitmap(title: String, contentSpannable: Spannable): Bitmap? {
         val baseWidth = maxOf(resources.displayMetrics.widthPixels, 720)
-        val scale = 2.0f
+        val scale = 1.85f
         val maxWidth = (baseWidth * scale).toInt()
 
         val paddingPx = (dpToPx(20f) * scale).toInt()
@@ -990,7 +990,7 @@ class NoteEditorActivity : AppCompatActivity() {
             } else {
                 editableText.setSpan(StyleSpan(Typeface.BOLD), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            editableText.setSpan(RelativeSizeSpan(2.0f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            editableText.setSpan(RelativeSizeSpan(1.85f), selStart, selEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         contentEdit.setText(editableText)
         Selection.setSelection(contentEdit.text, selStart, selEnd)

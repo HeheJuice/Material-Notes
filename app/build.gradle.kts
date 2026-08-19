@@ -19,8 +19,13 @@ android {
         create("stableDebug") {
             storeFile = file("debug.keystore")
             storePassword = System.getenv("RELEASE_SIGNING_PASSWORD") ?: "android"
-            keyAlias = System.getenv("RELEASE_SIGNING_KEY_ALIAS") ?: "androiddebugkey"
+            keyAlias = System.getenv("RELEASE_SIGNING_KEY_ALIAS") ?: "HeheJuice"
             keyPassword = System.getenv("RELEASE_SIGNING_KEY_PASSWORD") ?: "android"
+            
+            // Explicitly enable V1, V2, and V3 signing schemes
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 

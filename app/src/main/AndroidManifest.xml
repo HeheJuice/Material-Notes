@@ -28,6 +28,9 @@
         <!-- Add this line -->
         <activity android:name=".NoteEditorActivity" />
         <activity android:name=".NotesUpdate" />
+        <activity
+    android:name=".NotesEditorHelp"
+    android:exported="false" />
     <provider
     android:name="androidx.core.content.FileProvider"
     android:authorities="${applicationId}.fileprovider"

@@ -22,6 +22,9 @@
     <string name="themerestart">应用所选主题</string>
     <string name="setting_follow_system">跟随系统主题</string>
     <string name="setting_follow_system_subtitle">自动调整外观</string>
+    <string name="helper_title">编辑器帮助</string>
+<string name="helper_desc">了解技巧与快捷方式</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">编辑器</string>
@@ -95,4 +98,16 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">添加</string>
+    <!-- Helper -->
+<string name="copy_title">复制</string>
+<string name="copy_desc">复制所选文本</string>
+<string name="paste_title">粘贴</string>
+<string name="paste_desc">从剪贴板粘贴</string>
+<string name="title_title">内容标题</string>
+<string name="title_desc">将所选文本放大至 1.8 倍并加粗</string>
+<string name="bold_title">加粗</string>
+<string name="bold_desc">对所选文本应用或取消加粗</string>
+<string name="landscape_title">关于生成笔记图片</string>
+<string name="landscape_desc">你知道在横屏模式下可以生成更宽的笔记图片吗？</string>
+
 </resources>

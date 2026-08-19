@@ -22,6 +22,9 @@
     <string name="themerestart">選択したテーマを適用</string>
     <string name="setting_follow_system">システムのテーマに従う</string>
     <string name="setting_follow_system_subtitle">外観を自動的に調整します</string>
+    <string name="helper_title">エディターのヘルプ</string>
+<string name="helper_desc">ヒントやショートカットを確認</string>
+
 
     <!-- Editor Settings -->
     <string name="settings_editor_category">エディター</string>
@@ -95,4 +98,16 @@
 
     <!-- Misc -->
     <string name="add_button_content_desc">追加</string>
+    <!-- Helper -->
+<string name="copy_title">コピー</string>
+<string name="copy_desc">選択したテキストをコピー</string>
+<string name="paste_title">貼り付け</string>
+<string name="paste_desc">クリップボードから貼り付け</string>
+<string name="title_title">見出し</string>
+<string name="title_desc">選択したテキストを太字にして1.8倍に拡大</string>
+<string name="bold_title">太字</string>
+<string name="bold_desc">選択したテキストの太字を設定または解除</string>
+<string name="landscape_title">ノートを画像として保存 について</string>
+<string name="landscape_desc">横画面モードにすると、より広いノート画像をキャプチャできることをご存知ですか？</string>
+
 </resources>

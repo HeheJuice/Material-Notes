@@ -99,28 +99,37 @@ class NotesUpdate : AppCompatActivity() {
         val primaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.parseColor("#E8DEF8"))
         val tertiaryContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorTertiaryContainer, Color.parseColor("#FFD8E4"))
 
+        // ---------------------------------------------------------------------
+        // TRANSPARENT FLOATING TOP BAR + SCROLLVIEW WITH CLIPTOPADDING = FALSE
+        // ---------------------------------------------------------------------
+        val mainContainer = FrameLayout(this).apply {
+            setBackgroundColor(surfaceColor)
+        }
+
+        // ScrollView: clipToPadding = false so content scrolls under the top bar
         val scrollView = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_ALWAYS
-            setBackgroundColor(surfaceColor)
+            clipToPadding = false
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
         }
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(16f), 0, dpToPx(16f), dpToPx(16f))
         }
 
-        // ---- Back Button Header ----
+        // Top bar: transparent, floats above ScrollView
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(8f)
-                bottomMargin = dpToPx(8f)
-            }
+            setBackgroundColor(Color.TRANSPARENT)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
         }
 
         val backBtn = ImageView(this).apply {
@@ -138,7 +147,12 @@ class NotesUpdate : AppCompatActivity() {
             setOnClickListener { finish() }
         }
         topBar.addView(backBtn)
-        root.addView(topBar)
+
+        // Assemble: ScrollView first, topBar on top
+        scrollView.addView(root)
+        mainContainer.addView(scrollView)
+        mainContainer.addView(topBar)
+        setContentView(mainContainer)
 
         // ---- Big Title ----
         val bigTitle = TextView(this).apply {
@@ -704,9 +718,6 @@ class NotesUpdate : AppCompatActivity() {
 
         root.addView(creditsCard)
 
-        scrollView.addView(root)
-        setContentView(scrollView)
-
         // Restore cached downloaded APK state if present
         val cachedFile = File(cacheDir, "app-release.apk")
         if (cachedFile.exists()) {
@@ -745,13 +756,25 @@ class NotesUpdate : AppCompatActivity() {
         }
 
         // Apply dynamic system bar paddings
-        ViewCompat.setOnApplyWindowInsetsListener(scrollView) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(mainContainer) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val navBarBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
 
-            root.setPadding(
+            // Position topBar relative to status bar
+            topBar.setPadding(
                 dpToPx(16f),
                 statusBarTop + dpToPx(8f),
+                dpToPx(16f),
+                dpToPx(8f)
+            )
+
+            // Calculate total height occupied by top bar (padding + 50dp button + bottom padding)
+            val totalTopBarHeight = statusBarTop + dpToPx(8f + 50f + 8f)
+
+            // Set initial content padding so title sits right below the back button
+            root.setPadding(
+                dpToPx(16f),
+                totalTopBarHeight,
                 dpToPx(16f),
                 navBarBottom + dpToPx(16f)
             )
