@@ -1,6 +1,7 @@
 package com.HeheJuice.Notes
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
