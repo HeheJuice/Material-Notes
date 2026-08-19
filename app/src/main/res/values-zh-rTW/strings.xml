@@ -34,7 +34,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">新增記事</string>
     <string name="import_notes">匯入 TXT 記事</string>
-    <string name="import_notes_toast">匯入記事（即將推出）</string>
+<string name="import_notes_toast">已匯入</string>
 
     <!-- Note Editor -->
     <string name="save">儲存</string>

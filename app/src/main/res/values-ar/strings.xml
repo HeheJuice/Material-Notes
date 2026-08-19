@@ -34,7 +34,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">إنشاء ملاحظات</string>
     <string name="import_notes">استيراد ملاحظات TXT</string>
-    <string name="import_notes_toast">استيراد الملاحظات (قريباً)</string>
+<string name="import_notes_toast">تم الاستيراد</string>
 
     <!-- Note Editor -->
     <string name="save">حفظ</string>

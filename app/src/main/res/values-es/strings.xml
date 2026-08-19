@@ -34,7 +34,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">Crear notas</string>
     <string name="import_notes">Importar notas TXT</string>
-    <string name="import_notes_toast">Importar notas (próximamente)</string>
+<string name="import_notes_toast">Importado</string>
 
     <!-- Note Editor -->
     <string name="save">Guardar</string>

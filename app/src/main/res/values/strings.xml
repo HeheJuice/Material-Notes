@@ -26,7 +26,7 @@
 <!-- Menu Actions -->
 <string name="create_notes">Create Notes</string>
 <string name="import_notes">Import TXT Notes</string>
-<string name="import_notes_toast">Import Notes (coming soon)</string>
+<string name="import_notes_toast">Imported</string>
     <string name="settings_editor_category">Editor</string>
 <string name="show_lines_under_text">Show Lines Under Texts</string>
 <string name="show_lines_under_text_desc">Display ruled lines under note text inside editor</string>

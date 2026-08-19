@@ -34,7 +34,7 @@
     <!-- Menu Actions -->
     <string name="create_notes">Tạo ghi chú</string>
     <string name="import_notes">Nhập ghi chú TXT</string>
-    <string name="import_notes_toast">Nhập ghi chú (sắp ra mắt)</string>
+<string name="import_notes_toast">Đã nhập</string>
 
     <!-- Note Editor -->
     <string name="save">Lưu</string>
