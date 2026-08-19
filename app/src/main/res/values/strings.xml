@@ -102,7 +102,7 @@
 <string name="title_desc">Make selected texts 1.8X and bold</string>
 <string name="bold_title">Bold</string>
 <string name="bold_desc">Bold or Cancel Bold for selected texts</string>
-<string name="landscape_title">About XXX</string>
+<string name="landscape_title">About Capture Notes to Image</string>
 <string name="landscape_desc">Do you know you can capture a wider note image in landscape mode?</string>
 
 </resources>
