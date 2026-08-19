@@ -76,6 +76,9 @@
     <string name="credit_google_sans_flex_desc">Tipografías usadas en esta aplicación</string>
     <string name="desc_source">Ver el código fuente de esta aplicación en GitHub</string>
     <string name="desc_license">Ver uso de terceros y licencias para esta aplicación</string>
+    <string name="lang_settings">Idioma usado en la aplicación</string>
+<string name="lang_settings_desc">Haz clic aquí para seleccionar</string>
+
 
     <!-- Update Checker -->
     <string name="update_checking">Buscando actualizaciones…</string>

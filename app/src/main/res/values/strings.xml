@@ -30,6 +30,8 @@
     <string name="settings_editor_category">Editor</string>
 <string name="show_lines_under_text">Show Lines Under Texts</string>
 <string name="show_lines_under_text_desc">Display ruled lines under note text inside editor</string>
+<string name="lang_settings">Language uses in app</string>
+<string name="lang_settings_desc">Click here to select</string>
 
 
 <!-- Note Editor -->

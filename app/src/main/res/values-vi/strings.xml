@@ -24,6 +24,9 @@
     <string name="setting_follow_system_subtitle">Tự động điều chỉnh giao diện</string>
     <string name="helper_title">Trợ giúp trình chỉnh sửa</string>
 <string name="helper_desc">Tìm hiểu mẹo và phím tắt</string>
+<string name="lang_settings">Ngôn ngữ sử dụng trong ứng dụng</string>
+<string name="lang_settings_desc">Nhấn vào đây để chọn</string>
+
 
 
     <!-- Editor Settings -->

@@ -24,6 +24,9 @@
     <string name="setting_follow_system_subtitle">自动调整外观</string>
     <string name="helper_title">编辑器帮助</string>
 <string name="helper_desc">了解技巧与快捷方式</string>
+<string name="lang_settings">应用语言</string>
+<string name="lang_settings_desc">点击此处选择</string>
+
 
 
     <!-- Editor Settings -->

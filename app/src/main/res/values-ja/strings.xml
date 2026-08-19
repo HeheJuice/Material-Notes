@@ -76,6 +76,9 @@
 <string name="credit_google_sans_flex_desc">このアプリで使用されているフォント</string>
 <string name="desc_source">GitHub でこのアプリのソースコードを確認</string>
 <string name="desc_license">このアプリおよびサードパーティ製ライブラリのライセンスを確認</string>
+<string name="lang_settings">アプリの表示言語</string>
+<string name="lang_settings_desc">ここをクリックして選択</string>
+
 
 
     <!-- Update Checker -->

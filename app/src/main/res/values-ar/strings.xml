@@ -76,6 +76,9 @@
     <string name="credit_google_sans_flex_desc">الخطوط المستخدمة في هذا التطبيق</string>
     <string name="desc_source">اطّلع على الشفرة المصدرية لهذا التطبيق على GitHub</string>
     <string name="desc_license">عرض استخدامات الطرف الثالث والتراخيص الخاصة بها وبالمكتبات</string>
+    <string name="lang_settings">اللغة المستخدمة في التطبيق</string>
+<string name="lang_settings_desc">انقر هنا للاختيار</string>
+
 
     <!-- Update Checker -->
     <string name="update_checking">جاري التحقق من وجود تحديثات…</string>
