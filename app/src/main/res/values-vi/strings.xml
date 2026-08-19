@@ -113,5 +113,9 @@
 <string name="save_and_exit">Lưu và thoát</string>
 <string name="exit_directly">Thoát mà không lưu</string>
 <string name="back_to_editor">Tiếp tục chỉnh sửa</string>
+<!-- Action -->
+<string name="title_delete_action">Xóa ghi chú này?</string>
+<string name="option_delete_y">Tiếp tục</string>
+<string name="option_cancel">Hủy</string>
 
 </resources>

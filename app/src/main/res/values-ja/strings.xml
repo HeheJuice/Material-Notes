@@ -114,5 +114,9 @@
 <string name="save_and_exit">保存して終了</string>
 <string name="exit_directly">保存せずに終了</string>
 <string name="back_to_editor">編集を続ける</string>
+<!-- Action -->
+<string name="title_delete_action">ノートを削除しますか？</string>
+<string name="option_delete_y">続行</string>
+<string name="option_cancel">キャンセル</string>
 
 </resources>

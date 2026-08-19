@@ -113,5 +113,9 @@
 <string name="save_and_exit">Guardar y salir</string>
 <string name="exit_directly">Salir sin guardar</string>
 <string name="back_to_editor">Continuar editando</string>
+<!-- Action -->
+<string name="title_delete_action">¿Eliminar la nota?</string>
+<string name="option_delete_y">Continuar</string>
+<string name="option_cancel">Cancelar</string>
 
 </resources>

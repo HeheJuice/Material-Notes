@@ -109,4 +109,9 @@
 <string name="save_and_exit">Save and Exit</string>
 <string name="exit_directly">Exit without save</string>
 <string name="back_to_editor">Continue Editing</string>
+<!-- Action -->
+<string name="title_delete_action">Delete the note?</string>
+<string name="option_delete_y">Continue</string>
+<string name="option_cancel">Cancel</string>
+
 </resources>

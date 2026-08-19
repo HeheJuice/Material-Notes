@@ -223,22 +223,26 @@ class NotesUpdate : AppCompatActivity() {
         }
         appInfoCard.addView(appNameText)
 
-        // App Version
-        val appVersionText = TextView(this).apply {
-            text = getString(R.string.version_format, getVersionName())
-            textSize = 14f
-            setTextColor(onPrimaryContainerColor)
-            alpha = 0.8f
-            gravity = Gravity.CENTER
-            setGoogleSansFlexDefault(this, false)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(4f)
-            }
-        }
-        appInfoCard.addView(appVersionText)
+// App Version
+val appVersionText = TextView(this).apply {
+    text = getString(R.string.version_format, getVersionName())
+    textSize = 14f
+    setTextColor(onPrimaryContainerColor)
+    alpha = 0.8f
+    gravity = Gravity.CENTER
+    // Safe zone padding to prevent text glyph clipping in various languages
+    setPadding(dpToPx(16f), dpToPx(2f), dpToPx(16f), dpToPx(2f))
+    clipToPadding = false
+    setGoogleSansFlexDefault(this, false)
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.WRAP_CONTENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    ).apply {
+        topMargin = dpToPx(4f)
+    }
+}
+appInfoCard.addView(appVersionText)
+
 
         root.addView(appInfoCard)
 
@@ -646,75 +650,92 @@ class NotesUpdate : AppCompatActivity() {
         rowMaterial.addView(textContainer2)
         creditsCard.addView(rowMaterial)
 
-        // Credit 3: Google Sans Flex
-        val fontCreditName = "Google Sans Flex"
-        val rowFont = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(8f)
-                bottomMargin = dpToPx(8f)
-            }
-        }
+// Credit 3: Google Sans Flex
+val fontCreditName = "Google Sans Flex"
+val rowFont = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    ).apply {
+        topMargin = dpToPx(8f)
+        bottomMargin = dpToPx(8f)
+    }
+}
 
-        val fontAvatar = ImageView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(primaryColor)
-            }
+val fontAvatarRes = resources.getIdentifier("googlesansflex", "drawable", packageName)
+val fontAvatar = ImageView(this).apply {
+    layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
+        marginEnd = dpToPx(16f)
+    }
+    if (fontAvatarRes != 0) {
+        setImageResource(fontAvatarRes)
+        scaleType = ImageView.ScaleType.CENTER_CROP
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.TRANSPARENT)
         }
+        clipToOutline = true
+    } else {
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(primaryColor)
+        }
+    }
+}
 
-        val fontInitialTv = TextView(this).apply {
-            text = "G"
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            setGoogleSansFlexDefault(this, true)
-            gravity = Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(dpToPx(44f), dpToPx(44f))
+if (fontAvatarRes == 0) {
+    val fontInitialTv = TextView(this).apply {
+        text = "G"
+        textSize = 20f
+        setTextColor(Color.WHITE)
+        setGoogleSansFlexDefault(this, true)
+        gravity = Gravity.CENTER
+        layoutParams = FrameLayout.LayoutParams(dpToPx(44f), dpToPx(44f))
+    }
+    val fontAvatarContainer = FrameLayout(this).apply {
+        layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
+            marginEnd = dpToPx(16f)
         }
+        addView(fontAvatar)
+        addView(fontInitialTv)
+    }
+    rowFont.addView(fontAvatarContainer)
+} else {
+    rowFont.addView(fontAvatar)
+}
 
-        val fontAvatarContainer = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
-                marginEnd = dpToPx(16f)
-            }
-            addView(fontAvatar)
-            addView(fontInitialTv)
-        }
-        rowFont.addView(fontAvatarContainer)
+val textContainer3 = LinearLayout(this).apply {
+    orientation = LinearLayout.VERTICAL
+    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+}
 
-        val textContainer3 = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
+val nameView3 = TextView(this).apply {
+    text = fontCreditName
+    textSize = 16f
+    setTextColor(onSurfaceVariantColor)
+    setGoogleSansFlexDefault(this, true)
+    isClickable = true
+    isFocusable = true
+    setOnClickListener {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://fonts.google.com")))
+    }
+    setOnTouchListener(pressScaleTouchListener)
+}
 
-        val nameView3 = TextView(this).apply {
-            text = fontCreditName
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://fonts.google.com")))
-            }
-            setOnTouchListener(pressScaleTouchListener)
-        }
+val descView3 = TextView(this).apply {
+    text = getString(R.string.credit_google_sans_flex_desc)
+    textSize = 13f
+    setTextColor(onSurfaceVariantColor)
+    alpha = 0.8f
+    setGoogleSansFlexDefault(this, false)
+}
+textContainer3.addView(nameView3)
+textContainer3.addView(descView3)
+rowFont.addView(textContainer3)
+creditsCard.addView(rowFont)
 
-        val descView3 = TextView(this).apply {
-            text = getString(R.string.credit_google_sans_flex_desc)
-            textSize = 13f
-            setTextColor(onSurfaceVariantColor)
-            alpha = 0.8f
-            setGoogleSansFlexDefault(this, false)
-        }
-        textContainer3.addView(nameView3)
-        textContainer3.addView(descView3)
-        rowFont.addView(textContainer3)
-        creditsCard.addView(rowFont)
 
         root.addView(creditsCard)
 

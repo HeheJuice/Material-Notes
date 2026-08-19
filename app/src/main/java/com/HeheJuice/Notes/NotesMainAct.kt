@@ -1518,13 +1518,23 @@ class NotesMainAct : AppCompatActivity() {
                 }
 
                 deleteBtn.setOnClickListener {
-                    val pos = bindingAdapterPosition
-                    if (pos != RecyclerView.NO_POSITION) {
-                        NoteRepository.deleteNote(note.id)
-                        expandedPosition = RecyclerView.NO_POSITION
-                        loadNotesList()
-                    }
-                }
+    val pos = bindingAdapterPosition
+    if (pos != RecyclerView.NO_POSITION) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
+            .setTitle(R.string.title_delete_action)
+            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
+                NoteRepository.deleteNote(note.id)
+                expandedPosition = RecyclerView.NO_POSITION
+                loadNotesList()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+}
+
 
                 cancelBtn.setOnClickListener {
                     toggleExpansion(bindingAdapterPosition, this@ViewHolder)

@@ -114,5 +114,9 @@
 <string name="save_and_exit">儲存並離開</string>
 <string name="exit_directly">直接離開</string>
 <string name="back_to_editor">繼續編輯</string>
+<!-- Action -->
+<string name="title_delete_action">刪除此備忘錄？</string>
+<string name="option_delete_y">繼續</string>
+<string name="option_cancel">取消</string>
 
 </resources>
