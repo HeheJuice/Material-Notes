@@ -124,6 +124,5 @@
 <string name="title_delete_action">刪除此備忘錄？</string>
 <string name="option_delete_y">繼續</string>
 <string name="option_cancel">取消</string>
-<string name="website_pill">新增網站預覽卡片</string>
 
 </resources>

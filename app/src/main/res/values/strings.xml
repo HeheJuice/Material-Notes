@@ -117,6 +117,5 @@
 <string name="title_delete_action">Delete the note?</string>
 <string name="option_delete_y">Continue</string>
 <string name="option_cancel">Cancel</string>
-<string name="website_pill">Add a Website Preview Card</string>
 
 </resources>

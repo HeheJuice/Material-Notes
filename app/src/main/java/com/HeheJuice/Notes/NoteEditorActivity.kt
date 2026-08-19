@@ -53,6 +53,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 
+/**
+ * Custom EditText that draws ruled notebook lines below each text line.
+ */
 class LinedEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -125,6 +128,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
 
+    // Tracking initial state to detect unsaved edits (including text formatting)
     private var initialTitle: String = ""
     private var initialContent: String = ""
     private var initialSpans: List<SpanData> = emptyList()
@@ -142,10 +146,6 @@ class NoteEditorActivity : AppCompatActivity() {
     private var outerCornerPx: Float = 0f
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
-
-    // Floating Plus Button state
-    private var plusMenuPopup: android.widget.PopupWindow? = null
-    private var isPlusMenuOpen = false
 
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
@@ -188,7 +188,7 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // ---- Color resolution ----
+        // ---- 颜色解析 ----
         surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF"))
         surfaceLow = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7"))
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
@@ -209,7 +209,7 @@ class NoteEditorActivity : AppCompatActivity() {
             setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
-        // ---- Top Bar ----
+        // ---- 顶部栏 ----
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -355,7 +355,7 @@ class NoteEditorActivity : AppCompatActivity() {
         topBar.addView(splitButton)
         root.addView(topBar)
 
-        // ---- Title Edit ----
+        // ---- 标题 ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -393,7 +393,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleEdit)
 
-        // ---- Content Edit ----
+        // ---- 内容 ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -445,10 +445,10 @@ class NoteEditorActivity : AppCompatActivity() {
         scrollContainer.addView(contentEdit)
         root.addView(scrollContainer)
 
-        // ---- Toolbar Container ----
+        // ---- 工具栏 ----
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -541,39 +541,9 @@ class NoteEditorActivity : AppCompatActivity() {
 
         toolPill.addView(buttonRow)
         toolbarContainer.addView(toolPill)
-
-        // Spacer pushing the FAB to the bottom right
-        val toolbarSpacer = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
-        }
-        toolbarContainer.addView(toolbarSpacer)
-
-        // Floating Plus Button (Same logic & design as NotesMainAct)
-        val plusIconDrawable = PlusDrawable(onSurfaceVariantColor, dpToPx(3f).toFloat())
-        val plusBtn = ImageView(this).apply {
-            setImageDrawable(plusIconDrawable)
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(surfaceContainerLowColor)
-            }
-            contentDescription = getString(R.string.add_button_content_desc)
-            isClickable = true
-            isFocusable = true
-            layoutParams = LinearLayout.LayoutParams(dpToPx(52f), dpToPx(52f))
-            setOnTouchListener(pressScaleTouchListener)
-            setOnClickListener {
-                if (isPlusMenuOpen) {
-                    plusMenuPopup?.dismiss()
-                } else {
-                    showPlusMenu(this)
-                }
-            }
-        }
-        toolbarContainer.addView(plusBtn)
-
         root.addView(toolbarContainer)
 
-        // ---- Load Note ----
+        // ---- 加载已有笔记 ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
@@ -602,18 +572,21 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
+        // Cache initial values (title, content, and formatting spans) to check for changes
         initialTitle = titleEdit.text.toString()
         initialContent = contentEdit.text.toString()
         initialSpans = getCurrentSpans()
 
         setContentView(root)
 
+        // Register system back button callback
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 handleBackNavigation()
             }
         })
 
+        // ---- 监听器 ----
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -630,7 +603,7 @@ class NoteEditorActivity : AppCompatActivity() {
 
         updateToolbarButtons()
 
-        // Dynamic window inset handling (Moves toolbarContainer & plusBtn together)
+        // ---- 窗口边距 ----
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -651,80 +624,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Displays the single-pill popup aligned to the right edge of the + button
-    private fun showPlusMenu(anchor: View) {
-        plusMenuPopup?.dismiss()
-
-        anchor.animate().rotation(45f).setDuration(250)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
-
-        val menuView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.END
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        val webIcon = try { ContextCompat.getDrawable(this, R.drawable.web_24px) } catch (_: Exception) { null }
-        val tintedWebIcon = webIcon?.let {
-            val wrapped = DrawableCompat.wrap(it).mutate()
-            DrawableCompat.setTint(wrapped, onPrimaryContainerColor)
-            wrapped
-        }
-
-        val websitePillItem = TextView(this).apply {
-            text = getString(R.string.website_pill)
-            textSize = 14f
-            setTextColor(onPrimaryContainerColor)
-            setGoogleSansFlexDefault(this, true)
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(100f).toFloat()
-                setColor(primaryContainerColor)
-            }
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
-            compoundDrawablePadding = dpToPx(12f)
-            setCompoundDrawablesWithIntrinsicBounds(tintedWebIcon, null, null, null)
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
-            setOnClickListener {
-                // Do nothing for now
-                plusMenuPopup?.dismiss()
-            }
-        }
-        menuView.addView(websitePillItem)
-
-        menuView.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-
-        // Align right edge of + button with right edge of pill
-        val xOffset = anchor.width - menuView.measuredWidth
-        val yOffset = -(anchor.height + menuView.measuredHeight + dpToPx(8f))
-
-        plusMenuPopup = android.widget.PopupWindow(
-            menuView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        ).apply {
-            elevation = dpToPx(8f).toFloat()
-            isOutsideTouchable = true
-            isFocusable = true
-            animationStyle = android.R.style.Animation_Dialog
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
-            setOnDismissListener {
-                anchor.animate().rotation(0f).setDuration(250)
-                    .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
-                isPlusMenuOpen = false
-            }
-            showAsDropDown(anchor, xOffset, yOffset)
-            isPlusMenuOpen = true
-        }
-    }
-
+    // Helper to extract active spans in the content
     private fun getCurrentSpans(): List<SpanData> {
         val spans = mutableListOf<SpanData>()
         val spannable = contentEdit.text as? Spannable ?: return spans
@@ -758,16 +658,19 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
+        // Sort to ensure canonical order when comparing equality
         spans.sortWith(compareBy({ it.start }, { it.end }, { it.type }))
         return spans
     }
 
+    // Check if the user has unsaved edits (title, content, or formatting)
     private fun hasUnsavedChanges(): Boolean {
         return titleEdit.text.toString() != initialTitle ||
                 contentEdit.text.toString() != initialContent ||
                 getCurrentSpans() != initialSpans
     }
 
+    // Intercept back navigation
     private fun handleBackNavigation() {
         if (hasUnsavedChanges()) {
             showUnsavedChangesDialog()
@@ -776,6 +679,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // Material 3 style unsaved changes dialog matching screenshot design
     private fun showUnsavedChangesDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -842,9 +746,17 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        val btnSave = createOptionButton(R.string.save_and_exit) { saveNote() }
-        val btnExit = createOptionButton(R.string.exit_directly) { finish() }
-        val btnBack = createOptionButton(R.string.back_to_editor) {}
+        val btnSave = createOptionButton(R.string.save_and_exit) {
+            saveNote()
+        }
+
+        val btnExit = createOptionButton(R.string.exit_directly) {
+            finish()
+        }
+
+        val btnBack = createOptionButton(R.string.back_to_editor) {
+            // Dismiss dialog and stay in editor
+        }
 
         (btnBack.layoutParams as LinearLayout.LayoutParams).bottomMargin = 0
 
@@ -862,6 +774,8 @@ class NoteEditorActivity : AppCompatActivity() {
 
         dialog.show()
     }
+
+    // ---- 其余功能函数 ----
 
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
@@ -1110,6 +1024,7 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // ---- 隐藏键盘 ----
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
         currentFocus?.let { view ->
@@ -1254,26 +1169,6 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
         false
-    }
-
-    // Plus icon drawable matching NotesMainAct
-    private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
-        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            color = colorInt
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = strokeWidthPx
-            strokeCap = android.graphics.Paint.Cap.ROUND
-        }
-        override fun draw(canvas: android.graphics.Canvas) {
-            val cx = bounds.exactCenterX()
-            val cy = bounds.exactCenterY()
-            val size = dpToPx(9f).toFloat()
-            canvas.drawLine(cx - size, cy, cx + size, cy, paint)
-            canvas.drawLine(cx, cy - size, cx, cy + size, paint)
-        }
-        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
-        override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
-        @Deprecated("Deprecated in Java") override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
     }
 
     private fun dpToPx(dp: Float): Int =
