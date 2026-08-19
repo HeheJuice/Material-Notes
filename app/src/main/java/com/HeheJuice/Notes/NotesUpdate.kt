@@ -2,6 +2,7 @@ package com.HeheJuice.Notes
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -223,15 +224,15 @@ class NotesUpdate : AppCompatActivity() {
         }
         appInfoCard.addView(appNameText)
 
-        // App Version
+        // App Version (Fixed cutoff issue with padding and font padding disabled)
         val appVersionText = TextView(this).apply {
             text = getString(R.string.version_format, getVersionName())
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             alpha = 0.8f
             gravity = Gravity.CENTER
-            includeFontPadding = true
-            setPadding(dpToPx(16f), dpToPx(6f), dpToPx(16f), dpToPx(6f))
+            includeFontPadding = false
+            setPadding(dpToPx(16f), dpToPx(6f), dpToPx(16f), dpToPx(10f))
             setGoogleSansFlexDefault(this, false)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -496,7 +497,7 @@ class NotesUpdate : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                 marginEnd = dpToPx(16f)
             }
-            setImageResource(R.drawable.hehejuice)
+            setImageResource(R.drawable.hehejuice) // Fallback image set by default
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -686,6 +687,7 @@ class NotesUpdate : AppCompatActivity() {
             downloadProgressText.visibility = View.GONE
         } else {
             checkForUpdates()
+            loadHeheJuiceAvatar(hehejuiceAvatar)
         }
 
         // Apply dynamic system bar paddings
@@ -710,6 +712,32 @@ class NotesUpdate : AppCompatActivity() {
             )
             insets
         }
+    }
+
+    // ========== Load HeheJuice Profile Picture Logic ==========
+    private fun loadHeheJuiceAvatar(avatarView: ImageView) {
+        Thread {
+            try {
+                val url = URL("https://github.com/HeheJuice.png")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.connect()
+
+                if (connection.responseCode == HttpsURLConnection.HTTP_OK) {
+                    val bitmap = BitmapFactory.decodeStream(connection.inputStream)
+                    if (bitmap != null) {
+                        runOnUiThread {
+                            avatarView.setImageBitmap(bitmap)
+                        }
+                    }
+                }
+                connection.disconnect()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
     }
 
     // ========== Check For Updates Logic ==========
