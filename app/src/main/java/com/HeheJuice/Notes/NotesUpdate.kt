@@ -1,8 +1,8 @@
 package com.HeheJuice.Notes
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
@@ -225,7 +225,7 @@ class NotesUpdate : AppCompatActivity() {
         }
         appInfoCard.addView(appNameText)
 
-        // App Version (Fixed cutoff issue with padding and font padding disabled)
+        // App Version
         val appVersionText = TextView(this).apply {
             text = getString(R.string.version_format, getVersionName())
             textSize = 14f
@@ -498,7 +498,7 @@ class NotesUpdate : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(dpToPx(44f), dpToPx(44f)).apply {
                 marginEnd = dpToPx(16f)
             }
-            setImageResource(R.drawable.hehejuice) // Fallback image set by default
+            setImageResource(R.drawable.hehejuice)
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -675,6 +675,9 @@ class NotesUpdate : AppCompatActivity() {
         val isNetworkAllowed = prefsNotes.getBoolean("app_network_connection", true)
         val versionName = getVersionName()
 
+        // Always load cached avatar first regardless of network permission state
+        loadHeheJuiceAvatar(hehejuiceAvatar)
+
         if (versionName.contains("Debug", ignoreCase = true)) {
             updateStatusView.text = getString(R.string.update_disabled_debug)
             updateActionView.visibility = View.GONE
@@ -688,7 +691,6 @@ class NotesUpdate : AppCompatActivity() {
             downloadProgressText.visibility = View.GONE
         } else {
             checkForUpdates()
-            loadHeheJuiceAvatar(hehejuiceAvatar)
         }
 
         // Apply dynamic system bar paddings
@@ -715,60 +717,64 @@ class NotesUpdate : AppCompatActivity() {
         }
     }
 
-private fun loadHeheJuiceAvatar(avatarView: ImageView) {
-    val localAvatarFile = File(cacheDir, "hehejuice_avatar.png")
+    private fun loadHeheJuiceAvatar(avatarView: ImageView) {
+        val localAvatarFile = File(cacheDir, "hehejuice_avatar.png")
 
-    // 1. Instantly load locally cached avatar if present
-    if (localAvatarFile.exists()) {
-        val cachedBitmap = BitmapFactory.decodeFile(localAvatarFile.absolutePath)
-        if (cachedBitmap != null) {
-            avatarView.setImageBitmap(cachedBitmap)
+        // 1. Instantly load locally cached avatar if present
+        if (localAvatarFile.exists()) {
+            val cachedBitmap = BitmapFactory.decodeFile(localAvatarFile.absolutePath)
+            if (cachedBitmap != null) {
+                avatarView.setImageBitmap(cachedBitmap)
+            }
         }
-    }
 
-    // 2. Fetch from network in background & verify if changed
-    Thread {
-        try {
-            val url = URL("https://github.com/HeheJuice.png")
-            val connection = url.openConnection() as HttpsURLConnection
-            connection.instanceFollowRedirects = true
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
-            connection.connect()
+        // 2. Stop here if network permission is disabled by the user
+        val prefsNotes = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
+        val isNetworkAllowed = prefsNotes.getBoolean("app_network_connection", true)
+        if (!isNetworkAllowed) return
 
-            if (connection.responseCode == HttpsURLConnection.HTTP_OK) {
-                val downloadedBitmap = BitmapFactory.decodeStream(connection.inputStream)
-                connection.disconnect()
+        // 3. Fetch from network in background & verify if changed
+        Thread {
+            try {
+                val url = URL("https://github.com/HeheJuice.png")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.connect()
 
-                if (downloadedBitmap != null) {
-                    val localBitmap = if (localAvatarFile.exists()) {
-                        BitmapFactory.decodeFile(localAvatarFile.absolutePath)
-                    } else null
+                if (connection.responseCode == HttpsURLConnection.HTTP_OK) {
+                    val downloadedBitmap = BitmapFactory.decodeStream(connection.inputStream)
+                    connection.disconnect()
 
-                    // Check if network picture is identical to cached picture
-                    val isIdentical = localBitmap != null && downloadedBitmap.sameAs(localBitmap)
+                    if (downloadedBitmap != null) {
+                        val localBitmap = if (localAvatarFile.exists()) {
+                            BitmapFactory.decodeFile(localAvatarFile.absolutePath)
+                        } else null
 
-                    if (!isIdentical) {
-                        // Save new avatar to internal app cache
-                        FileOutputStream(localAvatarFile).use { out ->
-                            downloadedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                        }
+                        // Check if network picture is identical to cached picture
+                        val isIdentical = localBitmap != null && downloadedBitmap.sameAs(localBitmap)
 
-                        // Update UI only if the image changed or wasn't cached
-                        runOnUiThread {
-                            avatarView.setImageBitmap(downloadedBitmap)
+                        if (!isIdentical) {
+                            // Save new avatar to internal app cache
+                            FileOutputStream(localAvatarFile).use { out ->
+                                downloadedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                            }
+
+                            // Update UI only if the image changed or wasn't cached
+                            runOnUiThread {
+                                avatarView.setImageBitmap(downloadedBitmap)
+                            }
                         }
                     }
+                } else {
+                    connection.disconnect()
                 }
-            } else {
-                connection.disconnect()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }.start()
-}
-
+        }.start()
+    }
 
     // ========== Check For Updates Logic ==========
     private fun checkForUpdates() {
