@@ -108,5 +108,10 @@
 <string name="bold_desc">선택한 텍스트 굵게 설정 또는 해제</string>
 <string name="landscape_title">노트를 이미지로 저장 정보</string>
 <string name="landscape_desc">가로 모드에서는 더 넓은 노트 이미지를 캡처할 수 있다는 사실을 알고 계셨나요?</string>
+<!-- Back -->
+<string name="warning_save_title">현재 수정 사항이 저장되지 않았습니다</string>
+<string name="save_and_exit">저장 후 나가기</string>
+<string name="exit_directly">저장하지 않고 나가기</string>
+<string name="back_to_editor">계속 편집하기</string>
 
 </resources>

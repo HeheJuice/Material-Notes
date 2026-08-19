@@ -108,5 +108,10 @@
 <string name="bold_desc">Aplicar o quitar negrita a los textos seleccionados</string>
 <string name="landscape_title">Acerca de Guardar nota como imagen</string>
 <string name="landscape_desc">¿Sabías que puedes capturar una imagen de nota más ancha en modo horizontal?</string>
+<!-- Back -->
+<string name="warning_save_title">Los cambios actuales no se han guardado</string>
+<string name="save_and_exit">Guardar y salir</string>
+<string name="exit_directly">Salir sin guardar</string>
+<string name="back_to_editor">Continuar editando</string>
 
 </resources>

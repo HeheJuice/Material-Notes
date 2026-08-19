@@ -52,8 +52,6 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Custom EditText that draws ruled notebook lines below each text line.
@@ -130,9 +128,10 @@ class NoteEditorActivity : AppCompatActivity() {
     private var isNewNote = true
     private var googleSansFlex: Typeface? = null
 
-    // Tracking initial text to detect unsaved edits
+    // Tracking initial state to detect unsaved edits (including text formatting)
     private var initialTitle: String = ""
     private var initialContent: String = ""
+    private var initialSpans: List<SpanData> = emptyList()
 
     private lateinit var copyBtn: ImageView
     private lateinit var pasteBtn: ImageView
@@ -573,9 +572,10 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        // Cache initial values to check for changes later
+        // Cache initial values (title, content, and formatting spans) to check for changes
         initialTitle = titleEdit.text.toString()
         initialContent = contentEdit.text.toString()
+        initialSpans = getCurrentSpans()
 
         setContentView(root)
 
@@ -624,10 +624,50 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Check if the user has unsaved edits
+    // Helper to extract active spans in the content
+    private fun getCurrentSpans(): List<SpanData> {
+        val spans = mutableListOf<SpanData>()
+        val spannable = contentEdit.text as? Spannable ?: return spans
+
+        val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
+        for (span in boldSpans) {
+            val spanStart = spannable.getSpanStart(span)
+            val spanEnd = spannable.getSpanEnd(span)
+            if (spanStart >= 0 && spanEnd >= 0) {
+                spans.add(SpanData(start = spanStart, end = spanEnd, type = "bold"))
+            }
+        }
+
+        val styleSpans = spannable.getSpans(0, spannable.length, StyleSpan::class.java)
+        for (span in styleSpans) {
+            if (span.style == Typeface.BOLD) {
+                val spanStart = spannable.getSpanStart(span)
+                val spanEnd = spannable.getSpanEnd(span)
+                if (spanStart >= 0 && spanEnd >= 0) {
+                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bold"))
+                }
+            }
+        }
+
+        val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
+        for (span in sizeSpans) {
+            val spanStart = spannable.getSpanStart(span)
+            val spanEnd = spannable.getSpanEnd(span)
+            if (spanStart >= 0 && spanEnd >= 0) {
+                spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 1.85f))
+            }
+        }
+
+        // Sort to ensure canonical order when comparing equality
+        spans.sortWith(compareBy({ it.start }, { it.end }, { it.type }))
+        return spans
+    }
+
+    // Check if the user has unsaved edits (title, content, or formatting)
     private fun hasUnsavedChanges(): Boolean {
         return titleEdit.text.toString() != initialTitle ||
-                contentEdit.text.toString() != initialContent
+                contentEdit.text.toString() != initialContent ||
+                getCurrentSpans() != initialSpans
     }
 
     // Intercept back navigation
@@ -832,26 +872,7 @@ class NoteEditorActivity : AppCompatActivity() {
     private fun saveNoteData(): Boolean {
         val title = titleEdit.text.toString().trim()
         val plainText = contentEdit.text.toString()
-        val spans = mutableListOf<SpanData>()
-        val spannable = contentEdit.text as? Spannable
-        if (spannable != null) {
-            val boldSpans = spannable.getSpans(0, spannable.length, GoogleSansFlexBoldRoundSpan::class.java)
-            for (span in boldSpans) {
-                val spanStart = spannable.getSpanStart(span)
-                val spanEnd = spannable.getSpanEnd(span)
-                if (spanStart >= 0 && spanEnd >= 0) {
-                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bold"))
-                }
-            }
-            val sizeSpans = spannable.getSpans(0, spannable.length, RelativeSizeSpan::class.java)
-            for (span in sizeSpans) {
-                val spanStart = spannable.getSpanStart(span)
-                val spanEnd = spannable.getSpanEnd(span)
-                if (spanStart >= 0 && spanEnd >= 0) {
-                    spans.add(SpanData(start = spanStart, end = spanEnd, type = "bigger", size = 1.85f))
-                }
-            }
-        }
+        val spans = getCurrentSpans()
 
         if (title.isEmpty()) {
             Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()

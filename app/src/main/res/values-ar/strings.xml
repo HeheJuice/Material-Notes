@@ -108,5 +108,10 @@
 <string name="bold_desc">تطبيق الخط العريض أو إلغاؤه للنصوص المحددة</string>
 <string name="landscape_title">حول تحويل الملاحظة إلى صورة</string>
 <string name="landscape_desc">هل تعلم أنه يمكنك التقاط صورة ملاحظة أوسع في الوضع الأفقي؟</string>
+<!-- Back -->
+<string name="warning_save_title">لم يتم حفظ التعديلات الحالية</string>
+<string name="save_and_exit">حفظ وخروج</string>
+<string name="exit_directly">الخروج دون حفظ</string>
+<string name="back_to_editor">متابعة التعديل</string>
 
 </resources>
