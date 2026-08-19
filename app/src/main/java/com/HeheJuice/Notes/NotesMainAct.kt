@@ -13,9 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
-import android.provider.Settings
 import android.transition.ChangeBounds
-import android.transition.Fade
 import android.transition.TransitionManager
 import android.transition.TransitionSet
 import android.util.TypedValue
@@ -40,18 +38,20 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
+import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import android.provider.Settings
 
 data class Note(
     val id: String,
@@ -196,6 +196,11 @@ object NoteRepository {
 
 class NotesMainAct : AppCompatActivity() {
 
+    companion object {
+        private const val TYPE_HEADER = 0
+        private const val TYPE_NOTE = 1
+    }
+
     private lateinit var slidingPillView: View
     private lateinit var notesTabBtn: TextView
     private lateinit var settingsTabBtn: TextView
@@ -210,7 +215,10 @@ class NotesMainAct : AppCompatActivity() {
     private lateinit var plusIconDrawable: PlusDrawable
     private lateinit var plusBtnRef: ImageView
 
+    private lateinit var topBarLayout: FrameLayout
     private lateinit var contentHolder: FrameLayout
+    private lateinit var appNamePill: TextView
+
     private lateinit var notesRecyclerView: RecyclerView
     private lateinit var notesAdapter: NotesListAdapter
 
@@ -221,12 +229,16 @@ class NotesMainAct : AppCompatActivity() {
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
     private var onSurfaceVariantColor: Int = 0
+    private var redColor: Int = 0
     private var googleSansFlex: Typeface? = null
 
     // Theme preferences
     private lateinit var prefs: android.content.SharedPreferences
     private var followSystem: Boolean = true
     private var themeMode: Int = 0  // 0 = Light, 1 = Dark
+
+    // Store top inset for dynamic padding adjustment
+    private var currentTopInset = 0
 
     // SAF File Picker for Importing Notes
     private val importNoteLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -287,12 +299,41 @@ class NotesMainAct : AppCompatActivity() {
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, Color.parseColor("#FFFFFF"))
         onSurfaceVariantColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.parseColor("#49454F"))
 
+        redColor = MaterialColors.getColor(this, android.R.attr.colorError, Color.parseColor("#FF3B30"))
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.parseColor("#FEF7FF"))
         // -------------------------------------------------
 
         val rootFrame = FrameLayout(this).apply { setBackgroundColor(surfaceColor) }
 
-        // ---- NOTES CONTAINER (with its own header) ----
+        // ---- TOP BAR (Big Title for Notes Page) ----
+        topBarLayout = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
+        }
+
+        appNamePill = TextView(this).apply {
+            text = getString(R.string.nav_notes)
+            textSize = 32f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8f)
+                bottomMargin = dpToPx(16f)
+                marginStart = dpToPx(8f)
+            }
+        }
+
+        topBarLayout.addView(appNamePill)
+
+        // ---- NOTES CONTAINER ----
         notesContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -300,36 +341,10 @@ class NotesMainAct : AppCompatActivity() {
             )
             visibility = if (isNotesActive) View.VISIBLE else View.GONE
 
-            val notesLayout = LinearLayout(this@NotesMainAct).apply {
-                orientation = LinearLayout.VERTICAL
+            val rv = RecyclerView(this@NotesMainAct).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
-                )
-                // Top padding to leave room for status bar (matches Settings tab)
-                setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), 0)
-            }
-
-            val bigNotesTitle = TextView(this@NotesMainAct).apply {
-                text = getString(R.string.nav_notes)
-                textSize = 32f
-                setTextColor(onPrimaryContainerColor)
-                setGoogleSansFlexDefault(this, true)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dpToPx(8f)
-                    bottomMargin = dpToPx(16f)
-                    marginStart = dpToPx(8f)
-                }
-            }
-
-            val rv = RecyclerView(this@NotesMainAct).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    0,
-                    1f
                 )
                 layoutManager = LinearLayoutManager(this@NotesMainAct)
                 setPadding(0, 0, 0, dpToPx(100f))
@@ -337,12 +352,9 @@ class NotesMainAct : AppCompatActivity() {
             }
             notesRecyclerView = rv
 
-            notesLayout.addView(bigNotesTitle)
-            notesLayout.addView(rv)
-            addView(notesLayout)
+            addView(rv)
         }
 
-        // ---- SETTINGS CONTAINER (unchanged, already has its own header) ----
         settingsContainer = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
@@ -572,8 +584,8 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
         themeGroup.addView(themeModeRow)
-
-        // 3. Language Settings Row (Android 13+ only)
+        
+                // 3. Language Settings Row (Android 13+ only)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Update themeModeRow to act as a middle item in the card group
             themeModeRow.background = createGroupItemBg(innerRadiusPx, innerRadiusPx)
@@ -640,6 +652,7 @@ class NotesMainAct : AppCompatActivity() {
 
             themeGroup.addView(langSettingsRow)
         }
+
 
         fun updateRowState() {
             val enabled = !followSystem
@@ -826,6 +839,7 @@ class NotesMainAct : AppCompatActivity() {
         editorGroup.addView(helperRow)
 
         settingsContentLayout.addView(editorGroup)
+
 
         // ================================================================
         // NETWORK & ABOUT SETTINGS CARD
@@ -1271,44 +1285,13 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        // ------------------------------------------------------------
-        //  SMOOTH TAB SWITCH with crossfade + horizontal slide
-        // ------------------------------------------------------------
         val switchTab: (Boolean) -> Unit = { toNotes ->
             if (isNotesActive != toNotes) {
                 isNotesActive = toNotes
+                notesContainer.visibility = if (toNotes) View.VISIBLE else View.GONE
+                settingsContainer.visibility = if (toNotes) View.GONE else View.VISIBLE
 
-                val incomingView = if (toNotes) notesContainer else settingsContainer
-                val outgoingView = if (toNotes) settingsContainer else notesContainer
-
-                val offsetPx = dpToPx(20f).toFloat()
-
-                // Prepare incoming view: start off-screen and invisible
-                incomingView.translationX = if (toNotes) -offsetPx else offsetPx
-                incomingView.alpha = 0f
-                incomingView.visibility = View.VISIBLE
-
-                // Animate incoming: fade in + slide to center
-                incomingView.animate()
-                    .alpha(1f)
-                    .translationX(0f)
-                    .setDuration(220L)
-                    .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f))
-                    .start()
-
-                // Animate outgoing: fade out + slide out
-                outgoingView.animate()
-                    .alpha(0f)
-                    .translationX(if (toNotes) offsetPx else -offsetPx)
-                    .setDuration(180L)
-                    .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f))
-                    .setListener(object : AnimatorListenerAdapter() {
-                        override fun onAnimationEnd(animation: Animator) {
-                            outgoingView.visibility = View.GONE
-                            outgoingView.translationX = 0f   // reset for next time
-                        }
-                    })
-                    .start()
+                contentHolder.setPadding(0, currentTopInset, 0, 0)
             }
         }
 
@@ -1333,14 +1316,21 @@ class NotesMainAct : AppCompatActivity() {
         }
 
         // ---- Window insets listener ----
-        // We no longer set padding on contentHolder; each container already has its own top padding.
-        // We only adjust bottom margins for bottom bar and menu.
         rootFrame.setOnApplyWindowInsetsListener { _, insets ->
+            val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                insets.getInsets(WindowInsets.Type.statusBars()).top
+            } else {
+                @Suppress("DEPRECATION") insets.systemWindowInsetTop
+            }
             val bottomInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 insets.getInsets(WindowInsets.Type.navigationBars()).bottom
             } else {
                 @Suppress("DEPRECATION") insets.systemWindowInsetBottom
             }
+
+            currentTopInset = statusBarInset
+
+            contentHolder.setPadding(0, currentTopInset, 0, 0)
 
             val totalBottomMargin = dpToPx(16f) + bottomInset
             (bottomBarLayout.layoutParams as FrameLayout.LayoutParams).bottomMargin = totalBottomMargin
@@ -1359,7 +1349,7 @@ class NotesMainAct : AppCompatActivity() {
                     fileName = cursor.getString(nameIndex)
                 }
             }
-
+            
             val title = fileName.substringBeforeLast(".")
             val textContent = contentResolver.openInputStream(uri)?.use { stream ->
                 stream.bufferedReader().use { it.readText() }
@@ -1558,15 +1548,14 @@ class NotesMainAct : AppCompatActivity() {
         }
     }
 
-    // --------------------------------------------
-    //  UPDATED ADAPTER – NO HEADER ITEM
-    // --------------------------------------------
     inner class NotesListAdapter(
         private var items: List<Note>,
         private val onItemClick: (Note) -> Unit
-    ) : RecyclerView.Adapter<NotesListAdapter.ViewHolder>() {
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
         private var expandedPosition: Int = RecyclerView.NO_POSITION
+
+        inner class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view)
 
         inner class ViewHolder(
             val root: LinearLayout,
@@ -1599,22 +1588,23 @@ class NotesMainAct : AppCompatActivity() {
                 }
 
                 deleteBtn.setOnClickListener {
-                    val pos = bindingAdapterPosition
-                    if (pos != RecyclerView.NO_POSITION) {
-                        MaterialAlertDialogBuilder(root.context)
-                            .setTitle(R.string.title_delete_action)
-                            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
-                                NoteRepository.deleteNote(note.id)
-                                expandedPosition = RecyclerView.NO_POSITION
-                                loadNotesList()
-                                dialog.dismiss()
-                            }
-                            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
-                                dialog.dismiss()
-                            }
-                            .show()
-                    }
-                }
+    val pos = bindingAdapterPosition
+    if (pos != RecyclerView.NO_POSITION) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
+            .setTitle(R.string.title_delete_action)
+            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
+                NoteRepository.deleteNote(note.id)
+                expandedPosition = RecyclerView.NO_POSITION
+                loadNotesList()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+}
+
 
                 cancelBtn.setOnClickListener {
                     toggleExpansion(bindingAdapterPosition, this@ViewHolder)
@@ -1627,7 +1617,7 @@ class NotesMainAct : AppCompatActivity() {
                 if (animate) {
                     val transition = TransitionSet().apply {
                         addTransition(ChangeBounds())
-                        addTransition(Fade())
+                        addTransition(android.transition.Fade())
                         duration = if (expanded) 250L else 200L
                         interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
                     }
@@ -1640,10 +1630,42 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
 
-        override fun getItemCount() = items.size
+        override fun getItemViewType(position: Int): Int {
+            return if (position == 0) TYPE_HEADER else TYPE_NOTE
+        }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        override fun getItemCount() = items.size + 1
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val context = parent.context
+
+            if (viewType == TYPE_HEADER) {
+                val headerView = FrameLayout(context).apply {
+                    layoutParams = RecyclerView.LayoutParams(
+                        RecyclerView.LayoutParams.MATCH_PARENT,
+                        RecyclerView.LayoutParams.WRAP_CONTENT
+                    )
+                    setPadding(dpToPx(16f), dpToPx(64f), dpToPx(16f), dpToPx(8f))
+
+                    val appNamePill = TextView(context).apply {
+                        text = context.getString(R.string.nav_notes)
+                        textSize = 32f
+                        setTextColor(onPrimaryContainerColor)
+                        setGoogleSansFlexDefault(this, true)
+                        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                        layoutParams = FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            topMargin = dpToPx(8f)
+                            bottomMargin = dpToPx(16f)
+                            marginStart = dpToPx(8f)
+                        }
+                    }
+                    addView(appNamePill)
+                }
+                return HeaderViewHolder(headerView)
+            }
 
             val root = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -1770,14 +1792,17 @@ class NotesMainAct : AppCompatActivity() {
             return ViewHolder(root, cardContainer, titleText, timeText, actionContainer, deleteBtn, cancelBtn)
         }
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val note = items[position]
-            val isExpanded = position == expandedPosition
-            holder.bind(note, isExpanded, animate = false)
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (getItemViewType(position) == TYPE_NOTE) {
+                val noteHolder = holder as ViewHolder
+                val note = items[position - 1]
+                val isExpanded = position == expandedPosition
+                noteHolder.bind(note, isExpanded, animate = false)
+            }
         }
 
         private fun toggleExpansion(position: Int, holder: ViewHolder) {
-            if (position == RecyclerView.NO_POSITION) return
+            if (position == RecyclerView.NO_POSITION || position == 0) return
             val prevExpanded = expandedPosition
             if (expandedPosition == position) {
                 expandedPosition = RecyclerView.NO_POSITION
