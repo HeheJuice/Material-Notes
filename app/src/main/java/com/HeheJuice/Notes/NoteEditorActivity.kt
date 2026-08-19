@@ -210,22 +210,35 @@ class TextUndoHelper(private val editText: EditText, private val onStateChanged:
     }
 
     private fun applyState(state: TextState) {
-        editText.text = SpannableStringBuilder(state.content)
+        val editable = editText.text ?: return
         
-        val targetStart = state.selectionStart.coerceIn(0, editText.text.length)
-        val targetEnd = state.selectionEnd.coerceIn(0, editText.text.length)
-        
-        Selection.setSelection(editText.text, targetStart, targetEnd)
+        // Mutate current editable buffer in-place to preserve layout structure
+        editable.replace(0, editable.length, state.content)
 
-        // Scroll the viewport directly to the active cursor position
+        val targetStart = state.selectionStart.coerceIn(0, editable.length)
+        val targetEnd = state.selectionEnd.coerceIn(0, editable.length)
+
+        Selection.setSelection(editable, targetStart, targetEnd)
+
+        // Scroll view directly to the restored cursor position
         editText.post {
             val layout = editText.layout ?: return@post
-            val line = layout.getLineForOffset(targetEnd)
-            val top = layout.getLineTop(line)
-            val bottom = layout.getLineBottom(line)
+            val activeOffset = targetEnd.coerceIn(0, layout.text.length)
             
-            // Scroll parent ScrollView if applicable
-            (editText.parent as? ScrollView)?.smoothScrollTo(0, top - (editText.height / 3))
+            val line = layout.getLineForOffset(activeOffset)
+            val lineTop = layout.getLineTop(line)
+            val lineBottom = layout.getLineBottom(line)
+
+            // Compute precise bounding box for line inside EditText
+            val rect = android.graphics.Rect(
+                0,
+                lineTop + editText.paddingTop,
+                editText.width,
+                lineBottom + editText.paddingTop
+            )
+
+            // Request the parent ScrollView to bring line into viewport
+            editText.requestRectangleOnScreen(rect, false)
         }
     }
 
