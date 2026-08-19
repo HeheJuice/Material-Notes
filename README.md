@@ -24,10 +24,10 @@
 ## Screenshots
 
 <p align="center">
-  <a href="Banner/SS1.png"><img src="Banner/SS1.png" width="22%" alt="Screenshot 1"></a>
-  <a href="Banner/SS2.png"><img src="Banner/SS2.png" width="22%" alt="Screenshot 2"></a>
-  <a href="Banner/SS3.png"><img src="Banner/SS3.png" width="22%" alt="Screenshot 3"></a>
-  <a href="Banner/SS4.png"><img src="Banner/SS4.png" width="22%" alt="Screenshot 4"></a>
+  <a href="Banner/SS1.jpg"><img src="Banner/SS1.jpg" width="22%" alt="Screenshot 1"></a>
+  <a href="Banner/SS2.jpg"><img src="Banner/SS2.jpg" width="22%" alt="Screenshot 2"></a>
+  <a href="Banner/SS3.jpg"><img src="Banner/SS3.jpg" width="22%" alt="Screenshot 3"></a>
+  <a href="Banner/SS4.jpg"><img src="Banner/SS4.jpg" width="22%" alt="Screenshot 4"></a>
 </p>
 
 ## Support Us
