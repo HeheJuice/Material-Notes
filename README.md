@@ -8,7 +8,7 @@
 
 ## Badges
 
-[![Android](https://img.shields.io/badge/Android-12L_and_up-50f270?logo=android&logoColor=white&style=for-the-badge)](https://www.android.com/intl/zh-HK_hk)[![LICENSE](https://img.shields.io/badge/View_LICENCE-Check_before_reposting-87CEEB?style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/blob/main/LICENSE)[![GitHub Downloads](https://img.shields.io/github/downloads/HeheJuice/Material-Notes/total?color=blue&label=Downloads+from+GitHub&style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/releases)
+[![Android](https://img.shields.io/badge/Android-12L_and_up-50f270?logo=android&logoColor=white&style=for-the-badge)](https://www.android.com/intl/zh-HK_hk)[![LICENSE](https://img.shields.io/badge/View_LICENCE-Check_before_reposting-87CEEB?style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/blob/main/LICENSE)[![GitHub Downloads](https://img.shields.io/github/downloads/HeheJuice/Material-Notes/total?color=blue&label=Downloads+from_GitHub&style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/releases)
 
 
 ## Features 
