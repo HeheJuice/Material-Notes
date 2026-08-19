@@ -122,8 +122,15 @@ class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text
 }
 
 class TextUndoHelper(private val editText: EditText, private val onStateChanged: () -> Unit) {
-    private val undoStack = java.util.ArrayDeque<SpannableStringBuilder>()
-    private val redoStack = java.util.ArrayDeque<SpannableStringBuilder>()
+
+    private data class TextState(
+        val content: SpannableStringBuilder,
+        val selectionStart: Int,
+        val selectionEnd: Int
+    )
+
+    private val undoStack = java.util.ArrayDeque<TextState>()
+    private val redoStack = java.util.ArrayDeque<TextState>()
     private var isUndoOrRedo = false
     private var isBatchMode = false
 
@@ -133,7 +140,7 @@ class TextUndoHelper(private val editText: EditText, private val onStateChanged:
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 if (!isUndoOrRedo && !isBatchMode && s != null) {
-                    pushState(SpannableStringBuilder(s))
+                    pushState()
                 }
             }
         })
@@ -145,18 +152,26 @@ class TextUndoHelper(private val editText: EditText, private val onStateChanged:
 
     fun endBatch() {
         isBatchMode = false
-        val currentText = editText.text
-        if (currentText != null) {
-            pushState(SpannableStringBuilder(currentText))
-        }
+        pushState()
     }
 
-    private fun pushState(state: SpannableStringBuilder) {
-        if (undoStack.isNotEmpty() && undoStack.peek().toString() == state.toString() &&
-            undoStack.peek().getSpans(0, undoStack.peek().length, Any::class.java).contentEquals(state.getSpans(0, state.length, Any::class.java))) {
-            return
+    private fun pushState() {
+        val currentEditable = editText.text ?: return
+        val start = minOf(editText.selectionStart.coerceAtLeast(0), currentEditable.length)
+        val end = minOf(editText.selectionEnd.coerceAtLeast(0), currentEditable.length)
+        val newState = TextState(SpannableStringBuilder(currentEditable), start, end)
+
+        if (undoStack.isNotEmpty()) {
+            val lastState = undoStack.peek()
+            if (lastState.content.toString() == newState.content.toString() &&
+                lastState.content.getSpans(0, lastState.content.length, Any::class.java)
+                    .contentEquals(newState.content.getSpans(0, newState.content.length, Any::class.java))
+            ) {
+                return
+            }
         }
-        undoStack.push(state)
+
+        undoStack.push(newState)
         redoStack.clear()
         if (undoStack.size > 50) {
             undoStack.removeLast()
@@ -171,11 +186,13 @@ class TextUndoHelper(private val editText: EditText, private val onStateChanged:
     fun undo() {
         if (!canUndo()) return
         isUndoOrRedo = true
+
         val currentState = undoStack.pop()
         redoStack.push(currentState)
+
         val previousState = undoStack.peek()
-        editText.text = SpannableStringBuilder(previousState)
-        Selection.setSelection(editText.text, editText.text.length)
+        applyState(previousState)
+
         isUndoOrRedo = false
         onStateChanged()
     }
@@ -183,20 +200,39 @@ class TextUndoHelper(private val editText: EditText, private val onStateChanged:
     fun redo() {
         if (!canRedo()) return
         isUndoOrRedo = true
+
         val nextState = redoStack.pop()
         undoStack.push(nextState)
-        editText.text = SpannableStringBuilder(nextState)
-        Selection.setSelection(editText.text, editText.text.length)
+        applyState(nextState)
+
         isUndoOrRedo = false
         onStateChanged()
+    }
+
+    private fun applyState(state: TextState) {
+        editText.text = SpannableStringBuilder(state.content)
+        
+        val targetStart = state.selectionStart.coerceIn(0, editText.text.length)
+        val targetEnd = state.selectionEnd.coerceIn(0, editText.text.length)
+        
+        Selection.setSelection(editText.text, targetStart, targetEnd)
+
+        // Scroll the viewport directly to the active cursor position
+        editText.post {
+            val layout = editText.layout ?: return@post
+            val line = layout.getLineForOffset(targetEnd)
+            val top = layout.getLineTop(line)
+            val bottom = layout.getLineBottom(line)
+            
+            // Scroll parent ScrollView if applicable
+            (editText.parent as? ScrollView)?.smoothScrollTo(0, top - (editText.height / 3))
+        }
     }
 
     fun initInitialState() {
         undoStack.clear()
         redoStack.clear()
-        editText.text?.let {
-            undoStack.push(SpannableStringBuilder(it))
-        }
+        pushState()
         onStateChanged()
     }
 }
