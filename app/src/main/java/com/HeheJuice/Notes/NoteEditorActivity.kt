@@ -137,6 +137,8 @@ class NoteEditorActivity : AppCompatActivity() {
     private lateinit var pasteBtn: ImageView
     private lateinit var boldBtn: ImageView
     private lateinit var biggerBtn: ImageView
+    private lateinit var undoBtn: ImageView
+    private lateinit var redoBtn: ImageView
     private lateinit var toolbarContainer: LinearLayout
 
     private lateinit var splitButton: LinearLayout
@@ -448,7 +450,7 @@ class NoteEditorActivity : AppCompatActivity() {
         // ---- 工具栏 ----
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -457,7 +459,8 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        val toolPill = FrameLayout(this).apply {
+        // Left Tool Pill (Copy, Paste, Bold, Bigger)
+        val leftToolPill = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setCornerRadius(dpToPx(100f).toFloat())
@@ -524,7 +527,6 @@ class NoteEditorActivity : AppCompatActivity() {
                 Toast.makeText(this@NoteEditorActivity, getString(R.string.nothing_to_paste), Toast.LENGTH_SHORT).show()
             }
         }
-        updateButtonState(pasteBtn, true)
 
         boldBtn = createToolButton(R.drawable.format_bold_24px) {
             applyBoldRoundToSelection()
@@ -538,9 +540,51 @@ class NoteEditorActivity : AppCompatActivity() {
         buttonRow.addView(pasteBtn)
         buttonRow.addView(boldBtn)
         buttonRow.addView(biggerBtn)
+        leftToolPill.addView(buttonRow)
 
-        toolPill.addView(buttonRow)
-        toolbarContainer.addView(toolPill)
+        // Spacer pushing right pill to the far right
+        val toolbarSpacer = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+        }
+
+        // Right Tool Pill (Undo, Redo)
+        val rightToolPill = FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setCornerRadius(dpToPx(100f).toFloat())
+                setColor(surfaceContainerLowColor)
+            }
+            setPadding(dpToPx(6f), dpToPx(6f), dpToPx(6f), dpToPx(6f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val rightButtonRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        undoBtn = createToolButton(R.drawable.undo_24px) {
+            contentEdit.onTextContextMenuItem(android.R.id.undo)
+        }
+
+        redoBtn = createToolButton(R.drawable.redo_24px) {
+            contentEdit.onTextContextMenuItem(android.R.id.redo)
+        }
+
+        rightButtonRow.addView(undoBtn)
+        rightButtonRow.addView(redoBtn)
+        rightToolPill.addView(rightButtonRow)
+
+        toolbarContainer.addView(leftToolPill)
+        toolbarContainer.addView(toolbarSpacer)
+        toolbarContainer.addView(rightToolPill)
         root.addView(toolbarContainer)
 
         // ---- 加载已有笔记 ----
@@ -1045,6 +1089,8 @@ class NoteEditorActivity : AppCompatActivity() {
         updateButtonState(pasteBtn, false)
         updateButtonState(boldBtn, false)
         updateButtonState(biggerBtn, false)
+        updateButtonState(undoBtn, false)
+        updateButtonState(redoBtn, false)
     }
 
     private fun updateToolbarButtons() {
@@ -1055,6 +1101,8 @@ class NoteEditorActivity : AppCompatActivity() {
         updateButtonState(boldBtn, enabled)
         updateButtonState(biggerBtn, enabled)
         updateButtonState(pasteBtn, hasFocus)
+        updateButtonState(undoBtn, hasFocus)
+        updateButtonState(redoBtn, hasFocus)
     }
 
     private fun getSelectedText(): String {
