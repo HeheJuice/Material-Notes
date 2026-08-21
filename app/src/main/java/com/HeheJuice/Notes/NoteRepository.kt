@@ -131,11 +131,12 @@ object NoteRepository {
     }
 
     private fun sanitizeTitle(title: String): String {
-        return title.replace(Regex("[^a-zA-Z0-9\\-\\_ ]"), "")
-            .replace(" ", "_")
-            .trim()
-            .ifEmpty { "note" }
-    }
+    return title.replace(Regex("[^\\p{L}\\p{N}\\-\\_ ]"), "")
+        .replace(" ", "_")
+        .trim()
+        .ifEmpty { "note" }
+}
+
 
     private fun generateId(title: String): String {
         val sanitized = sanitizeTitle(title)
