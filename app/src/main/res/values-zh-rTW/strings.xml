@@ -26,6 +26,8 @@
 <string name="helper_desc">了解技巧與快速鍵</string>
 <string name="lang_settings">應用程式語言</string>
 <string name="lang_settings_desc">點擊此處選擇</string>
+<string name="title_report">發現 Bug 或遇到問題？</string>
+<string name="desc_report">點擊此處向開發者回報</string>
 
 
 
@@ -123,5 +125,18 @@
 <string name="title_delete_action">刪除此記事？</string>
 <string name="option_delete_y">繼續</string>
 <string name="option_cancel">取消</string>
+<!-- Tags -->
+<string name="editor_tags">為此記事建立或編輯標籤</string>
+<string name="tag_entering">請輸入標籤名稱...</string>
+<string name="tag_error">請在按下前輸入有效文字</string>
+<string name="create_tags">建立或編輯標籤</string>
+<!-- Audio -->
+<string name="add_audio">新增音訊或音樂</string>
+<string name="max_audio_reached">已達上限</string>
+<string name="audio_helper_title">關於新增音訊或音樂</string>
+<string name="audio_helper_desc">所選檔案將會複製到本機，可能會增加應用程式的儲存空間使用量</string>
+<!-- Texts Helper -->
+<string name="texts_helper_title">為什麼輸入框較小？</string>
+<string name="texts_helper_desc">它會根據內容長度自動展開</string>
 
 </resources>

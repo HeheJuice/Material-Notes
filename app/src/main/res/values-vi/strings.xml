@@ -26,6 +26,9 @@
 <string name="helper_desc">Tìm hiểu mẹo và phím tắt</string>
 <string name="lang_settings">Ngôn ngữ sử dụng trong ứng dụng</string>
 <string name="lang_settings_desc">Nhấn vào đây để chọn</string>
+<string name="title_report">Gặp lỗi hoặc sự cố?</string>
+<string name="desc_report">Nhấn vào đây để báo cáo cho nhà phát triển</string>
+
 
 
 
@@ -123,5 +126,18 @@
 <string name="title_delete_action">Xóa ghi chú này?</string>
 <string name="option_delete_y">Tiếp tục</string>
 <string name="option_cancel">Hủy</string>
+<!-- Tags -->
+<string name="editor_tags">Tạo hoặc chỉnh sửa thẻ cho ghi chú này</string>
+<string name="tag_entering">Nhập tên cho thẻ của bạn...</string>
+<string name="tag_error">Vui lòng nhập văn bản hợp lệ trước khi nhấn</string>
+<string name="create_tags">Tạo hoặc chỉnh sửa thẻ</string>
+<!-- Audio -->
+<string name="add_audio">Thêm âm thanh hoặc nhạc</string>
+<string name="max_audio_reached">Đã đạt giới hạn tối đa</string>
+<string name="audio_helper_title">Về việc thêm âm thanh hoặc nhạc</string>
+<string name="audio_helper_desc">Các tệp đã chọn được sao chép cục bộ, điều này có thể làm tăng dung lượng lưu trữ của ứng dụng</string>
+<!-- Texts Helper -->
+<string name="texts_helper_title">Tại sao trường nhập liệu lại nhỏ gọn?</string>
+<string name="texts_helper_desc">Nó sẽ tự động mở rộng dựa trên độ dài nội dung</string>
 
 </resources>

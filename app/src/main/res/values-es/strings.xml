@@ -78,6 +78,9 @@
     <string name="desc_license">Ver uso de terceros y licencias para esta aplicación</string>
     <string name="lang_settings">Idioma usado en la aplicación</string>
 <string name="lang_settings_desc">Haz clic aquí para seleccionar</string>
+<string name="title_report">¿Encontraste un error o tienes problemas?</string>
+<string name="desc_report">Presiona aquí para informar a los desarrolladores</string>
+
 
 
     <!-- Update Checker -->
@@ -123,5 +126,18 @@
 <string name="title_delete_action">¿Eliminar la nota?</string>
 <string name="option_delete_y">Continuar</string>
 <string name="option_cancel">Cancelar</string>
+<!-- Tags -->
+<string name="editor_tags">Crear o editar etiqueta para esta nota</string>
+<string name="tag_entering">Escribe el nombre de la etiqueta...</string>
+<string name="tag_error">Ingresa un texto válido antes de presionar</string>
+<string name="create_tags">Crear o editar etiqueta</string>
+<!-- Audio -->
+<string name="add_audio">Añadir audio o música</string>
+<string name="max_audio_reached">Límite máximo alcanzado</string>
+<string name="audio_helper_title">Acerca de añadir audio o música</string>
+<string name="audio_helper_desc">Los archivos seleccionados se copian localmente, lo que puede aumentar el uso de almacenamiento de la aplicación</string>
+<!-- Texts Helper -->
+<string name="texts_helper_title">¿Por qué el campo de entrada es compacto?</string>
+<string name="texts_helper_desc">Se expandirá automáticamente según la longitud del contenido</string>
 
 </resources>

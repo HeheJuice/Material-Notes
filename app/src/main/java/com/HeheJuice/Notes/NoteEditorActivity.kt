@@ -8,14 +8,21 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.content.res.ColorStateList
+import android.media.MediaMetadataRetriever
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.OpenableColumns
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
 import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
@@ -23,6 +30,7 @@ import android.text.Selection
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextUtils
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.AttributeSet
@@ -32,15 +40,19 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.Window
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.content.ContextCompat
@@ -49,13 +61,12 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
+import java.io.File
 
-/**
- * Custom EditText that draws ruled notebook lines below each text line.
- */
 class LinedEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -122,16 +133,37 @@ class GoogleSansFlexBoldRoundSpan(private val typeface: Typeface) : android.text
 
 class NoteEditorActivity : AppCompatActivity() {
 
+    private data class AudioHolder(
+        val filePath: String,
+        val uri: Uri,
+        var mediaPlayer: MediaPlayer? = null,
+        var isPlaying: Boolean = false,
+        var playerView: View? = null,
+        var playPauseBtnIcon: ImageView? = null,
+        var updateShape: ((Boolean) -> Unit)? = null
+    )
+
     private lateinit var titleEdit: EditText
+    private lateinit var tagPillContainer: LinearLayout
+    private lateinit var tagTextView: TextView
     private lateinit var contentEdit: LinedEditText
+    private lateinit var contentWrapper: LinearLayout
     private var noteId: String = ""
     private var isNewNote = true
+    private var noteTag: String? = null
     private var googleSansFlex: Typeface? = null
 
-    // Tracking initial state to detect unsaved edits (including text formatting)
+    private val audioHolders = mutableListOf<AudioHolder>()
+    private var initialAudioPaths: List<String> = emptyList()
+    private lateinit var createAudioItem: TextView
+    private var audioDrawable: android.graphics.drawable.Drawable? = null
+
     private var initialTitle: String = ""
     private var initialContent: String = ""
+    private var initialTag: String? = null
     private var initialSpans: List<SpanData> = emptyList()
+    // ✅ added to store pin state when editing
+    private var initialIsPinned: Boolean = false
 
     private lateinit var copyBtn: ImageView
     private lateinit var pasteBtn: ImageView
@@ -147,6 +179,12 @@ class NoteEditorActivity : AppCompatActivity() {
     private var menuPopup: android.widget.PopupWindow? = null
     private var isMenuOpen = false
 
+    private var isFabMenuExpanded = false
+    private lateinit var menuOverlayContainer: LinearLayout
+    private lateinit var dimOverlay: View
+    private lateinit var fabPlusBtn: ImageView
+    private lateinit var plusIconDrawable: PlusDrawable
+
     private var surfaceContainerLowColor: Int = 0
     private var surfaceContainerHighestColor: Int = 0
     private var onPrimaryContainerColor: Int = 0
@@ -159,11 +197,58 @@ class NoteEditorActivity : AppCompatActivity() {
     private val REQUEST_SAVE_IMAGE = 1002
     private var lastGeneratedBitmap: Bitmap? = null
 
+    private val pressScaleTouchListener = View.OnTouchListener { v, event ->
+        val springBackInterpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                v.animate().cancel()
+                v.animate().scaleX(0.95f).scaleY(0.95f).alpha(0.88f)
+                    .setDuration(120).setInterpolator(DecelerateInterpolator(1.5f)).start()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                v.animate().cancel()
+                v.animate().scaleX(1.0f).scaleY(1.0f).alpha(1.0f)
+                    .setDuration(350).setInterpolator(springBackInterpolator).start()
+            }
+        }
+        false
+    }
+
+    private val selectAudioLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let { sourceUri ->
+            if (audioHolders.size >= 5) {
+                Toast.makeText(this, getString(R.string.max_audio_reached), Toast.LENGTH_SHORT).show()
+                return@registerForActivityResult
+            }
+            val savedPath = NoteRepository.copyAudioToAppStorage(this, sourceUri)
+            if (savedPath != null) {
+                val savedUri = Uri.fromFile(File(savedPath))
+                addAudioPlayerToEditor(savedUri, savedPath)
+            } else {
+                Toast.makeText(this, "Failed to copy audio", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun updateButtonState(btn: ImageView, enabled: Boolean) {
         btn.isEnabled = enabled
         btn.alpha = if (enabled) 1.0f else 0.5f
         val iconColor = if (enabled) onPrimaryContainerColor else Color.parseColor("#888888")
         btn.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
+    }
+
+    private fun updateAddAudioButtonState() {
+        if (!::createAudioItem.isInitialized) return
+        val maxReached = audioHolders.size >= 5
+        createAudioItem.isClickable = !maxReached
+        createAudioItem.isFocusable = !maxReached
+
+        val activeColor = if (maxReached) Color.parseColor("#888888") else onPrimaryContainerColor
+        createAudioItem.setTextColor(activeColor)
+
+        audioDrawable?.let {
+            DrawableCompat.setTint(it, activeColor)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -188,7 +273,6 @@ class NoteEditorActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("note_id") ?: ""
         isNewNote = noteId.isEmpty()
 
-        // ---- 颜色解析 ----
         surfaceContainerColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainer, if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF"))
         surfaceLow = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7"))
         surfaceContainerHighestColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, if (isDark) Color.parseColor("#3B3B3E") else Color.parseColor("#FFFFFF"))
@@ -199,17 +283,23 @@ class NoteEditorActivity : AppCompatActivity() {
         cardBorderColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, if (isDark) Color.parseColor("#2C2C2E") else Color.parseColor("#E5E5EA"))
 
         val surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, if (isDark) Color.parseColor("#141218") else Color.parseColor("#FEF7FF"))
-
         val prefs = getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
         val isShowLinesEnabled = prefs.getBoolean("show_lines_under_text", false)
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        val rootFrame = FrameLayout(this).apply {
             setBackgroundColor(surfaceColor)
-            setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
         }
 
-        // ---- 顶部栏 ----
+        val mainLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(20f), 0, dpToPx(20f), dpToPx(20f))
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        // Top Bar
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -343,19 +433,14 @@ class NoteEditorActivity : AppCompatActivity() {
         trailingButtonContainer.addView(trailingBg)
         trailingButtonContainer.addView(trailingChevronIcon)
         trailingButtonContainer.setOnClickListener {
-            if (isMenuOpen) {
-                menuPopup?.dismiss()
-            } else {
-                showMenu(splitButton)
-            }
+            if (isMenuOpen) menuPopup?.dismiss() else showMenu(splitButton)
         }
 
         splitButton.addView(leadingButton)
         splitButton.addView(trailingButtonContainer)
         topBar.addView(splitButton)
-        root.addView(topBar)
+        mainLayout.addView(topBar)
 
-        // ---- 标题 ----
         val titleLabel = TextView(this).apply {
             text = getString(R.string.title)
             textSize = 14f
@@ -366,7 +451,74 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dpToPx(4f) }
         }
-        root.addView(titleLabel)
+        mainLayout.addView(titleLabel)
+
+        val titleInputContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                setCornerRadius(dpToPx(12f).toFloat())
+                setColor(surfaceContainerHighestColor)
+            }
+            setPadding(dpToPx(12f), dpToPx(4f), dpToPx(12f), dpToPx(4f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dpToPx(16f) }
+        }
+
+        tagPillContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(primaryContainerColor)
+            }
+            setPadding(dpToPx(10f), dpToPx(4f), dpToPx(10f), dpToPx(4f))
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = dpToPx(8f) }
+        }
+
+        tagTextView = TextView(this).apply {
+            textSize = 13f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val closeDrawable = ContextCompat.getDrawable(this, R.drawable.close_24px)?.let {
+            val wrapped = DrawableCompat.wrap(it).mutate()
+            DrawableCompat.setTint(wrapped, onPrimaryContainerColor)
+            wrapped
+        }
+
+        val deleteTagBtn = ImageView(this).apply {
+            setImageDrawable(closeDrawable)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            isClickable = true
+            isFocusable = true
+            setPadding(dpToPx(2f), dpToPx(2f), dpToPx(2f), dpToPx(2f))
+            layoutParams = LinearLayout.LayoutParams(dpToPx(18f), dpToPx(18f)).apply {
+                marginStart = dpToPx(4f)
+            }
+            setOnClickListener {
+                noteTag = null
+                tagPillContainer.visibility = View.GONE
+            }
+        }
+
+        tagPillContainer.addView(tagTextView)
+        tagPillContainer.addView(deleteTagBtn)
+        titleInputContainer.addView(tagPillContainer)
 
         titleEdit = EditText(this).apply {
             hint = getString(R.string.enter_title_hint)
@@ -377,23 +529,21 @@ class NoteEditorActivity : AppCompatActivity() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             maxLines = 1
             imeOptions = EditorInfo.IME_ACTION_NEXT
-            background = GradientDrawable().apply {
-                setCornerRadius(dpToPx(12f).toFloat())
-                setColor(surfaceContainerHighestColor)
-            }
-            setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
+            background = null
+            setPadding(dpToPx(4f), dpToPx(10f), dpToPx(4f), dpToPx(10f))
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dpToPx(16f) }
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
             setGoogleSansFlexDefault(this, false)
             setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) disableToolbar() else updateToolbarButtons()
             }
         }
-        root.addView(titleEdit)
+        titleInputContainer.addView(titleEdit)
+        mainLayout.addView(titleInputContainer)
 
-        // ---- 内容 ----
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
             textSize = 14f
@@ -404,19 +554,25 @@ class NoteEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dpToPx(4f) }
         }
-        root.addView(contentLabel)
+        mainLayout.addView(contentLabel)
 
         val scrollContainer = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
-            ).apply {
-                topMargin = dpToPx(8f)
-            }
+            ).apply { topMargin = dpToPx(8f) }
             isFillViewport = true
             isVerticalScrollBarEnabled = true
             overScrollMode = View.OVER_SCROLL_ALWAYS
+        }
+
+        contentWrapper = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
         }
 
         contentEdit = LinedEditText(this).apply {
@@ -430,10 +586,12 @@ class NoteEditorActivity : AppCompatActivity() {
             }
             setPadding(dpToPx(16f), dpToPx(14f), dpToPx(16f), dpToPx(14f))
             gravity = Gravity.TOP or Gravity.START
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+
+            layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
             )
+
             setGoogleSansFlexDefault(this, false)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             isVerticalScrollBarEnabled = false
@@ -442,19 +600,19 @@ class NoteEditorActivity : AppCompatActivity() {
             showLines = isShowLinesEnabled
             setLineColor(onSurfaceVariantColor)
         }
-        scrollContainer.addView(contentEdit)
-        root.addView(scrollContainer)
 
-        // ---- 工具栏 ----
+        contentWrapper.addView(contentEdit)
+        scrollContainer.addView(contentWrapper)
+        mainLayout.addView(scrollContainer)
+
+        // Formatting Toolbar
         toolbarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(16f)
-            }
+            ).apply { topMargin = dpToPx(16f) }
         }
 
         val toolPill = FrameLayout(this).apply {
@@ -526,13 +684,8 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         updateButtonState(pasteBtn, true)
 
-        boldBtn = createToolButton(R.drawable.format_bold_24px) {
-            applyBoldRoundToSelection()
-        }
-
-        biggerBtn = createToolButton(R.drawable.title_24px) {
-            applyBiggerRoundToSelection()
-        }
+        boldBtn = createToolButton(R.drawable.format_bold_24px) { applyBoldRoundToSelection() }
+        biggerBtn = createToolButton(R.drawable.title_24px) { applyBiggerRoundToSelection() }
 
         buttonRow.addView(copyBtn)
         buttonRow.addView(pasteBtn)
@@ -541,12 +694,148 @@ class NoteEditorActivity : AppCompatActivity() {
 
         toolPill.addView(buttonRow)
         toolbarContainer.addView(toolPill)
-        root.addView(toolbarContainer)
+        mainLayout.addView(toolbarContainer)
 
-        // ---- 加载已有笔记 ----
+        rootFrame.addView(mainLayout)
+
+        dimOverlay = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(Color.parseColor("#99000000"))
+            alpha = 0f
+            visibility = View.GONE
+            setOnClickListener { if (isFabMenuExpanded) closeFabMenu() }
+        }
+        rootFrame.addView(dimOverlay)
+
+        // FAB Menu Overlay
+        menuOverlayContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            visibility = View.GONE
+            alpha = 0f
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM or Gravity.END
+            )
+        }
+
+        val createPillBackground = {
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(100f).toFloat()
+                setColor(primaryContainerColor)
+            }
+        }
+
+        audioDrawable = ContextCompat.getDrawable(this, R.drawable.audio_file_24px)?.let {
+            val wrapped = DrawableCompat.wrap(it).mutate()
+            DrawableCompat.setTint(wrapped, onPrimaryContainerColor)
+            wrapped
+        }
+
+        createAudioItem = TextView(this).apply {
+            text = getString(R.string.add_audio)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            background = createPillBackground()
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            compoundDrawablePadding = dpToPx(12f)
+            setCompoundDrawablesWithIntrinsicBounds(audioDrawable, null, null, null)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(12f)
+                gravity = Gravity.END
+            }
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                if (audioHolders.size < 5) {
+                    closeFabMenu()
+                    selectAudioLauncher.launch(arrayOf("audio/*"))
+                }
+            }
+        }
+        menuOverlayContainer.addView(createAudioItem)
+
+        val tagDrawable = ContextCompat.getDrawable(this, R.drawable.tag_24px)?.let {
+            val wrapped = DrawableCompat.wrap(it).mutate()
+            DrawableCompat.setTint(wrapped, onPrimaryContainerColor)
+            wrapped
+        }
+
+        val createTagItem = TextView(this).apply {
+            text = getString(R.string.editor_tags)
+            textSize = 14f
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            background = createPillBackground()
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+            compoundDrawablePadding = dpToPx(12f)
+            setCompoundDrawablesWithIntrinsicBounds(tagDrawable, null, null, null)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(12f)
+                gravity = Gravity.END
+            }
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                closeFabMenu()
+                showCreateTagDialog()
+            }
+        }
+        menuOverlayContainer.addView(createTagItem)
+        rootFrame.addView(menuOverlayContainer)
+
+        plusIconDrawable = PlusDrawable(onSurfaceVariantColor, dpToPx(3f).toFloat())
+        fabPlusBtn = ImageView(this).apply {
+            setImageDrawable(plusIconDrawable)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(surfaceContainerLowColor)
+            }
+            contentDescription = getString(R.string.add_button_content_desc)
+            isClickable = true
+            isFocusable = true
+            layoutParams = FrameLayout.LayoutParams(dpToPx(56f), dpToPx(56f)).apply {
+                gravity = Gravity.BOTTOM or Gravity.END
+                rightMargin = dpToPx(20f)
+                bottomMargin = dpToPx(28f)
+            }
+            setOnClickListener {
+                if (isFabMenuExpanded) closeFabMenu() else openFabMenu()
+            }
+            setOnTouchListener(pressScaleTouchListener)
+        }
+        rootFrame.addView(fabPlusBtn)
+
+        // ---- Load Note Data ----
         if (!isNewNote) {
             NoteRepository.getNote(noteId)?.let { note ->
                 titleEdit.setText(note.title)
+                noteTag = note.tag
+                // ✅ store initial pin state
+                initialIsPinned = note.isPinned
+                if (!noteTag.isNullOrEmpty()) {
+                    tagTextView.text = noteTag
+                    tagPillContainer.visibility = View.VISIBLE
+                }
                 val spannable = SpannableStringBuilder(note.content)
                 for (spanData in note.spans) {
                     when (spanData.type) {
@@ -569,47 +858,44 @@ class NoteEditorActivity : AppCompatActivity() {
                 }
                 contentEdit.setText(spannable)
                 contentEdit.invalidate()
+
+                initialAudioPaths = note.audioPaths
+                loadAudioFilesAsync(note.audioPaths)
             }
+        } else {
+            initialAudioPaths = emptyList()
         }
 
-        // Cache initial values (title, content, and formatting spans) to check for changes
         initialTitle = titleEdit.text.toString()
         initialContent = contentEdit.text.toString()
+        initialTag = noteTag
         initialSpans = getCurrentSpans()
 
-        setContentView(root)
+        setContentView(rootFrame)
 
-        // Register system back button callback
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                handleBackNavigation()
-            }
+            override fun handleOnBackPressed() { handleBackNavigation() }
         })
 
-        // ---- 监听器 ----
         contentEdit.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                updateToolbarButtons()
-            }
+            override fun afterTextChanged(s: android.text.Editable?) { updateToolbarButtons() }
         })
         contentEdit.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP) {
-                updateToolbarButtons()
-            }
+            if (event.action == MotionEvent.ACTION_UP) updateToolbarButtons()
             false
         }
 
         updateToolbarButtons()
+        updateAddAudioButtonState()
 
-        // ---- 窗口边距 ----
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(rootFrame) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val keyboardHeight = imeInsets.bottom
 
-            root.setPadding(
+            mainLayout.setPadding(
                 dpToPx(20f),
                 statusBarTop + dpToPx(12f),
                 dpToPx(20f),
@@ -620,11 +906,656 @@ class NoteEditorActivity : AppCompatActivity() {
             lp.bottomMargin = keyboardHeight + dpToPx(8f)
             toolbarContainer.layoutParams = lp
 
+            val fabLp = fabPlusBtn.layoutParams as FrameLayout.LayoutParams
+            fabLp.bottomMargin = keyboardHeight + dpToPx(28f)
+            fabPlusBtn.layoutParams = fabLp
+
+            val menuLp = menuOverlayContainer.layoutParams as FrameLayout.LayoutParams
+            menuLp.bottomMargin = keyboardHeight + dpToPx(84f)
+            menuLp.rightMargin = dpToPx(20f)
+            menuOverlayContainer.layoutParams = menuLp
+
             insets
         }
     }
 
-    // Helper to extract active spans in the content
+    // ------------------------------------------------------------------
+    // AUDIO LOADING WITH CACHE + DOWNSAMPLED COVERS
+    // ------------------------------------------------------------------
+    private fun loadAudioFilesAsync(paths: List<String>) {
+        Thread {
+            for (path in paths) {
+                val file = File(path)
+                if (!file.exists()) continue
+
+                val meta = NoteRepository.getOrExtractAudioMetadata(path)
+                val coverBitmap = meta.coverPath?.let { decodeSampledBitmapFromFile(it, 192, 192) }
+
+                runOnUiThread {
+                    if (audioHolders.size < 5) {
+                        val holder = AudioHolder(filePath = path, uri = Uri.fromFile(file))
+                        buildAudioPlayerUi(holder, meta.title, meta.artist, coverBitmap)
+                    }
+                }
+            }
+        }.start()
+    }
+
+    private fun addAudioPlayerToEditor(uri: Uri, filePath: String) {
+        if (audioHolders.size >= 5) return
+
+        Thread {
+            val meta = NoteRepository.getOrExtractAudioMetadata(filePath)
+            val coverBitmap = meta.coverPath?.let { decodeSampledBitmapFromFile(it, 192, 192) }
+            runOnUiThread {
+                if (audioHolders.size < 5) {
+                    val holder = AudioHolder(filePath = filePath, uri = uri)
+                    buildAudioPlayerUi(holder, meta.title, meta.artist, coverBitmap)
+                }
+            }
+        }.start()
+    }
+
+    // ------------------------------------------------------------------
+    // REFINED AUDIO PLAYER UI
+    // ------------------------------------------------------------------
+    private fun buildAudioPlayerUi(holder: AudioHolder, finalTitle: String, finalSinger: String, coverBitmap: Bitmap?) {
+        var monetBgColor = primaryContainerColor
+        var playerTextColor = onPrimaryContainerColor
+        var playerSubtextColor = ColorUtils.setAlphaComponent(onPrimaryContainerColor, 180)
+        var iconTint = onPrimaryContainerColor
+
+        if (coverBitmap != null) {
+            try {
+                val scaled = Bitmap.createScaledBitmap(coverBitmap, 1, 1, false)
+                val pixel = scaled.getPixel(0, 0)
+                scaled.recycle()
+                monetBgColor = ColorUtils.setAlphaComponent(pixel, 255)
+                monetBgColor = ColorUtils.blendARGB(monetBgColor, primaryContainerColor, 0.45f)
+
+                val isBgLight = ColorUtils.calculateLuminance(monetBgColor) > 0.5
+                playerTextColor = if (isBgLight) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
+                playerSubtextColor = ColorUtils.setAlphaComponent(playerTextColor, 180)
+                iconTint = playerTextColor
+            } catch (_: Exception) {}
+        }
+
+        val monetEndColor = ColorUtils.blendARGB(monetBgColor, surfaceContainerLowColor, 0.5f)
+        val monetGradient = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(monetBgColor, monetEndColor)
+        ).apply {
+            cornerRadius = dpToPx(12f).toFloat()
+        }
+
+        val playerCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = monetGradient
+            setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(10f)
+            }
+        }
+
+        val topSection = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val coverImageView = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            if (coverBitmap != null) {
+                setImageBitmap(coverBitmap)
+            } else {
+                setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.audio_file_24px))
+                imageTintList = android.content.res.ColorStateList.valueOf(iconTint)
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(10f).toFloat()
+                setColor(ColorUtils.setAlphaComponent(iconTint, 30))
+            }
+            clipToOutline = true
+            layoutParams = LinearLayout.LayoutParams(dpToPx(48f), dpToPx(48f)).apply {
+                marginEnd = dpToPx(12f)
+            }
+        }
+        topSection.addView(coverImageView)
+
+        val textContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = dpToPx(8f)
+            }
+        }
+
+        val titleView = TextView(this).apply {
+            text = finalTitle
+            textSize = 15f
+            setTextColor(playerTextColor)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val singerView = TextView(this).apply {
+            text = finalSinger
+            textSize = 13f
+            setTextColor(playerSubtextColor)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setGoogleSansFlexDefault(this, false)
+        }
+
+        textContainer.addView(titleView)
+        textContainer.addView(singerView)
+        topSection.addView(textContainer)
+
+        val playPauseContainer = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dpToPx(48f), dpToPx(48f))
+            isClickable = true
+            isFocusable = true
+        }
+
+        val pausedRadius = dpToPx(20f).toFloat()   // Round circle when paused
+        val playingRadius = dpToPx(12f).toFloat()  // Rounded square when playing
+
+        var shapeAnimator: ValueAnimator? = null
+        var currentRadius = if (holder.isPlaying) playingRadius else pausedRadius
+
+        val buttonBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = currentRadius
+            setColor(ColorUtils.setAlphaComponent(iconTint, 45))
+        }
+
+        val playPauseBtnIcon = ImageView(this).apply {
+            setImageResource(if (holder.isPlaying) R.drawable.pause_24px else R.drawable.play_arrow_24px)
+            imageTintList = android.content.res.ColorStateList.valueOf(iconTint)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            background = buttonBg
+            layoutParams = FrameLayout.LayoutParams(dpToPx(40f), dpToPx(40f), Gravity.CENTER)
+        }
+        playPauseContainer.addView(playPauseBtnIcon)
+
+        fun morphShape(toPlaying: Boolean) {
+            val targetRadius = if (toPlaying) playingRadius else pausedRadius
+
+            shapeAnimator?.cancel()
+            // Ensure we start from the current visual radius (buttonBg.cornerRadius)
+            val startRadius = buttonBg.cornerRadius
+            shapeAnimator = ValueAnimator.ofFloat(startRadius, targetRadius).apply {
+                duration = 280
+                interpolator = PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
+                addUpdateListener { animator ->
+                    val value = animator.animatedValue as Float
+                    buttonBg.cornerRadius = value
+                    currentRadius = value
+                }
+                // After animation ends or is cancelled, ensure final value is set
+                addListener(object : android.animation.Animator.AnimatorListener {
+                    override fun onAnimationStart(animation: android.animation.Animator) {}
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        buttonBg.cornerRadius = targetRadius
+                        currentRadius = targetRadius
+                    }
+                    override fun onAnimationCancel(animation: android.animation.Animator) {
+                        buttonBg.cornerRadius = targetRadius
+                        currentRadius = targetRadius
+                    }
+                    override fun onAnimationRepeat(animation: android.animation.Animator) {}
+                })
+                start()
+            }
+        }
+
+        // Save UI references to AudioHolder
+        holder.playPauseBtnIcon = playPauseBtnIcon
+        holder.updateShape = { toPlaying -> morphShape(toPlaying) }
+
+        // Touch feedback without shadow/glow
+        playPauseContainer.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.animate().cancel()
+                    v.animate().scaleX(0.90f).scaleY(0.90f)
+                        .setDuration(120).setInterpolator(DecelerateInterpolator(1.5f)).start()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.animate().cancel()
+                    v.animate().scaleX(1.0f).scaleY(1.0f)
+                        .setDuration(300).setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+                }
+            }
+            false
+        }
+
+        playPauseContainer.setOnClickListener {
+            toggleAudioPlayback(holder)
+        }
+
+        topSection.addView(playPauseContainer)
+
+        val deleteBtn = ImageView(this).apply {
+            setImageResource(R.drawable.delete_24px)
+            background = null
+            val typedValue = TypedValue()
+            theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
+            setBackgroundResource(typedValue.resourceId)
+            imageTintList = ColorStateList.valueOf(iconTint)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            layoutParams = LinearLayout.LayoutParams(dpToPx(40f), dpToPx(40f)).apply {
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
+            setOnClickListener {
+                removeAudioPlayer(holder)
+            }
+        }
+        topSection.addView(deleteBtn)
+
+        playerCard.addView(topSection)
+
+        holder.playerView = playerCard
+        audioHolders.add(holder)
+
+        contentWrapper.addView(playerCard, audioHolders.size - 1)
+        updateAddAudioButtonState()
+    }
+
+    // ------------------------------------------------------------------
+    // CAPTURE BITMAP GENERATOR
+    // ------------------------------------------------------------------.
+
+    private fun createAudioPlayerForCapture(holder: AudioHolder, scale: Float): View {
+        val meta = NoteRepository.getOrExtractAudioMetadata(holder.filePath)
+        val coverBitmap = meta.coverPath?.let { decodeSampledBitmapFromFile(it, 192, 192) }
+
+        var monetBgColor = primaryContainerColor
+        var playerTextColor = onPrimaryContainerColor
+        var playerSubtextColor = ColorUtils.setAlphaComponent(onPrimaryContainerColor, 180)
+        var iconTint = onPrimaryContainerColor
+
+        if (coverBitmap != null) {
+            try {
+                val scaled = Bitmap.createScaledBitmap(coverBitmap, 1, 1, false)
+                val pixel = scaled.getPixel(0, 0)
+                scaled.recycle()
+                monetBgColor = ColorUtils.setAlphaComponent(pixel, 255)
+                monetBgColor = ColorUtils.blendARGB(monetBgColor, primaryContainerColor, 0.45f)
+
+                val isBgLight = ColorUtils.calculateLuminance(monetBgColor) > 0.5
+                playerTextColor = if (isBgLight) Color.parseColor("#1C1B1F") else Color.parseColor("#FEF7FF")
+                playerSubtextColor = ColorUtils.setAlphaComponent(playerTextColor, 180)
+                iconTint = playerTextColor
+            } catch (_: Exception) {}
+        }
+
+        val monetEndColor = ColorUtils.blendARGB(monetBgColor, surfaceContainerLowColor, 0.5f)
+        val monetGradient = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(monetBgColor, monetEndColor)
+        ).apply {
+            cornerRadius = (dpToPx(12f) * scale).toFloat()
+        }
+
+        val playerCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = monetGradient
+            setPadding((dpToPx(12f) * scale).toInt(), (dpToPx(12f) * scale).toInt(), (dpToPx(12f) * scale).toInt(), (dpToPx(12f) * scale).toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = (dpToPx(8f) * scale).toInt()
+            }
+        }
+
+        val topSection = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val coverImageView = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            if (coverBitmap != null) {
+                val roundedDrawable = RoundedBitmapDrawableFactory.create(resources, coverBitmap).apply {
+                    cornerRadius = (dpToPx(10f) * scale).toFloat()
+                }
+                setImageDrawable(roundedDrawable)
+            } else {
+                setImageDrawable(ContextCompat.getDrawable(this@NoteEditorActivity, R.drawable.audio_file_24px))
+                imageTintList = android.content.res.ColorStateList.valueOf(iconTint)
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = (dpToPx(10f) * scale).toFloat()
+                setColor(ColorUtils.setAlphaComponent(iconTint, 30))
+            }
+            clipToOutline = true
+            layoutParams = LinearLayout.LayoutParams((dpToPx(48f) * scale).toInt(), (dpToPx(48f) * scale).toInt()).apply {
+                marginEnd = (dpToPx(12f) * scale).toInt()
+            }
+        }
+        topSection.addView(coverImageView)
+
+        val textContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = (dpToPx(8f) * scale).toInt()
+            }
+        }
+
+        val titleView = TextView(this).apply {
+            text = meta.title
+            textSize = (15f * scale)
+            setTextColor(playerTextColor)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val singerView = TextView(this).apply {
+            text = meta.artist
+            textSize = (13f * scale)
+            setTextColor(playerSubtextColor)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setGoogleSansFlexDefault(this, false)
+        }
+
+        textContainer.addView(titleView)
+        textContainer.addView(singerView)
+        topSection.addView(textContainer)
+
+        playerCard.addView(topSection)
+
+        return playerCard
+    }
+
+    private fun getFileNameFromUri(uri: Uri): String {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (idx != -1) result = cursor.getString(idx)
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/') ?: -1
+            if (cut != -1) result = result?.substring(cut + 1)
+        }
+        return result ?: "Audio File"
+    }
+
+    private fun removeAudioPlayer(holder: AudioHolder) {
+        // Release native resources before removing
+        holder.mediaPlayer?.let { mp ->
+            try {
+                if (mp.isPlaying) mp.stop()
+                mp.release()
+            } catch (_: Exception) {}
+        }
+        holder.mediaPlayer = null
+        holder.playerView?.let { view ->
+            contentWrapper.removeView(view)
+        }
+        audioHolders.remove(holder)
+        updateAddAudioButtonState()
+    }
+
+    // ------------------------------------------------------------------
+    // FIXED: Fully release all other players, then toggle current
+    // ------------------------------------------------------------------
+    private fun toggleAudioPlayback(holder: AudioHolder) {
+        // 1. Fully release native resources of all OTHER media players
+        for (other in audioHolders) {
+            if (other != holder) {
+                if (other.isPlaying) {
+                    other.isPlaying = false
+                }
+                other.mediaPlayer?.let { mp ->
+                    try {
+                        if (mp.isPlaying) mp.stop()
+                        mp.release()
+                    } catch (_: Exception) {}
+                }
+                other.mediaPlayer = null
+                other.playPauseBtnIcon?.setImageResource(R.drawable.play_arrow_24px)
+                other.updateShape?.invoke(false)
+            }
+        }
+
+        // 2. Toggle current track playback safely
+        if (holder.isPlaying) {
+            try {
+                holder.mediaPlayer?.pause()
+            } catch (_: Exception) {}
+            holder.isPlaying = false
+            holder.playPauseBtnIcon?.setImageResource(R.drawable.play_arrow_24px)
+            holder.updateShape?.invoke(false)
+        } else {
+            try {
+                if (holder.mediaPlayer == null) {
+                    holder.mediaPlayer = MediaPlayer().apply {
+                        setDataSource(this@NoteEditorActivity, holder.uri)
+                        prepare()
+                        setOnCompletionListener { mp ->
+                            holder.isPlaying = false
+                            holder.playPauseBtnIcon?.setImageResource(R.drawable.play_arrow_24px)
+                            holder.updateShape?.invoke(false)
+                            try {
+                                mp.seekTo(0)
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+                holder.mediaPlayer?.start()
+                holder.isPlaying = true
+                holder.playPauseBtnIcon?.setImageResource(R.drawable.pause_24px)
+                holder.updateShape?.invoke(true)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Failed to play audio", Toast.LENGTH_SHORT).show()
+                // Clean up native resources on error to prevent freezes
+                try {
+                    holder.mediaPlayer?.release()
+                } catch (_: Exception) {}
+                holder.mediaPlayer = null
+                holder.isPlaying = false
+                holder.playPauseBtnIcon?.setImageResource(R.drawable.play_arrow_24px)
+                holder.updateShape?.invoke(false)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        for (holder in audioHolders) {
+            holder.mediaPlayer?.let { mp ->
+                try {
+                    if (mp.isPlaying) mp.stop()
+                    mp.release()
+                } catch (_: Exception) {}
+            }
+            holder.mediaPlayer = null
+        }
+        audioHolders.clear()
+    }
+
+    private fun showCreateTagDialog() {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+        val dialogBgColor = MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorSurfaceContainerHigh,
+            if (isDark) Color.parseColor("#2B2B2E") else Color.parseColor("#F2F2F7")
+        )
+
+        val dialogView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dpToPx(24f), dpToPx(28f), dpToPx(24f), dpToPx(28f))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setCornerRadius(dpToPx(28f).toFloat())
+                setColor(dialogBgColor)
+            }
+        }
+
+        val titleView = TextView(this).apply {
+            text = getString(R.string.create_tags)
+            textSize = 20f
+            setTextColor(MaterialColors.getColor(this@NoteEditorActivity, com.google.android.material.R.attr.colorOnSurface, Color.BLACK))
+            gravity = Gravity.CENTER
+            setGoogleSansFlexDefault(this, true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dpToPx(20f) }
+        }
+        dialogView.addView(titleView)
+
+        val tagEditText = EditText(this).apply {
+            hint = getString(R.string.tag_entering)
+            setHintTextColor(onSurfaceVariantColor)
+            setTextColor(onPrimaryContainerColor)
+            textSize = 16f
+            filters = arrayOf(InputFilter.LengthFilter(20))
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            maxLines = 1
+            background = GradientDrawable().apply {
+                setCornerRadius(dpToPx(12f).toFloat())
+                setColor(surfaceContainerHighestColor)
+            }
+            setPadding(dpToPx(16f), dpToPx(12f), dpToPx(16f), dpToPx(12f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dpToPx(20f) }
+            setGoogleSansFlexDefault(this, false)
+        }
+
+        if (!noteTag.isNullOrEmpty()) {
+            tagEditText.setText(noteTag)
+        }
+        dialogView.addView(tagEditText)
+
+        fun createOptionButton(textRes: Int, onClick: () -> Unit): MaterialButton {
+            return MaterialButton(
+                ContextThemeWrapper(this, com.google.android.material.R.style.Widget_Material3_Button_UnelevatedButton)
+            ).apply {
+                text = getString(textRes)
+                setTextColor(onPrimaryContainerColor)
+                setTypeface(googleSansFlex, Typeface.BOLD)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(primaryContainerColor)
+                gravity = Gravity.CENTER
+                insetTop = 0
+                insetBottom = 0
+                shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                    .setAllCornerSizes(dpToPx(100f).toFloat())
+                    .build()
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dpToPx(52f)
+                ).apply { bottomMargin = dpToPx(10f) }
+                setOnClickListener { onClick() }
+            }
+        }
+
+        val btnContinue = createOptionButton(R.string.option_delete_y) {
+            val enteredText = tagEditText.text.toString().trim()
+            val words = enteredText.split(Regex("\\s+")).filter { it.isNotEmpty() }
+            if (words.isEmpty()) {
+                Toast.makeText(this@NoteEditorActivity, getString(R.string.tag_error), Toast.LENGTH_SHORT).show()
+            } else {
+                noteTag = enteredText
+                tagTextView.text = noteTag
+                tagPillContainer.visibility = View.VISIBLE
+                dialog.dismiss()
+            }
+        }
+
+        val btnCancel = createOptionButton(R.string.option_cancel) { dialog.dismiss() }
+        (btnCancel.layoutParams as LinearLayout.LayoutParams).bottomMargin = 0
+
+        dialogView.addView(btnContinue)
+        dialogView.addView(btnCancel)
+
+        dialog.setContentView(dialogView)
+
+        dialog.window?.let { window ->
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            val width = (resources.displayMetrics.widthPixels * 0.88).toInt()
+            window.setLayout(width, FrameLayout.LayoutParams.WRAP_CONTENT)
+        }
+
+        dialog.show()
+    }
+
+    private fun openFabMenu() {
+        isFabMenuExpanded = true
+        fabPlusBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        fabPlusBtn.animate().rotation(45f).setDuration(250)
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+        dimOverlay.visibility = View.VISIBLE
+        dimOverlay.animate().alpha(1f).setDuration(200).start()
+
+        menuOverlayContainer.visibility = View.VISIBLE
+        menuOverlayContainer.alpha = 0f
+        menuOverlayContainer.scaleX = 0.8f
+        menuOverlayContainer.scaleY = 0.8f
+        menuOverlayContainer.translationY = dpToPx(16f).toFloat()
+
+        menuOverlayContainer.doOnPreDraw { view ->
+            view.pivotX = view.width.toFloat()
+            view.pivotY = view.height.toFloat()
+        }
+
+        menuOverlayContainer.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+            .setDuration(250)
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+    }
+
+    private fun closeFabMenu() {
+        isFabMenuExpanded = false
+        fabPlusBtn.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        fabPlusBtn.animate().rotation(0f).setDuration(250)
+            .setInterpolator(PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)).start()
+        dimOverlay.animate().alpha(0f).setDuration(200).withEndAction {
+            dimOverlay.visibility = View.GONE
+        }.start()
+
+        menuOverlayContainer.doOnPreDraw { view ->
+            view.pivotX = view.width.toFloat()
+            view.pivotY = view.height.toFloat()
+        }
+
+        menuOverlayContainer.animate().alpha(0f).scaleX(0.8f).scaleY(0.8f).translationY(dpToPx(16f).toFloat())
+            .setDuration(200).withEndAction {
+                menuOverlayContainer.visibility = View.GONE
+            }.start()
+    }
+
     private fun getCurrentSpans(): List<SpanData> {
         val spans = mutableListOf<SpanData>()
         val spannable = contentEdit.text as? Spannable ?: return spans
@@ -658,19 +1589,19 @@ class NoteEditorActivity : AppCompatActivity() {
             }
         }
 
-        // Sort to ensure canonical order when comparing equality
         spans.sortWith(compareBy({ it.start }, { it.end }, { it.type }))
         return spans
     }
 
-    // Check if the user has unsaved edits (title, content, or formatting)
     private fun hasUnsavedChanges(): Boolean {
+        val currentAudioPaths = audioHolders.map { it.filePath }
         return titleEdit.text.toString() != initialTitle ||
                 contentEdit.text.toString() != initialContent ||
-                getCurrentSpans() != initialSpans
+                noteTag != initialTag ||
+                getCurrentSpans() != initialSpans ||
+                currentAudioPaths != initialAudioPaths
     }
 
-    // Intercept back navigation
     private fun handleBackNavigation() {
         if (hasUnsavedChanges()) {
             showUnsavedChangesDialog()
@@ -679,7 +1610,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Material 3 style unsaved changes dialog matching screenshot design
     private fun showUnsavedChangesDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -713,9 +1643,7 @@ class NoteEditorActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = dpToPx(24f)
-            }
+            ).apply { bottomMargin = dpToPx(24f) }
         }
         dialogView.addView(titleView)
 
@@ -736,28 +1664,14 @@ class NoteEditorActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     dpToPx(52f)
-                ).apply {
-                    bottomMargin = dpToPx(10f)
-                }
-                setOnClickListener {
-                    onClick()
-                    dialog.dismiss()
-                }
+                ).apply { bottomMargin = dpToPx(10f) }
+                setOnClickListener { onClick(); dialog.dismiss() }
             }
         }
 
-        val btnSave = createOptionButton(R.string.save_and_exit) {
-            saveNote()
-        }
-
-        val btnExit = createOptionButton(R.string.exit_directly) {
-            finish()
-        }
-
-        val btnBack = createOptionButton(R.string.back_to_editor) {
-            // Dismiss dialog and stay in editor
-        }
-
+        val btnSave = createOptionButton(R.string.save_and_exit) { saveNote() }
+        val btnExit = createOptionButton(R.string.exit_directly) { finish() }
+        val btnBack = createOptionButton(R.string.back_to_editor) {}
         (btnBack.layoutParams as LinearLayout.LayoutParams).bottomMargin = 0
 
         dialogView.addView(btnSave)
@@ -775,15 +1689,13 @@ class NoteEditorActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    // ---- 其余功能函数 ----
-
     private fun animateTrailingButtonShape(expand: Boolean) {
         val startCorner = if (expand) innerCornerPx else outerCornerPx
         val endCorner = if (expand) outerCornerPx else innerCornerPx
 
         ValueAnimator.ofFloat(startCorner, endCorner).apply {
             duration = 200
-            interpolator = android.view.animation.DecelerateInterpolator()
+            interpolator = DecelerateInterpolator()
             addUpdateListener { animator ->
                 val animatedCorner = animator.animatedValue as Float
                 trailingBg.shapeAppearanceModel = trailingBg.shapeAppearanceModel.toBuilder()
@@ -825,9 +1737,11 @@ class NoteEditorActivity : AppCompatActivity() {
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
             setCompoundDrawablesWithIntrinsicBounds(tintedIcon, null, null, null)
             compoundDrawablePadding = dpToPx(12f)
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(100f).toFloat())
                 setColor(Color.TRANSPARENT)
@@ -869,21 +1783,33 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
+    // ✅ FIXED: preserves the pin state when saving
     private fun saveNoteData(): Boolean {
         val title = titleEdit.text.toString().trim()
         val plainText = contentEdit.text.toString()
         val spans = getCurrentSpans()
+        val audioPaths = audioHolders.map { it.filePath }
 
         if (title.isEmpty()) {
             Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
             return false
         }
 
+        val currentAudioPaths = audioPaths.toSet()
+        for (oldPath in initialAudioPaths) {
+            if (oldPath !in currentAudioPaths) {
+                try {
+                    val file = File(oldPath)
+                    if (file.exists()) file.delete()
+                } catch (_: Exception) {}
+            }
+        }
+
         if (isNewNote) {
-            NoteRepository.saveNote(title, plainText, spans)
+            NoteRepository.saveNote(title, plainText, spans, noteTag, audioPaths, isPinned = false)
         } else {
-            NoteRepository.deleteNote(noteId)
-            NoteRepository.saveNote(title, plainText, spans)
+            NoteRepository.deleteNote(noteId, deleteAudioFiles = false)
+            NoteRepository.saveNote(title, plainText, spans, noteTag, audioPaths, isPinned = initialIsPinned)
         }
         return true
     }
@@ -894,7 +1820,7 @@ class NoteEditorActivity : AppCompatActivity() {
         val title = titleEdit.text.toString().trim()
         val contentSpannable = contentEdit.text
 
-        if (title.isEmpty() && contentSpannable.isEmpty()) {
+        if (title.isEmpty() && contentSpannable.isEmpty() && audioHolders.isEmpty()) {
             Toast.makeText(this, getString(R.string.nothing_to_capture), Toast.LENGTH_SHORT).show()
             return
         }
@@ -948,22 +1874,62 @@ class NoteEditorActivity : AppCompatActivity() {
         }
         root.addView(titleLabel)
 
-        val titleText = TextView(this).apply {
-            text = title
-            textSize = (18f * scale)
-            setTextColor(onPrimaryContainerColor)
-            setGoogleSansFlexDefault(this, false)
+        val titleContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
                 setCornerRadius(cornerRadiusPx)
                 setColor(surfaceContainerHighestColor)
             }
-            setPadding(textPaddingHorizontal, textPaddingVertical, textPaddingHorizontal, textPaddingVertical)
+            setPadding(textPaddingHorizontal, (dpToPx(8f) * scale).toInt(), textPaddingHorizontal, (dpToPx(8f) * scale).toInt())
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = titleBottomMargin }
         }
-        root.addView(titleText)
+
+        if (!noteTag.isNullOrEmpty()) {
+            val tagPill = TextView(this).apply {
+                text = noteTag
+                textSize = (13f * scale)
+                setTextColor(onPrimaryContainerColor)
+                setGoogleSansFlexDefault(this, true)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = (100f * scale)
+                    setColor(primaryContainerColor)
+                }
+                setPadding(
+                    (dpToPx(10f) * scale).toInt(),
+                    (dpToPx(4f) * scale).toInt(),
+                    (dpToPx(10f) * scale).toInt(),
+                    (dpToPx(4f) * scale).toInt()
+                )
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = (dpToPx(8f) * scale).toInt()
+                }
+            }
+            titleContainer.addView(tagPill)
+        }
+
+        val titleText = TextView(this).apply {
+            text = title
+            textSize = (18f * scale)
+            setTextColor(onPrimaryContainerColor)
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        titleContainer.addView(titleText)
+        root.addView(titleContainer)
 
         val contentLabel = TextView(this).apply {
             text = getString(R.string.content)
@@ -976,6 +1942,11 @@ class NoteEditorActivity : AppCompatActivity() {
             ).apply { bottomMargin = labelBottomMargin }
         }
         root.addView(contentLabel)
+
+        for (holder in audioHolders) {
+            val audioView = createAudioPlayerForCapture(holder, scale)
+            root.addView(audioView)
+        }
 
         val contentText = TextView(this).apply {
             setText(contentSpannable)
@@ -1024,7 +1995,6 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---- 隐藏键盘 ----
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
         currentFocus?.let { view ->
@@ -1154,23 +2124,51 @@ class NoteEditorActivity : AppCompatActivity() {
         }
     }
 
-    private val pressScaleTouchListener = View.OnTouchListener { v, event ->
-        val springBackInterpolator = android.view.animation.PathInterpolator(0.22f, 1.0f, 0.36f, 1.0f)
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                v.animate().cancel()
-                v.animate().scaleX(0.95f).scaleY(0.95f).alpha(0.88f)
-                    .setDuration(120).setInterpolator(android.view.animation.DecelerateInterpolator(1.5f)).start()
-            }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                v.animate().cancel()
-                v.animate().scaleX(1.0f).scaleY(1.0f).alpha(1.0f)
-                    .setDuration(350).setInterpolator(springBackInterpolator).start()
-            }
-        }
-        false
-    }
-
     private fun dpToPx(dp: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
+
+    // ------------------------------------------------------------------
+    // BITMAP DOWNSAMPLING HELPERS (prevents memory pressure)
+    // ------------------------------------------------------------------
+    private fun decodeSampledBitmapFromFile(path: String, reqWidth: Int, reqHeight: Int): Bitmap? {
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        BitmapFactory.decodeFile(path, options)
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+        options.inJustDecodeBounds = false
+        return BitmapFactory.decodeFile(path, options)
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height, width) = options.outHeight to options.outWidth
+        var inSampleSize = 1
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
+    }
+
+    private inner class PlusDrawable(private val colorInt: Int, private val strokeWidthPx: Float) : android.graphics.drawable.Drawable() {
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = colorInt
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = strokeWidthPx
+            strokeCap = android.graphics.Paint.Cap.ROUND
+        }
+        override fun draw(canvas: android.graphics.Canvas) {
+            val cx = bounds.exactCenterX()
+            val cy = bounds.exactCenterY()
+            val size = dpToPx(11f).toFloat()
+            canvas.drawLine(cx - size, cy, cx + size, cy, paint)
+            canvas.drawLine(cx, cy - size, cx, cy + size, paint)
+        }
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+        override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
+        @Deprecated("Deprecated in Java") override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+    }
 }

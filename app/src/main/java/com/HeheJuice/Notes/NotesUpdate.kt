@@ -316,7 +316,7 @@ class NotesUpdate : AppCompatActivity() {
         updateCard.addView(updateActionView)
         root.addView(updateCard)
 
-        // ---- Info Card (Source Code & License) ----
+        // ---- Info Card (Source Code, License & Report Bug) ----
         fun createGroupItemBg(topRadius: Float, bottomRadius: Float): GradientDrawable {
             return GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -398,16 +398,18 @@ class NotesUpdate : AppCompatActivity() {
         sourceTextContainer.addView(sourceSubtitle)
         sourceRow.addView(sourceTextContainer)
 
-        // 2. License Row
+        // 2. License Row (Updated with inner radius on bottom and margin)
         val licenseRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            background = createGroupItemBg(innerRadiusPx, innerRadiusPx)
             setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply {
+                bottomMargin = dpToPx(2f)
+            }
             setMinimumHeight(dpToPx(56f))
             isClickable = true
             isFocusable = true
@@ -451,8 +453,62 @@ class NotesUpdate : AppCompatActivity() {
         licenseTextContainer.addView(licenseSubtitle)
         licenseRow.addView(licenseTextContainer)
 
+        // 3. Report Bug / Issue Row
+        val reportRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+            setPadding(dpToPx(20f), dpToPx(16f), dpToPx(20f), dpToPx(16f))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setMinimumHeight(dpToPx(56f))
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener(pressScaleTouchListener)
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HeheJuice/Material-Notes/issues")))
+            }
+        }
+
+        val reportTextContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val reportLabel = TextView(this).apply {
+            text = getString(R.string.title_report)
+            textSize = 16f
+            setTextColor(onSurfaceVariantColor)
+            setGoogleSansFlexDefault(this, true)
+        }
+
+        val reportSubtitle = TextView(this).apply {
+            text = getString(R.string.desc_report)
+            textSize = 14f
+            setTextColor(onSurfaceVariantColor)
+            alpha = 0.7f
+            setGoogleSansFlexDefault(this, false)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(2f)
+            }
+        }
+
+        reportTextContainer.addView(reportLabel)
+        reportTextContainer.addView(reportSubtitle)
+        reportRow.addView(reportTextContainer)
+
         infoGroup.addView(sourceRow)
         infoGroup.addView(licenseRow)
+        infoGroup.addView(reportRow)
         root.addView(infoGroup)
 
         // ---- ACKNOWLEDGMENTS CARD ----

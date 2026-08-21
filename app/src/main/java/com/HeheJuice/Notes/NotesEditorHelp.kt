@@ -264,8 +264,10 @@ class NotesEditorHelp : AppCompatActivity() {
             optionsGroup.addView(optionRow)
         }
 
-        // Separate Landscape Group
-        val landscapeGroup = LinearLayout(this).apply {
+        // ================================================================
+        // TIPS GROUP (Landscape + Audio helper)
+        // ================================================================
+        val tipsGroup = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -275,7 +277,7 @@ class NotesEditorHelp : AppCompatActivity() {
             }
         }
 
-        val landscapeHeader = TextView(this).apply {
+        val tipsHeader = TextView(this).apply {
             text = getString(R.string.help_tips)
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
@@ -286,70 +288,87 @@ class NotesEditorHelp : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
-        landscapeGroup.addView(landscapeHeader)
+        tipsGroup.addView(tipsHeader)
 
-        val landscapeRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = createGroupItemBg(outerRadiusPx, outerRadiusPx)
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            setMinimumHeight(dpToPx(56f))
-        }
+        // List of tips: (icon, titleRes, descRes)
+        val tipsList = listOf(
+            Triple(R.drawable.mobile_landscape_24px, R.string.landscape_title, R.string.landscape_desc),
+            Triple(R.drawable.audio_file_24px, R.string.audio_helper_title, R.string.audio_helper_desc),
+            Triple(R.drawable.text_select_move_down_24px, R.string.texts_helper_title, R.string.texts_helper_desc)
+        )
 
-        val landscapeIcon = ImageView(this).apply {
-            setImageDrawable(ContextCompat.getDrawable(this@NotesEditorHelp, R.drawable.mobile_landscape_24px))
-            setColorFilter(onSurfaceVariantColor)
-            layoutParams = LinearLayout.LayoutParams(dpToPx(24f), dpToPx(24f)).apply {
-                marginEnd = dpToPx(16f)
+        tipsList.forEachIndexed { index, (iconRes, titleRes, descRes) ->
+            val isFirst = index == 0
+            val isLast = index == tipsList.lastIndex
+
+            val topR = if (isFirst) outerRadiusPx else innerRadiusPx
+            val bottomR = if (isLast) outerRadiusPx else innerRadiusPx
+
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = createGroupItemBg(topR, bottomR)
+                setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    if (!isLast) bottomMargin = dpToPx(2f)
+                }
+                setMinimumHeight(dpToPx(56f))
             }
-        }
 
-        val landscapeTextContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        }
-
-        val landscapeTitleTv = TextView(this).apply {
-            text = getString(R.string.landscape_title)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
-        }
-
-        val landscapeDescTv = TextView(this).apply {
-            text = getString(R.string.landscape_desc)
-            textSize = 14f
-            setTextColor(onSurfaceVariantColor)
-            alpha = 0.7f
-            setGoogleSansFlexDefault(this, false)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(2f)
+            val iconIv = ImageView(this).apply {
+                setImageDrawable(ContextCompat.getDrawable(this@NotesEditorHelp, iconRes))
+                setColorFilter(onSurfaceVariantColor)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(24f), dpToPx(24f)).apply {
+                    marginEnd = dpToPx(16f)
+                }
             }
+
+            val textContainer = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            val titleTv = TextView(this).apply {
+                text = getString(titleRes)
+                textSize = 16f
+                setTextColor(onSurfaceVariantColor)
+                setGoogleSansFlexDefault(this, true)
+            }
+
+            val descTv = TextView(this).apply {
+                text = getString(descRes)
+                textSize = 14f
+                setTextColor(onSurfaceVariantColor)
+                alpha = 0.7f
+                setGoogleSansFlexDefault(this, false)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(2f)
+                }
+            }
+
+            textContainer.addView(titleTv)
+            textContainer.addView(descTv)
+
+            row.addView(iconIv)
+            row.addView(textContainer)
+
+            tipsGroup.addView(row)
         }
-
-        landscapeTextContainer.addView(landscapeTitleTv)
-        landscapeTextContainer.addView(landscapeDescTv)
-
-        landscapeRow.addView(landscapeIcon)
-        landscapeRow.addView(landscapeTextContainer)
-
-        landscapeGroup.addView(landscapeRow)
 
         root.addView(bigTitle)
         root.addView(gradientCard)
         root.addView(optionsGroup)
-        root.addView(landscapeGroup)
+        root.addView(tipsGroup)  // Replaces old landscapeGroup
 
         scrollView.addView(root)
         mainContainer.addView(scrollView)

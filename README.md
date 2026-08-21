@@ -4,20 +4,28 @@
 
 ### Simplify as "Notes"
 
-> A Simple / Light-Weight Android Material Design Expressive Notes App
+> An Android Material Design Expressive Notes App
 
 ## Badges
 
-[![Android](https://img.shields.io/badge/Android-12_and_up-50f270?logo=android&logoColor=white&style=for-the-badge)](https://www.android.com/intl/zh-HK_hk)[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white&style=for-the-badge)](https://kotlinlang.org)[![LICENSE](https://img.shields.io/badge/View_LICENCE-Check_before_reposting-87CEEB?style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/blob/main/LICENSE)[![GitHub Downloads](https://img.shields.io/github/downloads/HeheJuice/Material-Notes/total?color=blue&label=Downloads+from+GitHub&style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/releases)
+[![Android](https://img.shields.io/badge/Android-12L_and_up-50f270?logo=android&logoColor=white&style=for-the-badge)](https://www.android.com/intl/zh-HK_hk)[![LICENSE](https://img.shields.io/badge/View_LICENCE-Check_before_reposting-87CEEB?style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/blob/main/LICENSE)[![GitHub Downloads](https://img.shields.io/github/downloads/HeheJuice/Material-Notes/total?color=blue&label=Downloads+from+GitHub&style=for-the-badge)](https://github.com/HeheJuice/Material-Notes/releases)
 
 
 ## Features 
 
-> Basic Notes feature using .txt
+> 📝 Notes feature Using .txt
 
-> Notes to Image
+> ✍️ Texts Style Store Using .meta
 
-> Material Design Expressive 
+> 🖼️ Capture Notes To Images
+
+> 🎶 Audio Insert in Notes
+
+> 🏷️ Tags Your Notes
+
+> 📌 Pin Important 
+
+> More with updates...
 
 ## Screenshots
 
@@ -29,9 +37,14 @@
 </p>
 
 ## Support Us
-> This app is completely FREE 
+> This app is completely FREE 👀
 
 > Share this repository link to support us
+
+## Help Us Improve!
+> The DEV of this app isn't professional and may have some bugs
+
+> Feel free to report or we would like help from other developers 🩷
 
 ## Acknowledgements
 

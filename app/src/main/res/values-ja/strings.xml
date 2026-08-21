@@ -78,6 +78,9 @@
 <string name="desc_license">このアプリおよびサードパーティ製ライブラリのライセンスを確認</string>
 <string name="lang_settings">アプリの表示言語</string>
 <string name="lang_settings_desc">ここをクリックして選択</string>
+<string name="title_report">バグや問題が発生しましたか？</string>
+<string name="desc_report">ここを押して開発者に報告</string>
+
 
 
 
@@ -124,5 +127,18 @@
 <string name="title_delete_action">ノートを削除しますか？</string>
 <string name="option_delete_y">続行</string>
 <string name="option_cancel">キャンセル</string>
+<!-- Tags -->
+<string name="editor_tags">このノートのタグを作成または編集</string>
+<string name="tag_entering">タグの名前を入力...</string>
+<string name="tag_error">押す前に有効なテキストを入力してください</string>
+<string name="create_tags">タグを作成または編集</string>
+<!-- Audio -->
+<string name="add_audio">オーディオまたは音楽を追加</string>
+<string name="max_audio_reached">上限に達しました</string>
+<string name="audio_helper_title">オーディオ・音楽の追加について</string>
+<string name="audio_helper_desc">選択したファイルはローカルにコピーされるため、アプリのストレージ使用量が増加する可能性があります</string>
+<!-- Texts Helper -->
+<string name="texts_helper_title">なぜ入力欄がコンパクトなのですか？</string>
+<string name="texts_helper_desc">コンテンツの長さに応じて自動的に拡大します</string>
 
 </resources>

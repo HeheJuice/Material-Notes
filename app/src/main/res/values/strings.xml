@@ -74,6 +74,8 @@
 <string name="credit_google_sans_flex_desc">Fonts Uses in this app</string>
 <string name="desc_source">Check for source code of this app on GitHub</string>
 <string name="desc_license">View 3rd Party Usage and License for them and this app</string>
+<string name="title_report">Found a Bug or Facing Issues?</string>
+<string name="desc_report">Press here to report to Developers</string>
 
 
 
@@ -117,5 +119,17 @@
 <string name="title_delete_action">Delete the note?</string>
 <string name="option_delete_y">Continue</string>
 <string name="option_cancel">Cancel</string>
-
+<!-- Tags -->
+<string name="editor_tags">Create or Edit tag for this note</string>
+<string name="tag_entering">Enter the name for your tag...</string>
+<string name="tag_error">Enter a valid text before press</string>
+<string name="create_tags">Create or Edit Tag</string>
+<!-- Audio -->
+<string name="add_audio">Add Audio or Music</string>
+<string name="max_audio_reached">Maximum limit reached</string>
+<string name="audio_helper_title">About Add Audio or Music</string>
+<string name="audio_helper_desc">Selected files are copied locally, which may increase app storage usage</string>
+<!-- Texts Helper -->
+<string name="texts_helper_title">Why is input field compact?</string>
+<string name="texts_helper_desc">It will auto-expands based on content length</string>
 </resources>

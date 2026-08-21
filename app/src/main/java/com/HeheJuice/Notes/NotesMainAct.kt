@@ -53,147 +53,6 @@ import org.json.JSONObject
 import java.io.File
 import android.provider.Settings
 
-data class Note(
-    val id: String,
-    val title: String,
-    val content: String,
-    val spans: List<SpanData>,
-    val lastModified: Long
-)
-
-data class SpanData(
-    val start: Int,
-    val end: Int,
-    val type: String,
-    val size: Float? = null
-)
-
-object NoteRepository {
-    private const val NOTES_DIR = "notes"
-    private lateinit var context: Context
-
-    fun init(context: Context) {
-        this.context = context.applicationContext
-        val dir = getNotesDir()
-        if (!dir.exists()) dir.mkdirs()
-    }
-
-    private fun getNotesDir(): File = context.filesDir.resolve(NOTES_DIR)
-
-    private fun sanitizeTitle(title: String): String {
-        return title.replace(Regex("[^a-zA-Z0-9\\-\\_ ]"), "")
-            .replace(" ", "_")
-            .trim()
-            .ifEmpty { "note" }
-    }
-
-    private fun generateId(title: String): String {
-        val sanitized = sanitizeTitle(title)
-        return "$sanitized---${System.currentTimeMillis()}"
-    }
-
-    private fun getTitleFromFilename(filename: String): String {
-        val parts = filename.split("---")
-        return if (parts.isNotEmpty()) parts[0] else filename
-    }
-
-    private fun getMetaFile(id: String): File = getNotesDir().resolve("$id.meta")
-
-    fun getAllNotes(): List<Note> {
-        val dir = getNotesDir()
-        return dir.listFiles { file -> file.extension == "txt" }
-            ?.mapNotNull { file ->
-                val id = file.nameWithoutExtension
-                val plainText = file.readText()
-                val title = getTitleFromFilename(id)
-                val metaFile = getMetaFile(id)
-                val spans = if (metaFile.exists()) {
-                    parseSpans(metaFile.readText())
-                } else {
-                    emptyList()
-                }
-                Note(
-                    id = id,
-                    title = title,
-                    content = plainText,
-                    spans = spans,
-                    lastModified = file.lastModified()
-                )
-            }
-            ?.sortedByDescending { it.lastModified }
-            ?: emptyList()
-    }
-
-    fun getNote(id: String): Note? {
-        val file = getNotesDir().resolve("$id.txt")
-        val metaFile = getMetaFile(id)
-        return if (file.exists()) {
-            val plainText = file.readText()
-            val title = getTitleFromFilename(id)
-            val spans = if (metaFile.exists()) {
-                parseSpans(metaFile.readText())
-            } else {
-                emptyList()
-            }
-            Note(id, title, plainText, spans, file.lastModified())
-        } else null
-    }
-
-    fun saveNote(title: String, plainText: String, spans: List<SpanData>) {
-        val id = generateId(title)
-        val file = getNotesDir().resolve("$id.txt")
-        val metaFile = getMetaFile(id)
-
-        file.writeText(plainText)
-        if (spans.isNotEmpty()) {
-            val json = JSONArray()
-            for (span in spans) {
-                val obj = JSONObject()
-                obj.put("start", span.start)
-                obj.put("end", span.end)
-                obj.put("type", span.type)
-                span.size?.let { obj.put("size", it) }
-                json.put(obj)
-            }
-            metaFile.writeText(json.toString())
-        } else {
-            metaFile.delete()
-        }
-    }
-
-    fun deleteNote(id: String) {
-        getNotesDir().resolve("$id.txt").delete()
-        getMetaFile(id).delete()
-    }
-
-    fun renameNote(oldId: String, newTitle: String): Boolean {
-        val oldFile = getNotesDir().resolve("$oldId.txt")
-        val oldMeta = getMetaFile(oldId)
-        val newId = generateId(newTitle)
-        val newFile = getNotesDir().resolve("$newId.txt")
-        val newMeta = getMetaFile(newId)
-        val result = oldFile.renameTo(newFile)
-        if (oldMeta.exists()) oldMeta.renameTo(newMeta)
-        return result
-    }
-
-    private fun parseSpans(jsonString: String): List<SpanData> {
-        val list = mutableListOf<SpanData>()
-        try {
-            val jsonArray = JSONArray(jsonString)
-            for (i in 0 until jsonArray.length()) {
-                val obj = jsonArray.getJSONObject(i)
-                val start = obj.getInt("start")
-                val end = obj.getInt("end")
-                val type = obj.getString("type")
-                val size = if (obj.has("size")) obj.getDouble("size").toFloat() else null
-                list.add(SpanData(start, end, type, size))
-            }
-        } catch (_: Exception) { /* ignore */ }
-        return list
-    }
-}
-
 class NotesMainAct : AppCompatActivity() {
 
     companion object {
@@ -584,8 +443,8 @@ class NotesMainAct : AppCompatActivity() {
             }
         }
         themeGroup.addView(themeModeRow)
-        
-                // 3. Language Settings Row (Android 13+ only)
+
+        // 3. Language Settings Row (Android 13+ only)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Update themeModeRow to act as a middle item in the card group
             themeModeRow.background = createGroupItemBg(innerRadiusPx, innerRadiusPx)
@@ -652,7 +511,6 @@ class NotesMainAct : AppCompatActivity() {
 
             themeGroup.addView(langSettingsRow)
         }
-
 
         fun updateRowState() {
             val enabled = !followSystem
@@ -781,65 +639,90 @@ class NotesMainAct : AppCompatActivity() {
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
 
+
         // Helper Row
-        val helperRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            setMinimumHeight(dpToPx(56f))
-            isClickable = true
-            isFocusable = true
-            setOnTouchListener(pressScaleTouchListener)
-            setOnClickListener {
-                val intent = Intent(this@NotesMainAct, NotesEditorHelp::class.java)
-                startActivity(intent)
-            }
-        }
+val helperTextContainer = LinearLayout(this).apply {
+    orientation = LinearLayout.VERTICAL
+    layoutParams = LinearLayout.LayoutParams(
+        0,
+        LinearLayout.LayoutParams.WRAP_CONTENT,
+        1f
+    )
+}
 
-        val helperTextContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        }
+val helperLabel = TextView(this).apply {
+    text = getString(R.string.helper_title)
+    textSize = 16f
+    setTextColor(onSurfaceVariantColor)
+    setGoogleSansFlexDefault(this, true)
+}
 
-        val helperLabel = TextView(this).apply {
-            text = getString(R.string.helper_title)
-            textSize = 16f
-            setTextColor(onSurfaceVariantColor)
-            setGoogleSansFlexDefault(this, true)
-        }
+val helperSubtitle = TextView(this).apply {
+    text = getString(R.string.helper_desc)
+    textSize = 14f
+    setTextColor(onSurfaceVariantColor)
+    alpha = 0.7f
+    setGoogleSansFlexDefault(this, false)
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.WRAP_CONTENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    ).apply {
+        topMargin = dpToPx(2f)
+    }
+}
 
-        val helperSubtitle = TextView(this).apply {
-            text = getString(R.string.helper_desc)
-            textSize = 14f
-            setTextColor(onSurfaceVariantColor)
-            alpha = 0.7f
-            setGoogleSansFlexDefault(this, false)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(2f)
-            }
-        }
+helperTextContainer.addView(helperLabel)
+helperTextContainer.addView(helperSubtitle)
 
-        helperTextContainer.addView(helperLabel)
-        helperTextContainer.addView(helperSubtitle)
-        helperRow.addView(helperTextContainer)
+// Reminder icon for unread status
+val hasOpenedHelp = prefsNotes.getBoolean("has_opened_editor_help", false)
+val helperReminderDot = ImageView(this).apply {
+    val alertDrawable = ContextCompat.getDrawable(this@NotesMainAct, R.drawable.brightness_alert_24px)?.let {
+        val wrapped = DrawableCompat.wrap(it).mutate()
+        DrawableCompat.setTint(wrapped, onPrimaryContainerColor)
+        wrapped
+    }
+    setImageDrawable(alertDrawable)
+    visibility = if (hasOpenedHelp) View.GONE else View.VISIBLE
+    layoutParams = LinearLayout.LayoutParams(
+        dpToPx(24f),
+        dpToPx(24f)
+    ).apply {
+        marginStart = dpToPx(8f)
+    }
+}
+
+val helperRow = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    background = createGroupItemBg(innerRadiusPx, outerRadiusPx)
+    setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    )
+    setMinimumHeight(dpToPx(56f))
+    isClickable = true
+    isFocusable = true
+    setOnTouchListener(pressScaleTouchListener)
+    setOnClickListener {
+        if (!prefsNotes.getBoolean("has_opened_editor_help", false)) {
+            prefsNotes.edit().putBoolean("has_opened_editor_help", true).apply()
+            helperReminderDot.visibility = View.GONE
+        }
+        val intent = Intent(this@NotesMainAct, NotesEditorHelp::class.java)
+        startActivity(intent)
+    }
+}
+
+helperRow.addView(helperTextContainer)
+helperRow.addView(helperReminderDot)
+
 
         editorGroup.addView(showLinesRow)
         editorGroup.addView(helperRow)
 
         settingsContentLayout.addView(editorGroup)
-
 
         // ================================================================
         // NETWORK & ABOUT SETTINGS CARD
@@ -1075,8 +958,10 @@ class NotesMainAct : AppCompatActivity() {
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
             background = createPillBackground()
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
             compoundDrawablePadding = dpToPx(12f)
             setCompoundDrawablesWithIntrinsicBounds(createIcon, null, null, null)
             layoutParams = menuItemParams
@@ -1094,8 +979,10 @@ class NotesMainAct : AppCompatActivity() {
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             setGoogleSansFlexDefault(this, true)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
             background = createPillBackground()
-            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
+            setPadding(dpToPx(20f), dpToPx(14f), dpToPx(20f), dpToPx(14f))
             compoundDrawablePadding = dpToPx(12f)
             setCompoundDrawablesWithIntrinsicBounds(importIcon, null, null, null)
             layoutParams = menuItemParams
@@ -1349,7 +1236,7 @@ class NotesMainAct : AppCompatActivity() {
                     fileName = cursor.getString(nameIndex)
                 }
             }
-            
+
             val title = fileName.substringBeforeLast(".")
             val textContent = contentResolver.openInputStream(uri)?.use { stream ->
                 stream.bufferedReader().use { it.readText() }
@@ -1408,6 +1295,8 @@ class NotesMainAct : AppCompatActivity() {
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
             setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(16f).toFloat())
@@ -1431,6 +1320,8 @@ class NotesMainAct : AppCompatActivity() {
             textSize = 14f
             setTextColor(onPrimaryContainerColor)
             setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
             setPadding(dpToPx(24f), dpToPx(14f), dpToPx(24f), dpToPx(14f))
             background = GradientDrawable().apply {
                 setCornerRadius(dpToPx(16f).toFloat())
@@ -1560,16 +1451,50 @@ class NotesMainAct : AppCompatActivity() {
         inner class ViewHolder(
             val root: LinearLayout,
             val cardContainer: LinearLayout,
+            val titleContainer: LinearLayout,
+            val tagPill: TextView,
             val titleText: TextView,
             val timeText: TextView,
             val actionContainer: LinearLayout,
             val deleteBtn: ImageView,
-            val cancelBtn: ImageView
+            val pinBtn: ImageView,
+            val cancelBtn: ImageView,
+            val pinnedStatusIcon: ImageView // NEW: top-right pin indicator
         ) : RecyclerView.ViewHolder(root) {
 
             fun bind(note: Note, isExpanded: Boolean, animate: Boolean) {
+                // Show tag pill if tag exists
+                if (!note.tag.isNullOrEmpty()) {
+                    tagPill.text = note.tag
+                    tagPill.visibility = View.VISIBLE
+                } else {
+                    tagPill.visibility = View.GONE
+                }
+
                 titleText.text = note.title
                 timeText.text = getRelativeTimeSpan(root.context, note.lastModified)
+
+                // Show/Hide top-right pinned indicator
+                if (note.isPinned) {
+                    val pinIndicatorIcon = ContextCompat.getDrawable(root.context, R.drawable.keep_24px)?.let {
+                        val wrapped = DrawableCompat.wrap(it).mutate()
+                        DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
+                        wrapped
+                    }
+                    pinnedStatusIcon.setImageDrawable(pinIndicatorIcon)
+                    pinnedStatusIcon.visibility = View.VISIBLE
+                } else {
+                    pinnedStatusIcon.visibility = View.GONE
+                }
+
+                // Update action menu pin icon based on pinned state
+                val pinDrawableRes = if (note.isPinned) R.drawable.keep_off_24px else R.drawable.keep_24px
+                val pinIcon = ContextCompat.getDrawable(root.context, pinDrawableRes)?.let {
+                    val wrapped = DrawableCompat.wrap(it).mutate()
+                    DrawableCompat.setTint(wrapped, onSurfaceVariantColor)
+                    wrapped
+                }
+                pinBtn.setImageDrawable(pinIcon)
 
                 cardContainer.setOnClickListener {
                     if (expandedPosition != RecyclerView.NO_POSITION) {
@@ -1588,23 +1513,29 @@ class NotesMainAct : AppCompatActivity() {
                 }
 
                 deleteBtn.setOnClickListener {
-    val pos = bindingAdapterPosition
-    if (pos != RecyclerView.NO_POSITION) {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
-            .setTitle(R.string.title_delete_action)
-            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
-                NoteRepository.deleteNote(note.id)
-                expandedPosition = RecyclerView.NO_POSITION
-                loadNotesList()
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-}
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
+                            .setTitle(R.string.title_delete_action)
+                            .setPositiveButton(R.string.option_delete_y) { dialog, _ ->
+                                NoteRepository.deleteNote(note.id)
+                                expandedPosition = RecyclerView.NO_POSITION
+                                loadNotesList()
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton(R.string.option_cancel) { dialog, _ ->
+                                dialog.dismiss()
+                            }
+                            .show()
+                    }
+                }
 
+                // Pin button toggles pin state
+                pinBtn.setOnClickListener {
+                    NoteRepository.togglePinNote(note.id)
+                    expandedPosition = RecyclerView.NO_POSITION
+                    loadNotesList()
+                }
 
                 cancelBtn.setOnClickListener {
                     toggleExpansion(bindingAdapterPosition, this@ViewHolder)
@@ -1699,15 +1630,60 @@ class NotesMainAct : AppCompatActivity() {
                 setOnTouchListener(pressScaleTouchListener)
             }
 
-            val titleText = TextView(context).apply {
-                textSize = 16f
-                setTextColor(onSurfaceVariantColor)
-                setGoogleSansFlexDefault(this, true)
+            // Title container with tag pill, title, and pin indicator
+            val titleContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
             }
+
+            val tagPill = TextView(context).apply {
+                textSize = 12f
+                setTextColor(onPrimaryContainerColor)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                background = GradientDrawable().apply {
+                    cornerRadius = dpToPx(100f).toFloat()
+                    setColor(primaryContainerColor)
+                }
+                setPadding(dpToPx(8f), dpToPx(2f), dpToPx(8f), dpToPx(2f))
+                setGoogleSansFlexDefault(this, true)
+                visibility = View.GONE
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginEnd = dpToPx(6f) }
+            }
+
+            val titleText = TextView(context).apply {
+                textSize = 16f
+                setTextColor(onSurfaceVariantColor)
+                setGoogleSansFlexDefault(this, true)
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            // NEW: Top-right pin indicator view
+            val pinnedStatusIcon = ImageView(context).apply {
+                visibility = View.GONE
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(18f),
+                    dpToPx(18f)
+                ).apply {
+                    marginStart = dpToPx(8f)
+                }
+            }
+
+            titleContainer.addView(tagPill)
+            titleContainer.addView(titleText)
+            titleContainer.addView(pinnedStatusIcon) // Added to top right
+            cardContainer.addView(titleContainer)
 
             val timeText = TextView(context).apply {
                 textSize = 14f
@@ -1721,8 +1697,6 @@ class NotesMainAct : AppCompatActivity() {
                     topMargin = dpToPx(2f)
                 }
             }
-
-            cardContainer.addView(titleText)
             cardContainer.addView(timeText)
 
             val actionContainer = LinearLayout(context).apply {
@@ -1744,6 +1718,24 @@ class NotesMainAct : AppCompatActivity() {
                     wrapped
                 }
                 setImageDrawable(deleteIcon)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(16f).toFloat()
+                    setColor(surfaceContainerHighestColor)
+                }
+                setPadding(dpToPx(12f), dpToPx(12f), dpToPx(12f), dpToPx(12f))
+                layoutParams = LinearLayout.LayoutParams(
+                    dpToPx(48f),
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    marginEnd = dpToPx(8f)
+                }
+                isClickable = true
+                isFocusable = true
+                setOnTouchListener(pressScaleTouchListener)
+            }
+
+            val pinBtn = ImageView(context).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = dpToPx(16f).toFloat()
@@ -1783,13 +1775,27 @@ class NotesMainAct : AppCompatActivity() {
                 setOnTouchListener(pressScaleTouchListener)
             }
 
+            // Add views in order: Delete -> Pin -> Cancel
             actionContainer.addView(deleteBtn)
+            actionContainer.addView(pinBtn)
             actionContainer.addView(cancelBtn)
 
             root.addView(cardContainer)
             root.addView(actionContainer)
 
-            return ViewHolder(root, cardContainer, titleText, timeText, actionContainer, deleteBtn, cancelBtn)
+            return ViewHolder(
+                root,
+                cardContainer,
+                titleContainer,
+                tagPill,
+                titleText,
+                timeText,
+                actionContainer,
+                deleteBtn,
+                pinBtn,
+                cancelBtn,
+                pinnedStatusIcon
+            )
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {

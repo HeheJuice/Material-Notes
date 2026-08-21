@@ -76,6 +76,9 @@
     <string name="credit_google_sans_flex_desc">الخطوط المستخدمة في هذا التطبيق</string>
     <string name="desc_source">اطّلع على الشفرة المصدرية لهذا التطبيق على GitHub</string>
     <string name="desc_license">عرض استخدامات الطرف الثالث والتراخيص الخاصة بها وبالمكتبات</string>
+    <string name="title_report">هل وجدت خطأً أو تواجه مشاكل؟</string>
+<string name="desc_report">اضغط هنا للإبلاغ والمراسلة مع المطورين</string>
+
     <string name="lang_settings">اللغة المستخدمة في التطبيق</string>
 <string name="lang_settings_desc">انقر هنا للاختيار</string>
 
@@ -123,5 +126,18 @@
 <string name="title_delete_action">حذف الملاحظة؟</string>
 <string name="option_delete_y">متابعة</string>
 <string name="option_cancel">إلغاء</string>
+<!-- Tags -->
+<string name="editor_tags">إنشاء علامة أو تعديلها لهذه الملاحظة</string>
+<string name="tag_entering">أدخل اسم العلامة...</string>
+<string name="tag_error">يرجى إدخال نص صالحة قبل الضغط</string>
+<string name="create_tags">إنشاء علامة أو تعديلها</string>
+<!-- Audio -->
+<string name="add_audio">إضافة صوت أو موسيقى</string>
+<string name="max_audio_reached">تم الوصول إلى الحد الأقصى</string>
+<string name="audio_helper_title">حول إضافة الصوت أو الموسيقى</string>
+<string name="audio_helper_desc">يتم نسخ الملفات المحددة محليًا، مما قد يزيد من استهلاك مساحة تخزين التطبيق</string>
+<!-- Texts Helper -->
+<string name="texts_helper_title">لماذا حقل الإدخال مدمج؟</string>
+<string name="texts_helper_desc">سيتوسع تلقائيًا بناءً على طول المحتوى</string>
 
 </resources>

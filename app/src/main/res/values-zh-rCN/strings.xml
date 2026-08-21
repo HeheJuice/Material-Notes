@@ -26,6 +26,9 @@
 <string name="helper_desc">了解技巧与快捷方式</string>
 <string name="lang_settings">应用语言</string>
 <string name="lang_settings_desc">点击此处选择</string>
+<string name="title_report">发现 Bug 或遇到问题？</string>
+<string name="desc_report">点击此处向开发者反馈</string>
+
 
 
 
@@ -124,5 +127,18 @@
 <string name="title_delete_action">删除此笔记？</string>
 <string name="option_delete_y">继续</string>
 <string name="option_cancel">取消</string>
+<!-- Tags -->
+<string name="editor_tags">为此笔记创建或编辑标签</string>
+<string name="tag_entering">请输入标签名称...</string>
+<string name="tag_error">请在点击前输入有效文本</string>
+<string name="create_tags">创建或编辑标签</string>
+<!-- Audio -->
+<string name="add_audio">添加音频或音乐</string>
+<string name="max_audio_reached">已达最大限制</string>
+<string name="audio_helper_title">关于添加音频或音乐</string>
+<string name="audio_helper_desc">所选文件将被复制到本地，这可能会增加应用占用的存储空间</string>
+<!-- Texts Helper -->
+<string name="texts_helper_title">为什么输入框较小？</string>
+<string name="texts_helper_desc">它会根据内容长度自动展开</string>
 
 </resources>
